@@ -15,7 +15,7 @@ Review the diff against the base branch (`git diff main...HEAD`, or the PR diff)
 
 ## 2. Tests and checks
 
-- `npm test && npm run lint && npm run typecheck` pass. Run them; do not trust the description.
+- `pnpm test && pnpm lint && pnpm typecheck` pass. Run them; do not trust the description.
 - A bug fix comes with a test that fails without the fix. New pure logic in `utils/` or `features/*/utils/` has tests in the sibling `__tests__/`.
 - No test was skipped, deleted or loosened to get green.
 

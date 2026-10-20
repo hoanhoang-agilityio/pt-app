@@ -5,7 +5,7 @@ import { findViolation } from "../rules.mjs";
 describe("findViolation", () => {
   it.each([
     ["git status"],
-    ["npm test && npm run lint"],
+    ["pnpm test && pnpm lint"],
     ["git push -u origin claude/kan-12-hooks"],
     ["git push --force-with-lease origin kan-12"],
     ['git commit -m "fix(KAN-14): typecheck"'],
@@ -40,7 +40,7 @@ describe("findViolation", () => {
 
     it.each([
       ["cp .env.example .env.local", fresh],
-      ["cp ./.env.example ./.env.local && npm run db:push", fresh],
+      ["cp ./.env.example ./.env.local && pnpm db:push", fresh],
       ["cp -n .env.example .env.local", configured],
     ])("allows %s", (command, options) => {
       expect(findViolation(command, "kan-15", options)).toBeNull();

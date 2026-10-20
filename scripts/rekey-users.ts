@@ -1,5 +1,5 @@
 // Recomputes users.name_key after a change to toNameKey.
-// Run: npx tsx scripts/rekey-users.ts
+// Run: pnpm exec tsx scripts/rekey-users.ts
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db";

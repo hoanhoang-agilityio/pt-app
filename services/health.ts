@@ -75,7 +75,7 @@ const checkAdminAccount = async () => {
   if (!total) {
     throw new AppError(
       "CONFIG_MISSING",
-      "Chưa có tài khoản admin nào (đặt ADMIN_USERNAME/ADMIN_PASSWORD rồi deploy lại, hoặc chạy npm run admin:create)",
+      "Chưa có tài khoản admin nào (đặt ADMIN_USERNAME/ADMIN_PASSWORD rồi deploy lại, hoặc chạy pnpm admin:create)",
     );
   }
   return `${total} admin`;

@@ -3,8 +3,8 @@
 //   2. creates the first admin from ADMIN_USERNAME / ADMIN_PASSWORD when the
 //      database has no admin yet (an existing admin is never overwritten)
 //
-// Runs automatically before `next build` on Vercel (see "prebuild" in
-// package.json); run `npm run db:setup` to do the same by hand.
+// Runs automatically before `next build` on Vercel (see "build" in
+// package.json); run `pnpm db:setup` to do the same by hand.
 import { execSync } from "node:child_process";
 
 import { count } from "drizzle-orm";
@@ -24,7 +24,7 @@ const IS_PREBUILD = process.argv.includes("--prebuild");
 const pushSchema = () => {
   console.log(`▸ Đồng bộ bảng vào ${describeDatabaseConfig()}`);
   // Without --force: a change that would drop data stops the build instead.
-  execSync("npx drizzle-kit push", { stdio: "inherit" });
+  execSync("pnpm exec drizzle-kit push", { stdio: "inherit" });
 };
 
 const createFirstAdmin = async () => {
@@ -58,7 +58,7 @@ const createFirstAdmin = async () => {
 
 const setupDatabase = async () => {
   if (IS_PREBUILD && !process.env.VERCEL) {
-    // Local `npm run build` must not touch the database.
+    // Local `pnpm build` must not touch the database.
     return;
   }
 

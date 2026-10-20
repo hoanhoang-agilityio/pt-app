@@ -19,7 +19,7 @@
 
 **Admin** (`/admin`)
 
-- Đăng nhập bằng tài khoản + mật khẩu riêng (lưu trong DB, mật khẩu hash bằng scrypt). Tạo bằng `npm run admin:create`.
+- Đăng nhập bằng tài khoản + mật khẩu riêng (lưu trong DB, mật khẩu hash bằng scrypt). Tạo bằng `pnpm admin:create`.
 - **Dashboard** (`/admin`) theo tuần: số user, số user đang tập, % hoàn thành, số bài đã tập; danh sách user kèm tiến độ, lần tập gần nhất và nhãn "Chưa có lịch"; nhật ký hoạt động gần đây.
 - Thêm (nút + trên dashboard) / xóa user.
 - Trang từng user: tiến độ tuần, bài nào đã tập lúc nào, lịch sử tập.
@@ -35,11 +35,12 @@
 ## Chạy local
 
 ```bash
-npm install
+corepack enable              # một lần, để dùng đúng pnpm trong packageManager
+pnpm install
 cp .env.example .env.local   # sửa SESSION_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD
-npm run db:push              # tạo bảng trong local.db (SQLite)
-npm run admin:create         # tạo tài khoản admin từ ADMIN_USERNAME / ADMIN_PASSWORD
-npm run dev
+pnpm db:push                 # tạo bảng trong local.db (SQLite)
+pnpm admin:create            # tạo tài khoản admin từ ADMIN_USERNAME / ADMIN_PASSWORD
+pnpm dev
 ```
 
 Mở http://localhost:3000 (user) và http://localhost:3000/admin/login (admin). Trang user không có link sang admin.
@@ -47,25 +48,25 @@ Mở http://localhost:3000 (user) và http://localhost:3000/admin/login (admin).
 Tạo thêm admin hoặc đổi mật khẩu (chạy lại với cùng username sẽ đặt lại mật khẩu):
 
 ```bash
-npm run admin:create -- <username> <mật-khẩu>
+pnpm admin:create <username> <mật-khẩu>
 ```
 
 Để mở trên iPhone cùng mạng Wi-Fi, dùng địa chỉ `Network` mà `next dev` in ra.
 
 ## Scripts
 
-| Lệnh                   | Việc                                                        |
-| ---------------------- | ----------------------------------------------------------- |
-| `npm run dev`          | Dev server                                                  |
-| `npm run build`        | Build production                                            |
-| `npm test`             | Unit test (Vitest)                                          |
-| `npm run lint`         | ESLint (0 warning)                                          |
-| `npm run typecheck`    | TypeScript                                                  |
-| `npm run db:push`      | Đồng bộ schema `db/schema.ts` vào DB                        |
-| `npm run db:setup`     | Tạo bảng + admin đầu tiên (tự chạy khi build trên Vercel)   |
-| `npm run db:studio`    | Xem dữ liệu bằng Drizzle Studio                             |
-| `npm run admin:create` | Tạo admin / đặt lại mật khẩu                                |
-| `npm run db:seed-demo` | Tạo user "Demo" có lịch + bài đã tập (`-- --remove` để xóa) |
+| Lệnh                | Việc                                                        |
+| ------------------- | ----------------------------------------------------------- |
+| `pnpm dev`          | Dev server                                                  |
+| `pnpm build`        | Build production                                            |
+| `pnpm test`         | Unit test (Vitest)                                          |
+| `pnpm lint`         | ESLint (0 warning)                                          |
+| `pnpm typecheck`    | TypeScript                                                  |
+| `pnpm db:push`      | Đồng bộ schema `db/schema.ts` vào DB                        |
+| `pnpm db:setup`     | Tạo bảng + admin đầu tiên (tự chạy khi build trên Vercel)   |
+| `pnpm db:studio`    | Xem dữ liệu bằng Drizzle Studio                             |
+| `pnpm admin:create` | Tạo admin / đặt lại mật khẩu                                |
+| `pnpm db:seed-demo` | Tạo user "Demo" có lịch + bài đã tập (`-- --remove` để xóa) |
 
 ## Phân quyền
 
@@ -109,7 +110,7 @@ db/                  schema + kết nối Drizzle
 
    Không cần `DATABASE_URL` trên Vercel; nếu có, đừng để `file:local.db`.
 
-3. **Redeploy**. Bước `prebuild` tự chạy `scripts/setup-database.ts`: tạo/cập nhật bảng trên Turso và tạo admin từ `ADMIN_USERNAME`/`ADMIN_PASSWORD` nếu database chưa có admin nào (admin đã có thì không bị ghi đè).
+3. **Redeploy**. `pnpm build` chạy `scripts/setup-database.ts` trước `next build`: tạo/cập nhật bảng trên Turso và tạo admin từ `ADMIN_USERNAME`/`ADMIN_PASSWORD` nếu database chưa có admin nào (admin đã có thì không bị ghi đè).
 4. Kiểm tra: mở `https://<domain>/api/health?token=<HEALTH_CHECK_TOKEN>` — phải là `"status": "ok"`.
 
 ## Xử lý lỗi

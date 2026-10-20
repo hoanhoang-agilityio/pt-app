@@ -2,13 +2,13 @@
   "name": "pt-app",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.34.7",
   "engines": {
     "node": "24.x"
   },
   "scripts": {
     "dev": "next dev",
-    "prebuild": "tsx scripts/setup-database.ts --prebuild",
-    "build": "next build",
+    "build": "tsx scripts/setup-database.ts --prebuild && next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
     "format": "prettier --write .",

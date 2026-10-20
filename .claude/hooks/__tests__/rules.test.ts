@@ -5,7 +5,7 @@ import { findViolation } from "../rules.mjs";
 describe("findViolation", () => {
   it.each([
     ["git status"],
-    ["npm test && npm run lint"],
+    ["pnpm test && pnpm lint"],
     ["git push -u origin claude/kan-12-hooks"],
     ["git push --force-with-lease origin kan-12"],
     ['git commit -m "fix(KAN-14): typecheck"'],
@@ -32,5 +32,28 @@ describe("findViolation", () => {
     ['git add .env.local && git commit -m "add config"', "kan-12"],
   ])("blocks %s", (command, branch) => {
     expect(findViolation(command, branch)).toEqual(expect.any(String));
+  });
+
+  describe("copying the env template (README setup)", () => {
+    const fresh = { envLocalExists: false };
+    const configured = { envLocalExists: true };
+
+    it.each([
+      ["cp .env.example .env.local", fresh],
+      ["cp ./.env.example ./.env.local && pnpm db:push", fresh],
+      ["cp -n .env.example .env.local", configured],
+    ])("allows %s", (command, options) => {
+      expect(findViolation(command, "kan-15", options)).toBeNull();
+    });
+
+    it.each([
+      ["cp .env.example .env.local", configured],
+      ["cp .env.example .env.local && cat .env.local", fresh],
+      ["cp .env.example .env.production", fresh],
+    ])("blocks %s", (command, options) => {
+      expect(findViolation(command, "kan-15", options)).toEqual(
+        expect.any(String),
+      );
+    });
   });
 });

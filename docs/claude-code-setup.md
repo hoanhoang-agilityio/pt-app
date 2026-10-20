@@ -16,7 +16,7 @@ The repo already carries the team setup (dojo Day 01-10, Jira epic KAN-9). This 
 | `.mcp.json`                          | Playwright MCP, so a session can open and check the app on http://localhost:3000.                                               |
 | `docs/review-false-positives.md`     | Review findings that are by design; add rows during Day 10 and the retro.                                                       |
 
-Hooks and MCP need Node.js 20+ (already required by the app). After pulling, run `npm install`, then restart Claude Code so it loads the new settings.
+Use Node.js 24 (the app's `engines`, also what Vercel builds with) and pnpm (`corepack enable` once picks the version in `packageManager`). After pulling, run `pnpm install --frozen-lockfile` (installs exactly the lock file; `pnpm install` may rewrite it), then restart Claude Code so it loads the new settings.
 
 ## `/standup`
 
@@ -76,9 +76,14 @@ Restart the session and finish any prompt to test it.
 
 ### 3. GitHub connector (Day 08)
 
-1. In a terminal: `claude mcp add --transport http github https://api.githubcopilot.com/mcp/`
-2. Restart Claude Code, run `/mcp`, pick `github` and sign in with your GitHub account.
-3. Test it: ask Claude to list open PRs in `hoanhoang-agilityio/pt-app` and comment on one.
+GitHub's MCP endpoint does not support the automatic OAuth sign-in (`/mcp` shows "does not support dynamic client registration"), so use a personal access token.
+
+1. On GitHub: Settings > Developer settings > Fine-grained tokens > Generate. Repository access: only `pt-app`; permissions: Contents read, Pull requests read and write, Issues read and write. Copy the token; never paste it into a chat or a repo file.
+2. Store it as a user environment variable `GITHUB_PAT` (Windows: System Properties > Environment Variables; macOS: `export GITHUB_PAT=...` in `~/.zshrc`), then open a new terminal.
+3. Add the server at user scope, so the repo's `.mcp.json` stays unchanged. If an earlier attempt added it, run `claude mcp remove github -s user` first.
+   `claude mcp add --scope user --transport http github https://api.githubcopilot.com/mcp/ --header "Authorization: Bearer $GITHUB_PAT"` (PowerShell: `$env:GITHUB_PAT`)
+4. `claude mcp list` should show `github: ✓ Connected`.
+5. Test it: ask Claude to list open PRs in `hoanhoang-agilityio/pt-app` and comment on one.
 
 ### 4. `@claude` in GitHub Actions (Day 09)
 

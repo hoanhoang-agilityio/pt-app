@@ -54,7 +54,7 @@ describe("classifyError", () => {
 describe("getErrorMessage / describeErrorReference", () => {
   it("returns the readable message and code line", () => {
     expect(getErrorMessage({ code: "DB_NOT_MIGRATED", detail: "" })).toBe(
-      "Database chưa được tạo bảng (chạy npm run db:setup)",
+      "Database chưa được tạo bảng (chạy pnpm db:setup)",
     );
     expect(describeErrorReference("3f9a1c2e")).toBe("Mã tham chiếu: 3f9a1c2e");
     expect(describeErrorReference(undefined)).toBeUndefined();

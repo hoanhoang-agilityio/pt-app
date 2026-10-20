@@ -4,6 +4,10 @@ const PROTECTED_BRANCHES = ["main", "master"];
 
 const ENV_FILE_PATTERN = /(^|[\s/"'=<])\.env(\.[\w.-]+)?(?=$|[\s"';|&)>])/g;
 
+// The README setup step: create the local env file from the template.
+const ENV_TEMPLATE_COPY_PATTERN =
+  /\bcp\s+(-n\s+)?(\.\/)?\.env\.example\s+(\.\/)?\.env\.local(?=$|[\s;|&)])/g;
+
 // The quoted text after -m / --message on a git commit.
 const COMMIT_MESSAGE_PATTERN =
   /(?:-m|--message)(?:=|\s+)(?:"(?:[^"\\]|\\.)*"|'[^']*')/g;
@@ -28,8 +32,19 @@ const pushTargetsProtectedBranch = (command, currentBranch) => {
   return PROTECTED_BRANCHES.includes(currentBranch);
 };
 
+// Copying the template is fine, but a plain `cp` over an existing local env
+// file would wipe its secrets, so then only `cp -n` (no clobber) is allowed.
+const stripTemplateCopies = (command, envLocalExists) =>
+  command.replace(ENV_TEMPLATE_COPY_PATTERN, (match, noClobber) =>
+    noClobber || !envLocalExists ? "" : match,
+  );
+
 // Returns the reason a Bash command is blocked, or null when it may run.
-export const findViolation = (command, currentBranch = "") => {
+export const findViolation = (
+  command,
+  currentBranch = "",
+  { envLocalExists = true } = {},
+) => {
   const isPush = /\bgit\s+push\b/.test(command);
   const isCommit = /\bgit\s+commit\b/.test(command);
 
@@ -46,7 +61,10 @@ export const findViolation = (command, currentBranch = "") => {
     return "Commits must not carry Co-Authored-By: Claude or Claude-Session lines. Remove them from the message.";
   }
   // A commit message may mention .env; only real file access counts.
-  const withoutMessages = command.replace(COMMIT_MESSAGE_PATTERN, "");
+  const withoutMessages = stripTemplateCopies(
+    command.replace(COMMIT_MESSAGE_PATTERN, ""),
+    envLocalExists,
+  );
   const envFiles = [...withoutMessages.matchAll(ENV_FILE_PATTERN)].map(
     (match) => match[0].trim(),
   );

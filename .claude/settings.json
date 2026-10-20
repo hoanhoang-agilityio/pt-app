@@ -2,14 +2,14 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
-      "Bash(npm test)",
-      "Bash(npm test:*)",
-      "Bash(npm run lint)",
-      "Bash(npm run lint:*)",
-      "Bash(npm run typecheck)",
-      "Bash(npm run format)",
-      "Bash(npx vitest:*)",
-      "Bash(npx prettier --check:*)",
+      "Bash(pnpm test)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm format)",
+      "Bash(pnpm exec vitest:*)",
+      "Bash(pnpm exec prettier --check:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -19,11 +19,11 @@
     ],
     "ask": [
       "Bash(git push:*)",
-      "Bash(npm install:*)",
-      "Bash(npm run db:push)",
-      "Bash(npm run db:setup)",
-      "Bash(npm run db:seed-demo:*)",
-      "Bash(npm run admin:create:*)"
+      "Bash(pnpm install:*)",
+      "Bash(pnpm db:push)",
+      "Bash(pnpm db:setup)",
+      "Bash(pnpm db:seed-demo:*)",
+      "Bash(pnpm admin:create:*)"
     ],
     "deny": [
       "Read(./.env)",

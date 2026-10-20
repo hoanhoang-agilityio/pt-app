@@ -1,6 +1,6 @@
 // Creates an admin account, or resets its password if the username exists.
 //
-//   npm run admin:create -- <username> <password>
+//   pnpm admin:create <username> <password>
 //
 // Without arguments it reads ADMIN_USERNAME and ADMIN_PASSWORD from the
 // environment (.env.local), which keeps the password out of shell history.

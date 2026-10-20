@@ -1,7 +1,7 @@
 // Adds a "Demo" user with this week's schedule and a few completions, for
 // trying the app locally. Re-running replaces the demo user's data.
-//   npm run db:seed-demo           create / refresh
-//   npm run db:seed-demo -- --remove
+//   pnpm db:seed-demo           create / refresh
+//   pnpm db:seed-demo --remove
 import { eq, inArray } from "drizzle-orm";
 
 import { TIME_ZONE } from "@/constants/time";

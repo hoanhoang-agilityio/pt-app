@@ -13,7 +13,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   CONFIG_INVALID: "Biến môi trường trên server không hợp lệ",
   DB_FILE_UNAVAILABLE:
     "Database đang trỏ tới file SQLite, không dùng được trên Vercel",
-  DB_NOT_MIGRATED: "Database chưa được tạo bảng (chạy npm run db:setup)",
+  DB_NOT_MIGRATED: "Database chưa được tạo bảng (chạy pnpm db:setup)",
   DB_AUTH_FAILED:
     "Server không đăng nhập được vào database (sai DATABASE_AUTH_TOKEN?)",
   DB_UNREACHABLE: "Server không kết nối được tới database",

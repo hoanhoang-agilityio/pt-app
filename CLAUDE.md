@@ -6,10 +6,10 @@ Weekly PT workout app: admins (PTs) assign daily workouts, users log in by name.
 
 ## Commands
 
-- Install: `npm install`, then `cp .env.example .env.local`, `npm run db:push`, `npm run admin:create`
-- Dev: `npm run dev` (http://localhost:3000, admin at `/admin/login`)
-- Before every PR: `npm test && npm run lint && npm run typecheck`
-- Format: `npm run format` (Prettier; a hook runs `eslint --fix` + Prettier on each file Claude edits)
+- Install (Node 24, same as Vercel via `engines`): `pnpm install`, then `cp .env.example .env.local`, `pnpm db:push`, `pnpm admin:create`
+- Dev: `pnpm dev` (http://localhost:3000, admin at `/admin/login`)
+- Before every PR: `pnpm test && pnpm lint && pnpm typecheck`
+- Format: `pnpm format` (Prettier; a hook runs `eslint --fix` + Prettier on each file Claude edits)
 - Local-only setup steps (GitHub app, notifications, exercises): `docs/claude-code-setup.md`
 
 ## Layout

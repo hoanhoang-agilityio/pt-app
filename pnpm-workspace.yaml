@@ -1,0 +1,4 @@
+# Dependencies allowed to run install scripts (pnpm blocks the rest).
+onlyBuiltDependencies:
+  - esbuild
+  - unrs-resolver

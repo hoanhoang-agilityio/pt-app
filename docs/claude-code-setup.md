@@ -4,17 +4,19 @@ The repo already carries the team setup (dojo Day 01-10, Jira epic KAN-9). This 
 
 ## What the repo gives you
 
-| Path                                 | What it does                                                                                                                    |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| `CLAUDE.md`                          | Team rules loaded into every session: commands, layout, conventions, never-do list.                                             |
-| `.claude/settings.json`              | Permissions (allow / ask / deny) and the two hooks below.                                                                       |
-| `.claude/hooks/block-forbidden.mjs`  | Before each Bash command: blocks push to `main`, force-push, `--no-verify`, Claude trailers in commits, shell access to `.env`. |
-| `.claude/hooks/format-on-edit.mjs`   | After each Edit/Write: `eslint --fix` on JS/TS files, then Prettier, using the repo's own config.                               |
-| `.claude/agents/bug-investigator.md` | Read-only subagent that reproduces a bug and reports the root cause with `file:line`.                                           |
-| `.claude/skills/review-checklist/`   | Team review checklist, used by `/code-review` style reviews and before merging.                                                 |
-| `.claude/commands/standup.md`        | `/standup [since]`: drafts a standup from your commits and KAN tickets (see below).                                             |
-| `.mcp.json`                          | Playwright MCP, so a session can open and check the app on http://localhost:3000.                                               |
-| `docs/review-false-positives.md`     | Review findings that are by design; add rows during Day 10 and the retro.                                                       |
+| Path                                       | What it does                                                                                                                    |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| `CLAUDE.md`                                | Team rules loaded into every session: commands, layout, conventions, never-do list.                                             |
+| `.claude/settings.json`                    | Permissions (allow / ask / deny) and the two hooks below.                                                                       |
+| `.claude/hooks/block-forbidden.mjs`        | Before each Bash command: blocks push to `main`, force-push, `--no-verify`, Claude trailers in commits, shell access to `.env`. |
+| `.claude/hooks/format-on-edit.mjs`         | After each Edit/Write: `eslint --fix` on JS/TS files, then Prettier, using the repo's own config.                               |
+| `.claude/agents/bug-investigator.md`       | Read-only subagent that reproduces a bug and reports the root cause with `file:line`.                                           |
+| `.claude/skills/review-checklist/`         | Team review checklist, used by `/code-review` style reviews and before merging.                                                 |
+| `.claude/commands/standup.md`              | `/standup [since]`: drafts a standup from your commits and KAN tickets (see below).                                             |
+| `.mcp.json`                                | Playwright MCP, so a session can open and check the app on http://localhost:3000.                                               |
+| `docs/review-false-positives.md`           | Review findings that are by design; add rows during Day 10 and the retro.                                                       |
+| `.github/workflows/claude.yml`             | GitHub Action: runs Claude when an issue or PR comment mentions `@claude`.                                                      |
+| `.github/workflows/claude-code-review.yml` | GitHub Action: reviews every opened or updated PR with the `code-review` plugin and posts inline comments.                      |
 
 Use Node.js 24 (the app's `engines`, also what Vercel builds with) and pnpm (`corepack enable` once picks the version in `packageManager`). After pulling, run `pnpm install --frozen-lockfile` (installs exactly the lock file; `pnpm install` may rewrite it), then restart Claude Code so it loads the new settings.
 
@@ -23,6 +25,19 @@ Use Node.js 24 (the app's `engines`, also what Vercel builds with) and pnpm (`co
 `/standup` (or `/standup last friday`) reads `git log` for commits by your git email since the given day (default: yesterday), groups them by KAN key, and, when the Atlassian connector is on, adds the status of those tickets and your In Progress tickets. It prints three short sections, **Done**, **Today** and **Blockers**, to read aloud. It only reads; it never posts anywhere. Edit `.claude/commands/standup.md` to change the format.
 
 ## Steps to do on your machine
+
+### 0. Install the command-line tools (once)
+
+Steps 3 and 4 run `claude` and `gh` in a terminal, so both must be on your `PATH`.
+
+1. Claude Code CLI. The `claude.exe` bundled with Claude Desktop lives in a versioned folder that changes on every app update, so install the standalone CLI instead:
+   - Windows (PowerShell): `irm https://claude.ai/install.ps1 | iex`
+   - macOS: `curl -fsSL https://claude.ai/install.sh | bash`
+2. GitHub CLI, used by `/install-github-app` to add the repo secret and open the workflow PR:
+   - Windows: `winget install --id GitHub.cli`
+   - macOS: `brew install gh`
+3. Open a new terminal, run `gh auth login` (GitHub.com, HTTPS, log in with a web browser) with the account that owns the repo.
+4. Check with `claude --version` and `gh auth status`.
 
 ### 1. Approve the project settings (once)
 
@@ -87,10 +102,16 @@ GitHub's MCP endpoint does not support the automatic OAuth sign-in (`/mcp` shows
 
 ### 4. `@claude` in GitHub Actions (Day 09)
 
-1. In Claude Code inside this repo, run `/install-github-app`.
-2. Follow the prompts: install the Claude GitHub App on `hoanhoang-agilityio/pt-app` and let it add the `ANTHROPIC_API_KEY` (or OAuth token) repo secret. Never paste the key into a file or chat.
-3. Merge the workflow PR it opens.
-4. Test it: comment `@claude review this PR` on a PR and evaluate the comments.
+Already done for this repo (PR #4): both workflows above are on `main` and use the `CLAUDE_CODE_OAUTH_TOKEN` repo secret. Repeat these steps only for a new repo or to rotate the secret.
+
+1. Make sure step 0 is done (`gh auth status` shows you logged in); otherwise `/install-github-app` warns that GitHub CLI is missing.
+2. In Claude Code inside this repo, run `/install-github-app`.
+3. Pick the workflows: **@Claude Code** (on mention) and **Claude Code Review** (auto review on every PR).
+4. Install the Claude GitHub App on the repo and let it add the secret: sign in with your Claude account (OAuth token) on a Pro/Max plan, or use an API key. Never paste the key or token into a file or chat.
+5. Merge the workflow PR it opens.
+6. Test it: comment `@claude review this PR` on a PR, or open an issue that mentions `@claude`, and evaluate the result in the Actions tab.
+
+Auto review runs on every push to every PR and uses your Claude quota. To limit it, uncomment the `paths:` filter in `claude-code-review.yml` or delete that file.
 
 ### 5. Hands-on exercises (no repo change needed)
 

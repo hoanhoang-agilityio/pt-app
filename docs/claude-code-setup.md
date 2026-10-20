@@ -16,7 +16,7 @@ The repo already carries the team setup (dojo Day 01-10, Jira epic KAN-9). This 
 | `.mcp.json`                          | Playwright MCP, so a session can open and check the app on http://localhost:3000.                                               |
 | `docs/review-false-positives.md`     | Review findings that are by design; add rows during Day 10 and the retro.                                                       |
 
-Hooks and MCP need Node.js 20+ (already required by the app). After pulling, run `npm install`, then restart Claude Code so it loads the new settings.
+Use Node.js 24 (the app's `engines`, also what Vercel builds with); the hooks and MCP run on it too. After pulling, run `npm install`, then restart Claude Code so it loads the new settings.
 
 ## `/standup`
 

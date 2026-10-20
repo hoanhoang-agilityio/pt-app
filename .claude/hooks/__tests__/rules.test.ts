@@ -33,4 +33,27 @@ describe("findViolation", () => {
   ])("blocks %s", (command, branch) => {
     expect(findViolation(command, branch)).toEqual(expect.any(String));
   });
+
+  describe("copying the env template (README setup)", () => {
+    const fresh = { envLocalExists: false };
+    const configured = { envLocalExists: true };
+
+    it.each([
+      ["cp .env.example .env.local", fresh],
+      ["cp ./.env.example ./.env.local && npm run db:push", fresh],
+      ["cp -n .env.example .env.local", configured],
+    ])("allows %s", (command, options) => {
+      expect(findViolation(command, "kan-15", options)).toBeNull();
+    });
+
+    it.each([
+      ["cp .env.example .env.local", configured],
+      ["cp .env.example .env.local && cat .env.local", fresh],
+      ["cp .env.example .env.production", fresh],
+    ])("blocks %s", (command, options) => {
+      expect(findViolation(command, "kan-15", options)).toEqual(
+        expect.any(String),
+      );
+    });
+  });
 });

@@ -9,7 +9,8 @@ Weekly PT workout app: admins (PTs) assign daily workouts, users log in by name.
 - Install: `npm install`, then `cp .env.example .env.local`, `npm run db:push`, `npm run admin:create`
 - Dev: `npm run dev` (http://localhost:3000, admin at `/admin/login`)
 - Before every PR: `npm test && npm run lint && npm run typecheck`
-- Format: `npm run format` (Prettier; a hook also formats each file Claude edits)
+- Format: `npm run format` (Prettier; a hook runs `eslint --fix` + Prettier on each file Claude edits)
+- Local-only setup steps (GitHub app, notifications, exercises): `docs/claude-code-setup.md`
 
 ## Layout
 

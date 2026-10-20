@@ -44,3 +44,7 @@ next-env.d.ts
 # local database
 *.db
 *.db-journal
+
+# claude code (personal settings and parallel worktrees)
+.claude/settings.local.json
+.claude/worktrees/

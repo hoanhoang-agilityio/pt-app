@@ -1,0 +1,57 @@
+"use client";
+
+import { ArrowRight } from "lucide-react";
+
+import { SubmitButton } from "@/components/common/SubmitButton";
+import { BUTTON_PRIMARY, FIELD_ERROR, INPUT, LABEL } from "@/constants/styles";
+import { useLoginForm } from "@/features/auth/hooks/use-login-form";
+import { useRememberedName } from "@/features/auth/hooks/use-remembered-name";
+import { loginUserAction } from "@/features/auth/services/auth-actions";
+import { describeErrorReference } from "@/utils/errors";
+
+export const UserLoginForm = () => {
+  const { formAction, errorMessage, errorReference, values } =
+    useLoginForm(loginUserAction);
+  const rememberedName = useRememberedName();
+  const defaultName = values.name ?? rememberedName;
+
+  return (
+    <form action={formAction} className="space-y-4">
+      <div>
+        <label htmlFor="name" className={LABEL}>
+          Tên của bạn
+        </label>
+        <input
+          // Remounts once the remembered name is read after hydration.
+          key={defaultName}
+          id="name"
+          name="name"
+          defaultValue={defaultName}
+          placeholder="VD: Nguyễn Văn An"
+          autoComplete="name"
+          autoCapitalize="words"
+          autoCorrect="off"
+          enterKeyHint="go"
+          required
+          aria-invalid={Boolean(errorMessage)}
+          aria-describedby={errorMessage ? "name-error" : undefined}
+          className={INPUT}
+        />
+        {errorMessage && (
+          <p id="name-error" role="alert" className={FIELD_ERROR}>
+            {errorMessage}
+            {errorReference && (
+              <span className="mt-0.5 block font-mono text-xs opacity-80">
+                {describeErrorReference(errorReference)}
+              </span>
+            )}
+          </p>
+        )}
+      </div>
+      <SubmitButton className={`${BUTTON_PRIMARY} w-full`}>
+        Vào tập
+        <ArrowRight className="size-5" aria-hidden />
+      </SubmitButton>
+    </form>
+  );
+};

@@ -13,7 +13,7 @@ The repo already carries the team setup (dojo Day 01-10, Jira epic KAN-9). This 
 | `.claude/agents/bug-investigator.md`       | Read-only subagent that reproduces a bug and reports the root cause with `file:line`.                                           |
 | `.claude/skills/review-checklist/`         | Team review checklist, used by `/code-review` style reviews and before merging.                                                 |
 | `.claude/commands/standup.md`              | `/standup [since]`: drafts a standup from your commits and KAN tickets (see below).                                             |
-| `.mcp.json`                                | Playwright MCP, so a session can open and check the app on http://localhost:3000.                                               |
+| `.mcp.json`                                | Playwright MCP to open and check the app on http://localhost:3000; output goes to the ignored `.playwright-mcp/`.               |
 | `docs/review-false-positives.md`           | Review findings that are by design; add rows during Day 10 and the retro.                                                       |
 | `.github/workflows/claude.yml`             | GitHub Action: runs Claude when an issue or PR comment mentions `@claude`.                                                      |
 | `.github/workflows/claude-code-review.yml` | GitHub Action: reviews every opened or updated PR with the `code-review` plugin and posts inline comments.                      |

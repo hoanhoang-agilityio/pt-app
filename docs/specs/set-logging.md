@@ -150,6 +150,8 @@ Each Story was read as a developer with no context (prompt E); every question we
 | D8  | Personal bests are computed on read, not stored.                                                                                |
 | D9  | The copy-week guard checks logged sets only (completions alone do not block it).                                                |
 
+D10 (2026-10-22, from the Jira auto-analysis, verified in code): `PRAGMA foreign_keys` is never set and every delete path removes child rows by hand, so `onDelete: cascade` is not relied on. `deleteExerciseAction`, `copyWeekAction` and `deleteMemberAction` delete `exercise_sets` explicitly, in the same transaction and before the parent rows (KAN-25).
+
 ### KAN-22 (E1-E8)
 
 | #   | Decision                                                                                             |

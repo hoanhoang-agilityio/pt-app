@@ -27,6 +27,14 @@ Weekly PT workout app: admins (PTs) assign daily workouts, users log in by name.
 - Errors go through `services/action-errors.ts`: production shows only a generic message plus a reference id.
 - UI copy is Vietnamese; code, comments, commits, PRs and Jira tickets are English.
 - One KAN ticket per branch, key in the branch name and commit subject, e.g. `fix(KAN-14): ...`.
+- CI (`.github/workflows/ci.yml`) runs test, lint and typecheck on every PR; keep it green.
+
+## Capstone workflow
+
+- Specs live in `docs/specs/<feature>.md` (decisions, open questions, test matrix); the Jira ticket links to it.
+- Ask every question as a comment on the Jira ticket, never in chat; update the ticket and spec when it is answered.
+- One Story per worktree session and per PR, plan mode first. Run `/grill-me` before planning a feature, file tickets with `actionable-ticket`.
+- Schema changes must be additive (new tables, nullable columns): the Vercel build runs `drizzle-kit push` against production.
 
 ## Never do
 

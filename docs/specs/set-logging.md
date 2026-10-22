@@ -40,11 +40,11 @@ Rounds 1 and 2 answered 2026-10-22 by Hoan: all recommendations accepted.
 
 ## Open questions for the client
 
-These need the client, not the team. Each Story notes which one it depends on.
+Answered by the client on 2026-10-22 (comment on KAN-20). The assumptions stand, plus one addition in OQ1.
 
-- OQ1: When the PT deletes an exercise or changes its YouTube link after the trainee logged sets, should the history disappear (today's cascade) or be kept? Assumption until answered: deleting the exercise deletes its sets; a new link starts a new history.
-- OQ2: Should a set logged as bodyweight (no kg) ever count as a personal best? Assumption: only sets with a weight count.
-- OQ3: Is "Tiến bộ" on the Summary tab enough for the PT, or does the client also want it on the dashboard soon? Assumption: Summary tab only (Q9).
+- OQ1: When the PT deletes an exercise or changes its YouTube link after the trainee logged sets, should the history disappear (today's cascade) or be kept? **Answer:** deleting the exercise deletes its sets; a new link starts a new history. Before deleting an exercise with logged sets, the PT's confirm says the sets go too (KAN-33).
+- OQ2: Should a set logged as bodyweight (no kg) ever count as a personal best? **Answer:** no, only sets with a weight count in v1.
+- OQ3: Is "Tiến bộ" on the Summary tab enough for the PT, or does the client also want it on the dashboard soon? **Answer:** the Summary tab is enough; personal-best entries in the dashboard activity list (F3) cover the dashboard. A tile can be a later story.
 
 ## Out of scope (v1)
 

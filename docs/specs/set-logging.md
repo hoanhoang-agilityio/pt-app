@@ -114,6 +114,25 @@ Depends on A. As a PT, I want to see what each trainee lifted and who is getting
 
 Depends on B. Test matrix in this file (one row per acceptance criterion, level unit or e2e). Add `@playwright/test` with an e2e run for the trainee flow (log sets, hint, record badge) against a seeded local DB, and run it in CI if it stays under 3 minutes.
 
+## Sub-tasks
+
+Each Story is split by layer; one branch and one PR per sub-task (`feat/KAN-<sub-task>-<short-name>`).
+
+| Parent | Sub-task                                                     | Layer | Needs          |
+| ------ | ------------------------------------------------------------ | ----- | -------------- |
+| KAN-21 | KAN-25 Add `exercise_sets` table                             | BE    | -              |
+| KAN-21 | KAN-26 Pure utils: best set, personal best, previous session | BE    | KAN-25         |
+| KAN-21 | KAN-27 Save/delete set actions, linked to completion         | BE    | KAN-25         |
+| KAN-21 | KAN-28 Copy week refuses a logged target week                | BE    | KAN-25         |
+| KAN-22 | KAN-29 Load sets and last-session hints with the week        | BE    | KAN-21         |
+| KAN-22 | KAN-30 `SetLogger` component                                 | FE    | KAN-21         |
+| KAN-22 | KAN-31 Last-time hint and "Kỷ lục mới" badge                 | FE    | KAN-29, KAN-30 |
+| KAN-23 | KAN-32 Admin queries: sets, progress, record activity        | BE    | KAN-21         |
+| KAN-23 | KAN-33 Member page: read-only sets                           | FE    | KAN-32         |
+| KAN-23 | KAN-34 Summary "Tiến bộ" list and activity entry             | FE    | KAN-32         |
+| KAN-24 | KAN-35 Test matrix                                           | QA    | -              |
+| KAN-24 | KAN-36 Playwright e2e setup and trainee spec                 | QA    | KAN-22         |
+
 ## Test matrix
 
 To be filled by KAN-24.

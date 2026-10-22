@@ -21,23 +21,22 @@ Trainees record what they actually lifted (weight and reps per set) while they t
 
 Rounds 1 and 2 answered 2026-10-22 by Hoan: all recommendations accepted.
 
-| #   | Question                                               | Recommended                                                                                             | Decision |
-| --- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | -------- |
-| Q1  | Log per set, or one line per exercise?                 | Per set: weight + reps for each set; number of rows prefilled from `sets`                               | Accepted |
-| Q2  | Units?                                                 | kg only, steps of 0.5 kg                                                                                | Accepted |
-| Q3  | Bodyweight and timed exercises (`30s`)?                | Weight optional (empty = bodyweight); reps is a whole number; timed exercises have no set logging in v1 | Accepted |
-| Q4  | How does logging relate to "Đánh dấu đã tập"?          | Optional; saving the first set also marks the exercise done; marking done without sets stays possible   | Accepted |
-| Q5  | Un-marking a done exercise: what happens to its sets?  | Sets are kept; un-mark only clears the check                                                            | Accepted |
-| Q6  | How do we know it is "the same exercise" across weeks? | Same user + same `youtubeId`                                                                            | Accepted |
-| Q7  | Which days can be logged or edited?                    | Same rule as completion: today and past days, never future                                              | Accepted |
-
-| Q8 | What does "getting stronger" mean? | Per exercise, the best set is the heaviest weight (tie: more reps); progress = latest best vs the previous best | Accepted |
-| Q9 | Where does the PT see it? | Member page: logged sets under each exercise; Summary tab: a per-exercise "Tiến bộ" list (latest best vs previous best). Not on the dashboard in v1 | Accepted |
-| Q10 | How do trainees "feel proud"? | A "Kỷ lục mới" badge on the exercise card when a saved set beats the previous best; also shown in the admin recent activity. No push notification | Accepted |
-| Q11 | Do we show last time's numbers? | Yes: each set row shows the same set from the latest previous session as a hint ("Lần trước 40 kg × 10"); one tap copies it | Accepted |
-| Q12 | Copy week onto a week that already has logged sets? | Refuse with a message while the target week has logged sets (today copy silently deletes them) | Accepted |
-| Q13 | Can the PT edit a trainee's sets? | No, read-only for the PT in v1 | Accepted |
-| Q14 | Can the trainee add or remove set rows? | Yes: add rows beyond the PT's `sets`, delete own rows; at most 10 rows per exercise | Accepted |
+| #   | Question                                               | Recommended                                                                                                                                         | Decision |
+| --- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Q1  | Log per set, or one line per exercise?                 | Per set: weight + reps for each set; number of rows prefilled from `sets`                                                                           | Accepted |
+| Q2  | Units?                                                 | kg only, steps of 0.5 kg                                                                                                                            | Accepted |
+| Q3  | Bodyweight and timed exercises (`30s`)?                | Weight optional (empty = bodyweight); reps is a whole number; timed exercises have no set logging in v1                                             | Accepted |
+| Q4  | How does logging relate to "Đánh dấu đã tập"?          | Optional; saving the first set also marks the exercise done; marking done without sets stays possible                                               | Accepted |
+| Q5  | Un-marking a done exercise: what happens to its sets?  | Sets are kept; un-mark only clears the check                                                                                                        | Accepted |
+| Q6  | How do we know it is "the same exercise" across weeks? | Same user + same `youtubeId`                                                                                                                        | Accepted |
+| Q7  | Which days can be logged or edited?                    | Same rule as completion: today and past days, never future                                                                                          | Accepted |
+| Q8  | What does "getting stronger" mean?                     | Per exercise, the best set is the heaviest weight (tie: more reps); progress = latest best vs the previous best                                     | Accepted |
+| Q9  | Where does the PT see it?                              | Member page: logged sets under each exercise; Summary tab: a per-exercise "Tiến bộ" list (latest best vs previous best). Not on the dashboard in v1 | Accepted |
+| Q10 | How do trainees "feel proud"?                          | A "Kỷ lục mới" badge on the exercise card when a saved set beats the previous best; also shown in the admin recent activity. No push notification   | Accepted |
+| Q11 | Do we show last time's numbers?                        | Yes: each set row shows the same set from the latest previous session as a hint ("Lần trước 40 kg × 10"); one tap copies it                         | Accepted |
+| Q12 | Copy week onto a week that already has logged sets?    | Refuse with a message while the target week has logged sets (today copy silently deletes them)                                                      | Accepted |
+| Q13 | Can the PT edit a trainee's sets?                      | No, read-only for the PT in v1                                                                                                                      | Accepted |
+| Q14 | Can the trainee add or remove set rows?                | Yes: add rows beyond the PT's `sets`, delete own rows; at most 10 rows per exercise                                                                 | Accepted |
 
 ## Open questions for the client
 
@@ -68,8 +67,8 @@ Links this spec. Children: A, B, C, QA.
 
 As a trainee, I want my sets saved against the exercise, so that the app can show last time's numbers and my records.
 
-- Schema (additive): new table `exercise_sets` (id, exercise_id FK cascade, user_id FK cascade, position, weight_kg real nullable, reps integer, created_at, updated_at).
-- Server actions `saveExerciseSetsAction` / `deleteExerciseSetAction`: `requireUser()` first, Zod (weight 0-500 step 0.5 or empty, reps 1-100 integer, at most 10 rows), only the trainee's own exercises, refuse future dates (Asia/Ho_Chi_Minh). Saving the first set inserts the completion if missing (Q4); un-marking keeps sets (Q5).
+- Schema (additive): new table `exercise_sets` (id, exercise_id FK cascade, user_id FK cascade, position 0-based, weight_kg real nullable, reps integer, created_at; no updated_at, D4).
+- Server action `saveExerciseSetsAction(exerciseId, sets[])`, replace-on-save (D1): `requireUser()` first, Zod (weight empty or 0.5-500 step 0.5, reps 1-100 integer, at most 10 rows; D3), only the trainee's own exercises, refuse future dates (Asia/Ho_Chi_Minh). Saving the first set inserts the completion if missing (Q4); un-marking keeps sets (Q5).
 - Pure utils with Vitest tests: `getBestSet` (heaviest, tie on reps; weightless sets ignored, OQ2), `isPersonalBest`, `getPreviousSession` (same user + `youtubeId`, latest earlier date, Q6).
 - `copyWeekAction` refuses when the target week has logged sets, with a Vietnamese error message (Q12).
   Acceptance criteria:
@@ -132,6 +131,48 @@ Each Story is split by layer; one branch and one PR per sub-task (`feat/KAN-<sub
 | KAN-23 | KAN-34 Summary "Tiến bộ" list and activity entry             | FE    | KAN-32         |
 | KAN-24 | KAN-35 Test matrix                                           | QA    | -              |
 | KAN-24 | KAN-36 Playwright e2e setup and trainee spec                 | QA    | KAN-22         |
+
+## Zero-questions test decisions
+
+Each Story was read as a developer with no context (prompt E); every question went to Jira with a suggested answer. Hoan (BA) accepted all of them on 2026-10-22. They override the Story summaries above where they differ.
+
+### KAN-21 (D1-D9)
+
+| #   | Decision                                                                                                                        |
+| --- | ------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Replace-on-save: one `saveExerciseSetsAction(exerciseId, sets[])` deletes and re-inserts the exercise's rows; no delete action. |
+| D2  | Saving an empty list clears the sets and keeps the completion.                                                                  |
+| D3  | Weight is empty (bodyweight) or 0.5-500 in steps of 0.5; 0 is rejected.                                                         |
+| D4  | No `updated_at` column; `position` is 0-based.                                                                                  |
+| D5  | Wrapped in `withResultErrorHandling`; returns `{ status, personalBest }`.                                                       |
+| D6  | Personal best = strictly better than every earlier set of that user + `youtubeId` before that date; a tie is not a record.      |
+| D7  | "Previous session" means strictly earlier dates only; the same day never counts.                                                |
+| D8  | Personal bests are computed on read, not stored.                                                                                |
+| D9  | The copy-week guard checks logged sets only (completions alone do not block it).                                                |
+
+### KAN-22 (E1-E8)
+
+| #   | Decision                                                                                             |
+| --- | ---------------------------------------------------------------------------------------------------- |
+| E1  | When `sets` is null, the logger starts with 1 row.                                                   |
+| E2  | The reps input placeholder is the PT's target `reps`.                                                |
+| E3  | One "Lưu" button saves all rows.                                                                     |
+| E4  | A pure `isTimedReps` util detects timed exercises (`s`, `sec`, `giây`, `p`, `ph`, `phút`, `'`, `"`). |
+| E5  | The admin preview shows the logger read-only.                                                        |
+| E6  | The "Kỷ lục mới" badge is computed on read in KAN-29.                                                |
+| E7  | Hints match by row position (row n shows the previous session's set n).                              |
+| E8  | Toasts follow `useExerciseCompletion` (success and error).                                           |
+
+### KAN-23 (F1-F6)
+
+| #   | Decision                                                                                             |
+| --- | ---------------------------------------------------------------------------------------------------- |
+| F1  | Member page: a read-only "Đã ghi:" line inside `ExerciseEditorItem`.                                 |
+| F2  | `ActivityItem` gets a `kind` field; list keys are `${kind}-${id}`.                                   |
+| F3  | Personal-best entries also show in the `/admin` dashboard activity list; no new tile.                |
+| F4  | "Tiến bộ" compares the selected week's best with the best before it.                                 |
+| F5  | When the title changed across weeks, show the latest title.                                          |
+| F6  | Bodyweight-only exercises are excluded from "Tiến bộ"; an exercise with one session shows "Lần đầu". |
 
 ## Test matrix
 

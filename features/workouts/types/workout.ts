@@ -1,3 +1,5 @@
+import type { LoggedSet } from "@/features/workouts/utils/sets";
+
 export interface Exercise {
   id: number;
   title: string;
@@ -27,6 +29,21 @@ export interface ScheduleDay {
   title: string;
   note: string;
   exercises: Exercise[];
+}
+
+// An exercise with the trainee's logged sets (KAN-29), for the pages that show
+// the set logger: /workouts, the admin preview and the admin member page.
+export interface ExerciseWithSets extends Exercise {
+  // This exercise's sets, ordered by position (index = position).
+  loggedSets: LoggedSet[];
+  // The previous session's sets; row n's hint is previousSets[n] (E7, D7).
+  previousSets: LoggedSet[];
+  // "Kỷ lục mới", computed on read (E6, D6, D11).
+  isPersonalBest: boolean;
+}
+
+export interface ScheduleDayWithSets extends Omit<ScheduleDay, "exercises"> {
+  exercises: ExerciseWithSets[];
 }
 
 export type MoveDirection = "up" | "down";

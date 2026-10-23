@@ -20,6 +20,7 @@ import {
   type SetInput,
   type SetSession,
 } from "@/features/workouts/utils/sets";
+import { groupSetSessions } from "@/features/workouts/utils/week-sets";
 import { withResultErrorHandling } from "@/services/action-errors";
 import { requireUser } from "@/services/auth-guard";
 import type { SaveSetsResult } from "@/types/error";
@@ -36,7 +37,10 @@ const getEarlierSessions = async (
   const rows = await db
     .select({
       exerciseId: exerciseSets.exerciseId,
+      userId: exerciseSets.userId,
+      youtubeId: exercises.youtubeId,
       date: workoutDays.date,
+      position: exerciseSets.position,
       weightKg: exerciseSets.weightKg,
       reps: exerciseSets.reps,
     })
@@ -52,22 +56,7 @@ const getEarlierSessions = async (
       ),
     );
 
-  const sessions = new Map<number, SetSession>();
-
-  for (const row of rows) {
-    const session = sessions.get(row.exerciseId) ?? {
-      userId,
-      youtubeId,
-      date: row.date,
-      exerciseId: row.exerciseId,
-      sets: [],
-    };
-
-    session.sets.push({ weightKg: row.weightKg, reps: row.reps });
-    sessions.set(row.exerciseId, session);
-  }
-
-  return [...sessions.values()];
+  return groupSetSessions(rows);
 };
 
 // Replaces the exercise's logged sets with `sets` (D1). Saving at least one

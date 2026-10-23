@@ -187,6 +187,7 @@ Levels: **unit** = Vitest on pure utils (`pnpm test`), **e2e** = Playwright agai
 
 - `features/workouts/utils/__tests__/sets.test.ts`: `exerciseSetsSchema`, `getBestSet`, `isPersonalBest`, `getPreviousSession`
 - `features/workouts/utils/__tests__/exercise.test.ts`: `isTimedReps`
+- `features/workouts/utils/__tests__/week-sets.test.ts`: `groupSetSessions`, `attachSetsToWeek` (KAN-29 mapping helper)
 - `features/members/utils/__tests__/progress.test.ts`: "Tiến bộ" progress rows
 - `e2e/trainee-sets.spec.ts`: trainee flow (KAN-36)
 
@@ -218,21 +219,22 @@ Levels: **unit** = Vitest on pure utils (`pnpm test`), **e2e** = Playwright agai
 
 ### KAN-22 Trainee logs sets while training
 
-| ID  | Criterion (Given / When / Then)                                                                               | Source       | Level  | Target                             | Owner          |
-| --- | ------------------------------------------------------------------------------------------------------------- | ------------ | ------ | ---------------------------------- | -------------- |
-| B1  | 3 sets and a previous session / open today / 3 rows, row n hints "Lần trước 40 kg × 10" from set n            | AC1, Q11, E7 | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-31, KAN-36 |
-| B2  | A hint / tap it and press "Lưu" / set stored, success toast, card shows "Đã tập xong"                         | AC2, E3, E8  | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-31, KAN-36 |
-| B3  | A set heavier than my previous best / save / "Kỷ lục mới" on that card                                        | AC3, Q10, E6 | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-31, KAN-36 |
-| B4  | A tie with the previous best, or a first-ever weighted set / save / no badge                                  | D6, D11      | manual | `UserExerciseItem`                 | KAN-29, KAN-31 |
-| B5  | A timed exercise (`30s`) / open its card / no set rows                                                        | AC4, Q3      | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
-| B6  | A future day / open its card / no set rows (the server also refuses, A2)                                      | AC4, Q7      | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
-| B7  | `isTimedReps` / `30s`, `45 sec`, `30 giây`, `1p`, `2ph`, `1 phút`, `1'`, `30"` true; `12`, `8-12`, `10` false | E4           | unit   | `exercise.test.ts` (`isTimedReps`) | KAN-29         |
-| B8  | `sets` null / open the card / 1 row; `sets` 4 / 4 rows                                                        | E1, Q1       | manual | `SetLogger`                        | KAN-30         |
-| B9  | 9 rows / add a row / 10 rows, then add is disabled; delete a row / 9 rows                                     | Q14          | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
-| B10 | A row / look at the reps input / placeholder is the PT's target `reps`                                        | E2           | manual | `SetLogger`                        | KAN-30         |
-| B11 | A save fails (e.g. weight 40.25 bypassing the input) / press "Lưu" / error toast, nothing changes             | E8, D5       | manual | `use-exercise-sets.ts`             | KAN-30         |
-| B12 | Viewport 390 px (iPhone 12) / open the day / no horizontal scroll (`scrollWidth <= innerWidth`)               | AC5          | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
-| B13 | Admin opens `/admin/users/[id]/preview` / the logger shows read-only                                          | E5           | manual | `/preview`                         | KAN-30         |
+| ID  | Criterion (Given / When / Then)                                                                                                                     | Source              | Level  | Target                             | Owner          |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------ | ---------------------------------- | -------------- |
+| B1  | 3 sets and a previous session / open today / 3 rows, row n hints "Lần trước 40 kg × 10" from set n                                                  | AC1, Q11, E7        | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-31, KAN-36 |
+| B2  | A hint / tap it and press "Lưu" / set stored, success toast, card shows "Đã tập xong"                                                               | AC2, E3, E8         | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-31, KAN-36 |
+| B3  | A set heavier than my previous best / save / "Kỷ lục mới" on that card                                                                              | AC3, Q10, E6        | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-31, KAN-36 |
+| B4  | A tie with the previous best, or a first-ever weighted set / save / no badge                                                                        | D6, D11             | manual | `UserExerciseItem`                 | KAN-29, KAN-31 |
+| B5  | A timed exercise (`30s`) / open its card / no set rows                                                                                              | AC4, Q3             | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
+| B6  | A future day / open its card / no set rows (the server also refuses, A2)                                                                            | AC4, Q7             | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
+| B7  | `isTimedReps` / `30s`, `45 sec`, `30 giây`, `1p`, `2ph`, `1 phút`, `1'`, `30"` true; `12`, `8-12`, `10` false                                       | E4                  | unit   | `exercise.test.ts` (`isTimedReps`) | KAN-29         |
+| B8  | `sets` null / open the card / 1 row; `sets` 4 / 4 rows                                                                                              | E1, Q1              | manual | `SetLogger`                        | KAN-30         |
+| B9  | 9 rows / add a row / 10 rows, then add is disabled; delete a row / 9 rows                                                                           | Q14                 | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
+| B10 | A row / look at the reps input / placeholder is the PT's target `reps`                                                                              | E2                  | manual | `SetLogger`                        | KAN-30         |
+| B11 | A save fails (e.g. weight 40.25 bypassing the input) / press "Lưu" / error toast, nothing changes                                                   | E8, D5              | manual | `use-exercise-sets.ts`             | KAN-30         |
+| B12 | Viewport 390 px (iPhone 12) / open the day / no horizontal scroll (`scrollWidth <= innerWidth`)                                                     | AC5                 | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
+| B13 | Admin opens `/admin/users/[id]/preview` / the logger shows read-only                                                                                | E5                  | manual | `/preview`                         | KAN-30         |
+| B14 | A week of exercises and the user's set history / `attachSetsToWeek` / sets by position, previous-session hints, record flag (tie, first-ever false) | E6, E7, D6, D7, D11 | unit   | `week-sets.test.ts`                | KAN-29         |
 
 ### KAN-23 PT sees logged sets and progress
 

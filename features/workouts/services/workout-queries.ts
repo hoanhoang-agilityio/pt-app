@@ -1,10 +1,23 @@
 import "server-only";
 
-import { and, asc, between, eq, inArray } from "drizzle-orm";
+import { and, asc, between, eq, inArray, lte } from "drizzle-orm";
 
 import { db } from "@/db";
-import { exerciseCompletions, exercises, workoutDays } from "@/db/schema";
-import type { Exercise, ScheduleDay } from "@/features/workouts/types/workout";
+import {
+  exerciseCompletions,
+  exercises,
+  exerciseSets,
+  workoutDays,
+} from "@/db/schema";
+import type {
+  Exercise,
+  ScheduleDay,
+  ScheduleDayWithSets,
+} from "@/features/workouts/types/workout";
+import {
+  attachSetsToWeek,
+  groupSetSessions,
+} from "@/features/workouts/utils/week-sets";
 import { getWeekDates } from "@/utils/week";
 
 const toExercise = (
@@ -65,4 +78,44 @@ export const getWeekSchedule = async (
         : [],
     };
   });
+};
+
+// getWeekSchedule plus each exercise's logged sets, last-session hints and
+// record flag (KAN-29). One extra query covers both this week's sets and all
+// earlier sessions of the week's links, so there is no query per exercise.
+export const getWeekScheduleWithSets = async (
+  userId: number,
+  weekStart: string,
+): Promise<ScheduleDayWithSets[]> => {
+  const days = await getWeekSchedule(userId, weekStart);
+  const youtubeIds = [
+    ...new Set(
+      days.flatMap((day) => day.exercises.map((item) => item.youtubeId)),
+    ),
+  ];
+  const rows = youtubeIds.length
+    ? await db
+        .select({
+          exerciseId: exerciseSets.exerciseId,
+          userId: exerciseSets.userId,
+          youtubeId: exercises.youtubeId,
+          date: workoutDays.date,
+          position: exerciseSets.position,
+          weightKg: exerciseSets.weightKg,
+          reps: exerciseSets.reps,
+        })
+        .from(exerciseSets)
+        .innerJoin(exercises, eq(exercises.id, exerciseSets.exerciseId))
+        .innerJoin(workoutDays, eq(workoutDays.id, exercises.dayId))
+        .where(
+          and(
+            eq(exerciseSets.userId, userId),
+            eq(workoutDays.userId, userId),
+            inArray(exercises.youtubeId, youtubeIds),
+            lte(workoutDays.date, days[days.length - 1].date),
+          ),
+        )
+    : [];
+
+  return attachSetsToWeek(days, userId, groupSetSessions(rows));
 };

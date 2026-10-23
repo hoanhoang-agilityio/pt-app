@@ -32,5 +32,6 @@ export const describeRepsLabel = (setNumber: number) =>
 export const describeDeleteLabel = (setNumber: number) =>
   `Xóa hiệp ${setNumber}`;
 
+// Starts with the visible text so voice control can match it (WCAG 2.5.3).
 export const describeHintLabel = (setNumber: number, text: string) =>
-  `Dùng số lần trước cho hiệp ${setNumber}: ${text}`;
+  `${SET_LOGGER_COPY.HINT_PREFIX} ${text}, dùng cho hiệp ${setNumber}`;

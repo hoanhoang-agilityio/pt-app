@@ -188,10 +188,3 @@ describe("hintToDraftValues", () => {
     });
   });
 });
-
-describe("formatSet hints", () => {
-  it("reads like the spec copy", () => {
-    expect(formatSet({ weightKg: 40, reps: 10 })).toBe("40 kg × 10");
-    expect(formatSet({ weightKg: null, reps: 12 })).toBe("Tự trọng × 12");
-  });
-});

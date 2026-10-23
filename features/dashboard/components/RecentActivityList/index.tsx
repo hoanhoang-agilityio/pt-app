@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CARD } from "@/constants/styles";
 import { TIME_ZONE } from "@/constants/time";
 import type { ActivityItem } from "@/features/dashboard/types/dashboard";
+import { formatSet } from "@/features/workouts/utils/set-logger";
 import { getAdminUserPath } from "@/utils/routes";
 import { formatClockTime, formatRelativeTime } from "@/utils/time";
 import { formatFullDay } from "@/utils/week";
@@ -38,10 +39,9 @@ export const RecentActivityList = ({
           key={`${item.kind}-${item.id}`}
           className="flex items-start gap-3 px-4 py-3"
         >
-          {/* Minimal record marker; KAN-34 owns the final wording. */}
           {item.kind === "personalBest" ? (
             <Trophy
-              className="mt-0.5 size-5 shrink-0 text-success"
+              className="mt-0.5 size-5 shrink-0 text-warning"
               aria-hidden
             />
           ) : (
@@ -67,7 +67,7 @@ export const RecentActivityList = ({
             </p>
             <p className="mt-0.5 text-xs text-muted">
               {item.kind === "personalBest" &&
-                `Kỷ lục mới ${item.best.weightKg} kg × ${item.best.reps} · `}
+                `Kỷ lục mới: ${formatSet(item.best)} (trước đó ${formatSet(item.previousBest)}) · `}
               Lịch {formatFullDay(item.date)} · lúc{" "}
               {formatClockTime(item.occurredAt, TIME_ZONE)}
             </p>

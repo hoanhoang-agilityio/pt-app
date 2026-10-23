@@ -7,6 +7,8 @@ import { WeekSummary } from "@/components/layout/WeekSummary";
 import { ROUTES } from "@/constants/routes";
 import { PAGE_CONTAINER } from "@/constants/styles";
 import { TIME_ZONE } from "@/constants/time";
+import { ExerciseProgressList } from "@/features/members/components/ExerciseProgressList";
+import { getExerciseProgress } from "@/features/members/services/progress-queries";
 import { WEIGHT_CHART_WEEKS } from "@/features/nutrition/constants/weight";
 import {
   getTodayWeight,
@@ -45,12 +47,13 @@ const AdminSummaryPage = async ({
     { week: readSearchParam(query.week), day: readSearchParam(query.day) },
     today,
   );
-  const [workoutDays, nutritionDays, weightWeeks, todayWeight] =
+  const [workoutDays, nutritionDays, weightWeeks, todayWeight, progressRows] =
     await Promise.all([
       getWeekSchedule(user.id, schedule.weekStart),
       getNutritionWeek(user.id, schedule.weekStart),
       getWeightTrend(user.id, schedule.weekStart, WEIGHT_CHART_WEEKS),
       getTodayWeight(user.id, today),
+      getExerciseProgress(user.id, schedule.weekStart),
     ]);
 
   return (
@@ -80,6 +83,7 @@ const AdminSummaryPage = async ({
           weightWeeks={weightWeeks}
           canLogWeight={false}
           todayWeight={todayWeight}
+          progress={<ExerciseProgressList rows={progressRows} />}
         />
       </main>
     </>

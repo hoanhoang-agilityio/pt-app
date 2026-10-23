@@ -34,7 +34,10 @@ export const RecentActivityList = ({
   return (
     <ol className={`${CARD} divide-y divide-line overflow-hidden`}>
       {items.map((item) => (
-        <li key={item.id} className="flex items-start gap-3 px-4 py-3">
+        <li
+          key={`${item.kind}-${item.id}`}
+          className="flex items-start gap-3 px-4 py-3"
+        >
           <CheckCircle2
             className="mt-0.5 size-5 shrink-0 text-success"
             aria-hidden
@@ -56,11 +59,11 @@ export const RecentActivityList = ({
             </p>
             <p className="mt-0.5 text-xs text-muted">
               Lịch {formatFullDay(item.date)} · lúc{" "}
-              {formatClockTime(item.completedAt, TIME_ZONE)}
+              {formatClockTime(item.occurredAt, TIME_ZONE)}
             </p>
           </div>
           <span className="shrink-0 text-xs text-muted">
-            {formatRelativeTime(item.completedAt, TIME_ZONE, now)}
+            {formatRelativeTime(item.occurredAt, TIME_ZONE, now)}
           </span>
         </li>
       ))}

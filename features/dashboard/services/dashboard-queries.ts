@@ -1,11 +1,23 @@
 import "server-only";
 
-import { asc, between, count, countDistinct, desc, eq, max } from "drizzle-orm";
+import {
+  and,
+  asc,
+  between,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  inArray,
+  lte,
+  max,
+} from "drizzle-orm";
 
 import { db } from "@/db";
 import {
   exerciseCompletions,
   exercises,
+  exerciseSets,
   foodEntries,
   users,
   workoutDays,
@@ -14,6 +26,12 @@ import type {
   ActivityItem,
   MemberProgress,
 } from "@/features/dashboard/types/dashboard";
+import {
+  type ActivitySession,
+  findPersonalBests,
+  mergeActivity,
+} from "@/features/dashboard/utils/activity";
+import { groupSetRows } from "@/features/workouts/utils/set-rows";
 import { getWeekDates } from "@/utils/week";
 
 const toEpochMs = (value: Date | number | null | undefined) =>
@@ -92,7 +110,7 @@ interface RecentActivityOptions {
   userId?: number;
 }
 
-export const getRecentActivity = async ({
+const getRecentCompletions = async ({
   limit,
   userId,
 }: RecentActivityOptions): Promise<ActivityItem[]> => {
@@ -113,8 +131,96 @@ export const getRecentActivity = async ({
     .orderBy(desc(exerciseCompletions.completedAt))
     .limit(limit);
 
-  return rows.map((row) => ({
+  return rows.map(({ completedAt, ...row }) => ({
     ...row,
-    completedAt: row.completedAt.getTime(),
+    kind: "completion",
+    occurredAt: completedAt.getTime(),
   }));
+};
+
+// Personal bests among the `limit` exercises whose sets were saved most
+// recently, computed on read (D8). The lookback is not capped: a record must
+// beat every earlier weighted set of the same user + link, so the history query
+// reads all of them up to the window's latest date (KAN-32 Q2).
+const getRecentPersonalBests = async ({
+  limit,
+  userId,
+}: RecentActivityOptions): Promise<ActivityItem[]> => {
+  const lastSavedAt = max(exerciseSets.createdAt);
+  const window = await db
+    .select({
+      exerciseId: exerciseSets.exerciseId,
+      userId: exerciseSets.userId,
+      youtubeId: exercises.youtubeId,
+      date: workoutDays.date,
+      lastSavedAt,
+    })
+    .from(exerciseSets)
+    .innerJoin(exercises, eq(exercises.id, exerciseSets.exerciseId))
+    .innerJoin(workoutDays, eq(workoutDays.id, exercises.dayId))
+    .where(userId ? eq(exerciseSets.userId, userId) : undefined)
+    .groupBy(exerciseSets.exerciseId)
+    .orderBy(desc(lastSavedAt))
+    .limit(limit);
+
+  if (!window.length) {
+    return [];
+  }
+
+  const latestDate = window.reduce(
+    (date, row) => (row.date > date ? row.date : date),
+    window[0].date,
+  );
+  // A superset (every user x every link of the window); findPersonalBests
+  // keeps only the same user + link on earlier dates.
+  const rows = await db
+    .select({
+      exerciseId: exerciseSets.exerciseId,
+      userId: exerciseSets.userId,
+      userName: users.name,
+      exerciseTitle: exercises.title,
+      youtubeId: exercises.youtubeId,
+      date: workoutDays.date,
+      weightKg: exerciseSets.weightKg,
+      reps: exerciseSets.reps,
+    })
+    .from(exerciseSets)
+    .innerJoin(exercises, eq(exercises.id, exerciseSets.exerciseId))
+    .innerJoin(workoutDays, eq(workoutDays.id, exercises.dayId))
+    .innerJoin(users, eq(users.id, exerciseSets.userId))
+    .where(
+      and(
+        inArray(exerciseSets.userId, [...new Set(window.map((r) => r.userId))]),
+        inArray(exercises.youtubeId, [
+          ...new Set(window.map((row) => row.youtubeId)),
+        ]),
+        lte(workoutDays.date, latestDate),
+      ),
+    )
+    .orderBy(asc(exerciseSets.exerciseId), asc(exerciseSets.position));
+
+  const history = groupSetRows(rows);
+  const savedAt = new Map(
+    window.map((row) => [row.exerciseId, toEpochMs(row.lastSavedAt) ?? 0]),
+  );
+  const windowSessions: ActivitySession[] = history.flatMap((session) => {
+    const occurredAt = savedAt.get(session.exerciseId);
+
+    return occurredAt === undefined ? [] : [{ ...session, occurredAt }];
+  });
+
+  return findPersonalBests(windowSessions, history);
+};
+
+// Completions and personal bests, newest first (F2, F3). Admin-only: both
+// callers are pages under app/admin/(protected) that call requireAdmin().
+export const getRecentActivity = async (
+  options: RecentActivityOptions,
+): Promise<ActivityItem[]> => {
+  const [completions, records] = await Promise.all([
+    getRecentCompletions(options),
+    getRecentPersonalBests(options),
+  ]);
+
+  return mergeActivity(completions, records, options.limit);
 };

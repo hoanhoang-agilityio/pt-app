@@ -1,3 +1,5 @@
+import type { BestSet } from "@/features/members/types/progress";
+
 export interface MemberProgress {
   id: number;
   name: string;
@@ -29,11 +31,29 @@ export interface WeekSummary {
   percent: number;
 }
 
-export interface ActivityItem {
+interface ActivityBase {
+  // Completion id, or exercise id for a personal best; list keys are
+  // `${kind}-${id}` because the two id spaces overlap (F2).
   id: number;
   userId: number;
   userName: string;
   exerciseTitle: string;
+  // Scheduled day (YYYY-MM-DD) of the exercise.
   date: string;
-  completedAt: number;
+  // Epoch ms: completion time, or when the record's sets were saved.
+  occurredAt: number;
 }
+
+export interface CompletionActivity extends ActivityBase {
+  kind: "completion";
+}
+
+// Computed on read from the logged sets (D8): the session's best strictly
+// beats every earlier weighted set of the same user + link (D6, D11).
+export interface PersonalBestActivity extends ActivityBase {
+  kind: "personalBest";
+  best: BestSet;
+  previousBest: BestSet;
+}
+
+export type ActivityItem = CompletionActivity | PersonalBestActivity;

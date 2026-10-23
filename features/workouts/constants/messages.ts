@@ -8,6 +8,7 @@ export const WORKOUT_MESSAGES = {
   USER_NOT_FOUND: "Không tìm thấy user",
   COPY_EMPTY: "Tuần này chưa có nội dung để sao chép",
   COPY_SAME_WEEK: "Hãy chọn một tuần khác hoặc user khác",
+  COPY_TARGET_HAS_SETS: "Tuần đích đã có buổi tập được ghi, không thể ghi đè",
   COMPLETION_TOO_EARLY: "Chưa tới ngày tập bài này",
   COMPLETION_DONE: "Đã đánh dấu tập xong 💪",
 } as const;

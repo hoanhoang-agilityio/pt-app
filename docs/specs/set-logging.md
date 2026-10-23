@@ -153,6 +153,8 @@ Each Story was read as a developer with no context (prompt E); every question we
 
 D10 (2026-10-22, from the Jira auto-analysis, verified in code): `PRAGMA foreign_keys` is never set and every delete path removes child rows by hand, so `onDelete: cascade` is not relied on. `deleteExerciseAction`, `copyWeekAction` and `deleteMemberAction` delete `exercise_sets` explicitly, in the same transaction and before the parent rows (KAN-25).
 
+D9 guard placement (2026-10-23, approved by Hoan on KAN-28): `copyWeekAction` checks for logged sets as the first query inside its copy transaction, not before it. libSQL opens the transaction with `BEGIN IMMEDIATE`, so a trainee cannot save a set between the check and the delete; any `exercise_sets` row on the target user's 7 target dates blocks the copy, and the explicit delete from D10 stays as a safety net.
+
 ### KAN-22 (E1-E8)
 
 | #   | Decision                                                                                             |

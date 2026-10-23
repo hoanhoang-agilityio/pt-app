@@ -2,11 +2,12 @@ import type {
   ActivityItem,
   PersonalBestActivity,
 } from "@/features/dashboard/types/dashboard";
-import { toBestSet } from "@/features/members/utils/progress";
 import {
   getBestSet,
   isPersonalBest,
+  isSameExerciseBefore,
   type SetSession,
+  toBestSet,
 } from "@/features/workouts/utils/sets";
 
 // One exercise with logged sets inside the activity window.
@@ -30,25 +31,16 @@ export const findPersonalBests = (
       youtubeId: session.youtubeId,
       date: session.date,
     };
-
-    if (!isPersonalBest(session.sets, history, key)) {
-      return [];
-    }
-
+    // Filtered once, so the history is scanned once per window session.
+    const earlier = history.filter((item) => isSameExerciseBefore(item, key));
     const best = getBestSet(session.sets);
-    const previousBest = getBestSet(
-      history
-        .filter(
-          (earlier) =>
-            earlier.userId === key.userId &&
-            earlier.youtubeId === key.youtubeId &&
-            earlier.date < key.date,
-        )
-        .flatMap((earlier) => earlier.sets),
-    );
+    const previousBest = getBestSet(earlier.flatMap((item) => item.sets));
 
-    // isPersonalBest already guarantees both exist; this narrows the types.
-    if (best === null || previousBest === null) {
+    if (
+      best === null ||
+      previousBest === null ||
+      !isPersonalBest(session.sets, earlier, key)
+    ) {
       return [];
     }
 
@@ -67,8 +59,9 @@ export const findPersonalBests = (
     ];
   });
 
-// Newest first, at most `limit` items. On the same timestamp a record comes
-// before the completion it usually arrives with (Q4).
+// Newest first, at most `limit` items; on an exact tie a record comes first.
+// Sets are stamped in whole seconds and the completion a few ms later, so a
+// record usually sits just below the completion saved with it (F7).
 export const mergeActivity = (
   completions: ActivityItem[],
   records: ActivityItem[],

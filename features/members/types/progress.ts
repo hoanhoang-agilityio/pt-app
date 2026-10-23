@@ -1,8 +1,4 @@
-// A best set always has a weight: bodyweight sets never count (OQ2).
-export interface BestSet {
-  weightKg: number;
-  reps: number;
-}
+import type { BestSet } from "@/features/workouts/types/workout";
 
 // "first" = no earlier weighted set ("Lần đầu", F6, D11). Otherwise the week's
 // best compared with the best before the week (F4): heavier, or same weight

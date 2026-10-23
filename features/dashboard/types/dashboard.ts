@@ -1,4 +1,4 @@
-import type { BestSet } from "@/features/members/types/progress";
+import type { BestSet } from "@/features/workouts/types/workout";
 
 export interface MemberProgress {
   id: number;

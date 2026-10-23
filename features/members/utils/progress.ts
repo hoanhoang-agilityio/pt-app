@@ -1,23 +1,18 @@
 import type {
-  BestSet,
   ExerciseProgressRow,
   ProgressTrend,
 } from "@/features/members/types/progress";
+import type { BestSet } from "@/features/workouts/types/workout";
 import {
   compareSets,
   getBestSet,
-  type LoggedSet,
   type SetSession,
+  toBestSet,
 } from "@/features/workouts/utils/sets";
 
 export interface ProgressSession extends SetSession {
   title: string;
 }
-
-export const toBestSet = (set: LoggedSet & BestSet): BestSet => ({
-  weightKg: set.weightKg,
-  reps: set.reps,
-});
 
 const getTrend = (
   weekBest: BestSet,
@@ -53,10 +48,13 @@ export const buildExerciseProgress = (
     if (session.date > weekEnd) {
       continue;
     }
-    byLink.set(session.youtubeId, [
-      ...(byLink.get(session.youtubeId) ?? []),
-      session,
-    ]);
+    const linkSessions = byLink.get(session.youtubeId);
+
+    if (linkSessions) {
+      linkSessions.push(session);
+    } else {
+      byLink.set(session.youtubeId, [session]);
+    }
   }
 
   const rows: ExerciseProgressRow[] = [];

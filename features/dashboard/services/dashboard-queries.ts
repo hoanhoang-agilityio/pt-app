@@ -9,6 +9,7 @@ import {
   desc,
   eq,
   inArray,
+  isNotNull,
   lte,
   max,
 } from "drizzle-orm";
@@ -158,9 +159,16 @@ const getRecentPersonalBests = async ({
     .from(exerciseSets)
     .innerJoin(exercises, eq(exercises.id, exerciseSets.exerciseId))
     .innerJoin(workoutDays, eq(workoutDays.id, exercises.dayId))
-    .where(userId ? eq(exerciseSets.userId, userId) : undefined)
+    // Only weighted sets can be a record (OQ2), so bodyweight-only sessions
+    // do not take window slots.
+    .where(
+      and(
+        isNotNull(exerciseSets.weightKg),
+        userId ? eq(exerciseSets.userId, userId) : undefined,
+      ),
+    )
     .groupBy(exerciseSets.exerciseId)
-    .orderBy(desc(lastSavedAt))
+    .orderBy(desc(lastSavedAt), desc(exerciseSets.exerciseId))
     .limit(limit);
 
   if (!window.length) {

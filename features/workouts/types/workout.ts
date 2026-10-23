@@ -10,6 +10,18 @@ export interface Exercise {
   completedAt: number | null;
 }
 
+export interface ExerciseSet {
+  id: number;
+  exerciseId: number;
+  userId: number;
+  // 0-based order within the exercise.
+  position: number;
+  // Kilograms; null means bodyweight.
+  weightKg: number | null;
+  reps: number;
+  createdAt: Date;
+}
+
 export interface ScheduleDay {
   date: string;
   title: string;

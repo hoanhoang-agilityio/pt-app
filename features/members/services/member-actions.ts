@@ -11,6 +11,7 @@ import {
   bodyProfiles,
   exerciseCompletions,
   exercises,
+  exerciseSets,
   foodEntries,
   nutritionTargets,
   users,
@@ -82,6 +83,8 @@ export const deleteMemberAction = withResultErrorHandling(
     const dayIds = days.map((day) => day.id);
 
     await db.transaction(async (tx) => {
+      // Children first: foreign keys are not enforced (D10).
+      await tx.delete(exerciseSets).where(eq(exerciseSets.userId, id));
       await tx
         .delete(exerciseCompletions)
         .where(eq(exerciseCompletions.userId, id));

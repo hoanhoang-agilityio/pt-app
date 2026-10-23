@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  index,
   integer,
   real,
   sqliteTable,
@@ -80,6 +81,36 @@ export const exerciseCompletions = sqliteTable("exercise_completions", {
     .references(() => users.id, { onDelete: "cascade" }),
   completedAt: integer("completed_at", { mode: "timestamp_ms" }).notNull(),
 });
+
+// Weight and reps the user actually lifted, one row per set (KAN-25).
+// Delete paths remove these rows by hand before the parent rows: PRAGMA
+// foreign_keys is never enabled, so onDelete cascade does not fire (D10).
+export const exerciseSets = sqliteTable(
+  "exercise_sets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    exerciseId: integer("exercise_id")
+      .notNull()
+      .references(() => exercises.id, { onDelete: "cascade" }),
+    // Denormalized from the exercise's day so history queries skip the joins.
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // 0-based order of the set within the exercise.
+    position: integer("position").notNull(),
+    // Kilograms; null means bodyweight.
+    weightKg: real("weight_kg"),
+    reps: integer("reps").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    uniqueIndex("exercise_sets_exercise_position").on(
+      table.exerciseId,
+      table.position,
+    ),
+    index("exercise_sets_user").on(table.userId),
+  ],
+);
 
 // Daily macro targets set by the admin. A target applies from `effectiveFrom`
 // until a later one replaces it, so past days keep the target they had.

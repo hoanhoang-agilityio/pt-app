@@ -1,4 +1,4 @@
-import { CheckCircle2, History } from "lucide-react";
+import { CheckCircle2, History, Trophy } from "lucide-react";
 import Link from "next/link";
 
 import { CARD } from "@/constants/styles";
@@ -34,11 +34,22 @@ export const RecentActivityList = ({
   return (
     <ol className={`${CARD} divide-y divide-line overflow-hidden`}>
       {items.map((item) => (
-        <li key={item.id} className="flex items-start gap-3 px-4 py-3">
-          <CheckCircle2
-            className="mt-0.5 size-5 shrink-0 text-success"
-            aria-hidden
-          />
+        <li
+          key={`${item.kind}-${item.id}`}
+          className="flex items-start gap-3 px-4 py-3"
+        >
+          {/* Minimal record marker; KAN-34 owns the final wording. */}
+          {item.kind === "personalBest" ? (
+            <Trophy
+              className="mt-0.5 size-5 shrink-0 text-success"
+              aria-hidden
+            />
+          ) : (
+            <CheckCircle2
+              className="mt-0.5 size-5 shrink-0 text-success"
+              aria-hidden
+            />
+          )}
           <div className="min-w-0 flex-1">
             <p className="text-[15px] leading-snug text-fg">
               {isUserShown && (
@@ -49,18 +60,20 @@ export const RecentActivityList = ({
                   >
                     {item.userName}
                   </Link>{" "}
-                  đã tập{" "}
+                  {item.kind === "personalBest" ? "lập kỷ lục" : "đã tập"}{" "}
                 </>
               )}
               <span className="font-medium">{item.exerciseTitle}</span>
             </p>
             <p className="mt-0.5 text-xs text-muted">
+              {item.kind === "personalBest" &&
+                `Kỷ lục mới ${item.best.weightKg} kg × ${item.best.reps} · `}
               Lịch {formatFullDay(item.date)} · lúc{" "}
-              {formatClockTime(item.completedAt, TIME_ZONE)}
+              {formatClockTime(item.occurredAt, TIME_ZONE)}
             </p>
           </div>
           <span className="shrink-0 text-xs text-muted">
-            {formatRelativeTime(item.completedAt, TIME_ZONE, now)}
+            {formatRelativeTime(item.occurredAt, TIME_ZONE, now)}
           </span>
         </li>
       ))}

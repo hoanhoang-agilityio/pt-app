@@ -24,6 +24,12 @@ export interface ExerciseSet {
   createdAt: Date;
 }
 
+// A best set always has a weight: bodyweight sets never count (OQ2).
+export interface BestSet {
+  weightKg: number;
+  reps: number;
+}
+
 export interface ScheduleDay {
   date: string;
   title: string;

@@ -22,3 +22,13 @@ export const E2E_ENV = {
 } as const;
 
 export const E2E_USER_NAME = "E2E Trainee";
+
+// Throwaway admin for the PT specs. It only exists in the scratch DB.
+export const E2E_ADMIN = {
+  username: "e2e-admin",
+  password: "e2e-only-admin-password",
+} as const;
+
+// Trainees of the PT specs: one with logged sets, one with nothing logged.
+export const E2E_LIFTER_NAME = "E2E Lifter";
+export const E2E_EMPTY_NAME = "E2E Empty";

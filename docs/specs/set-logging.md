@@ -193,6 +193,7 @@ Levels: **unit** = Vitest on pure utils (`pnpm test`), **e2e** = Playwright agai
 - `features/workouts/utils/__tests__/week-sets.test.ts`: `groupSetSessions`, `attachSetsToWeek` (KAN-29 mapping helper)
 - `features/members/utils/__tests__/progress.test.ts`: "Tiến bộ" progress rows
 - `e2e/trainee-sets.spec.ts`: trainee flow (KAN-36)
+- `e2e/admin-sets.spec.ts`: PT views, rows C1, C3, C4, C8, C9 (KAN-38)
 
 ### KAN-21 Store logged sets and compute bests
 
@@ -241,18 +242,18 @@ Levels: **unit** = Vitest on pure utils (`pnpm test`), **e2e** = Playwright agai
 
 ### KAN-23 PT sees logged sets and progress
 
-| ID  | Criterion (Given / When / Then)                                                                                  | Source       | Level  | Target                                              | Owner          |
-| --- | ---------------------------------------------------------------------------------------------------------------- | ------------ | ------ | --------------------------------------------------- | -------------- |
-| C1  | A trainee logged sets this week / PT opens the member page / each exercise shows "Đã ghi:" sets, no edit control | AC1, F1, Q13 | manual | `ExerciseEditorItem`                                | KAN-33         |
-| C2  | Two sessions of the same link / "Tiến bộ" / selected week's best vs the best before it, with the kg change       | AC2, F4      | unit   | `features/members/utils/__tests__/progress.test.ts` | KAN-32         |
-| C3  | Same as C2 / open the Summary tab / list renders both bests and the difference                                   | AC2, Q9      | manual | `/summary`                                          | KAN-34         |
-| C4  | A trainee with no logged sets / open the Summary tab / "Tiến bộ" empty state                                     | AC3          | manual | `/summary`                                          | KAN-34         |
-| C5  | One weighted session only / "Tiến bộ" / shows "Lần đầu"                                                          | F6, D11      | unit   | `progress.test.ts`                                  | KAN-32, KAN-34 |
-| C6  | A bodyweight-only exercise / "Tiến bộ" / excluded                                                                | F6, OQ2      | unit   | `progress.test.ts`                                  | KAN-32         |
-| C7  | The title changed across weeks (same link) / "Tiến bộ" / shows the latest title                                  | F5           | unit   | `progress.test.ts`                                  | KAN-32         |
-| C8  | A trainee sets a personal best / PT opens member activity and `/admin` / a record entry, keys `${kind}-${id}`    | Q10, F2, F3  | manual | `dashboard-queries.ts`, `ActivityItem`              | KAN-32, KAN-34 |
-| C9  | An exercise with logged sets / PT deletes it / the confirm says the sets are deleted too                         | OQ1          | manual | `ExerciseEditorItem`                                | KAN-33         |
-| C10 | Every new admin query / code review / behind `requireAdmin()` or the admin layout                                | AC4          | manual | `features/members/*`, `dashboard-queries.ts`        | KAN-32         |
+| ID  | Criterion (Given / When / Then)                                                                                  | Source       | Level  | Target                                              | Owner                  |
+| --- | ---------------------------------------------------------------------------------------------------------------- | ------------ | ------ | --------------------------------------------------- | ---------------------- |
+| C1  | A trainee logged sets this week / PT opens the member page / each exercise shows "Đã ghi:" sets, no edit control | AC1, F1, Q13 | e2e    | `e2e/admin-sets.spec.ts`                            | KAN-33, KAN-38         |
+| C2  | Two sessions of the same link / "Tiến bộ" / selected week's best vs the best before it, with the kg change       | AC2, F4      | unit   | `features/members/utils/__tests__/progress.test.ts` | KAN-32                 |
+| C3  | Same as C2 / open the Summary tab / list renders both bests and the difference                                   | AC2, Q9      | e2e    | `e2e/admin-sets.spec.ts`                            | KAN-34, KAN-38         |
+| C4  | A trainee with no logged sets / open the Summary tab / "Tiến bộ" empty state                                     | AC3          | e2e    | `e2e/admin-sets.spec.ts`                            | KAN-34, KAN-38         |
+| C5  | One weighted session only / "Tiến bộ" / shows "Lần đầu"                                                          | F6, D11      | unit   | `progress.test.ts`                                  | KAN-32, KAN-34         |
+| C6  | A bodyweight-only exercise / "Tiến bộ" / excluded                                                                | F6, OQ2      | unit   | `progress.test.ts`                                  | KAN-32                 |
+| C7  | The title changed across weeks (same link) / "Tiến bộ" / shows the latest title                                  | F5           | unit   | `progress.test.ts`                                  | KAN-32                 |
+| C8  | A trainee sets a personal best / PT opens member activity and `/admin` / a record entry, keys `${kind}-${id}`    | Q10, F2, F3  | e2e    | `e2e/admin-sets.spec.ts`                            | KAN-32, KAN-34, KAN-38 |
+| C9  | An exercise with logged sets / PT deletes it / the confirm says the sets are deleted too                         | OQ1          | e2e    | `e2e/admin-sets.spec.ts`                            | KAN-33, KAN-38         |
+| C10 | Every new admin query / code review / behind `requireAdmin()` or the admin layout                                | AC4          | manual | `features/members/*`, `dashboard-queries.ts`        | KAN-32                 |
 
 ### Video review checklist
 

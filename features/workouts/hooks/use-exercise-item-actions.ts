@@ -14,7 +14,11 @@ import {
 import type { MoveDirection } from "@/features/workouts/types/workout";
 import { describeErrorReference } from "@/utils/errors";
 
-export const useExerciseItemActions = (exerciseId: number, userId: number) => {
+export const useExerciseItemActions = (
+  exerciseId: number,
+  userId: number,
+  hasSets: boolean,
+) => {
   const [isPending, startTransition] = useTransition();
 
   const handleMove = (direction: MoveDirection) => {
@@ -30,7 +34,13 @@ export const useExerciseItemActions = (exerciseId: number, userId: number) => {
   };
 
   const handleDelete = () => {
-    if (!window.confirm(CONFIRM_MESSAGES.DELETE_EXERCISE)) {
+    if (
+      !window.confirm(
+        hasSets
+          ? CONFIRM_MESSAGES.DELETE_EXERCISE_WITH_SETS
+          : CONFIRM_MESSAGES.DELETE_EXERCISE,
+      )
+    ) {
       return;
     }
 

@@ -14,11 +14,11 @@ import { ExerciseEditorItem } from "@/features/workouts/components/ExerciseEdito
 import { ExerciseForm } from "@/features/workouts/components/ExerciseForm";
 import { RestDayState } from "@/features/workouts/components/RestDayState";
 import { useDayEditor } from "@/features/workouts/hooks/use-day-editor";
-import type { ScheduleDay } from "@/features/workouts/types/workout";
+import type { ScheduleDayWithSets } from "@/features/workouts/types/workout";
 import { formatFullDay } from "@/utils/week";
 
 interface DayEditorProps {
-  day: ScheduleDay;
+  day: ScheduleDayWithSets;
   userId: number;
   isToday: boolean;
 }

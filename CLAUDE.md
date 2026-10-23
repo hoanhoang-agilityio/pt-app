@@ -36,6 +36,19 @@ Weekly PT workout app: admins (PTs) assign daily workouts, users log in by name.
 - One Story per worktree session and per PR, plan mode first. Run `/grill-me` before planning a feature, file tickets with `actionable-ticket`.
 - Schema changes must be additive (new tables, nullable columns): the Vercel build runs `drizzle-kit push` against production.
 
+## Skills: hoan-dev-skills (`.claude/skills/`)
+
+Working standards and checklists for the set: `docs/hoan-dev-skills.md`.
+
+- `grill-me`: interview in decision rounds before planning a feature bigger than a day.
+- `actionable-ticket`: KAN tickets and PR descriptions a stranger can act on.
+- `review-checklist`: review a branch or PR before opening or merging it.
+- `honest-commit-push`: commit from the diff with the KAN key, checks, push, no force-push.
+- `browser-proof`: prove a UI change with the Playwright MCP on a local DB, report in an artifact.
+- `ai-work-queue`: claim a KAN ticket, plan, fix, verify, move it across the board or release it.
+- `advisor-delegate`: main session plans and reviews; Sonnet builds, Haiku runs checks.
+- `project-map-refresh`: keep this file true when a convention changes.
+
 ## Never do
 
 - Never add `Co-Authored-By` or `Claude-Session` lines to commits.

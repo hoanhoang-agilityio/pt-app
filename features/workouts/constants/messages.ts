@@ -10,6 +10,21 @@ export const WORKOUT_MESSAGES = {
   COPY_SAME_WEEK: "Hãy chọn một tuần khác hoặc user khác",
   COMPLETION_TOO_EARLY: "Chưa tới ngày tập bài này",
   COMPLETION_DONE: "Đã đánh dấu tập xong 💪",
+  SETS_SAVED: "Đã lưu các hiệp",
+  SET_WEIGHT_RANGE: "Mức tạ từ 0,5 đến 500 kg",
+  SET_WEIGHT_STEP: "Mức tạ phải chia hết cho 0,5 kg",
+  SET_REPS_INTEGER: "Số lần phải là số nguyên",
+  SET_REPS_RANGE: "Số lần từ 1 đến 100",
+  SET_TOO_MANY: "Tối đa 10 hiệp",
+} as const;
+
+// Limits for logged sets (spec D3, Q14).
+export const SET_LIMITS = {
+  MAX_ROWS: 10,
+  MIN_WEIGHT_KG: 0.5,
+  MAX_WEIGHT_KG: 500,
+  MIN_REPS: 1,
+  MAX_REPS: 100,
 } as const;
 
 export const EXERCISE_LIMITS = {

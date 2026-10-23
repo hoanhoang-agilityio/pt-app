@@ -15,7 +15,7 @@ import { DeleteMemberButton } from "@/features/members/components/DeleteMemberBu
 import { listMembers } from "@/features/members/services/member-queries";
 import { CopyWeekButton } from "@/features/workouts/components/CopyWeekButton";
 import { WorkoutWeekEditor } from "@/features/workouts/components/WorkoutWeekEditor";
-import { getWeekSchedule } from "@/features/workouts/services/workout-queries";
+import { getWeekScheduleWithSets } from "@/features/workouts/services/workout-queries";
 import { requireAdmin } from "@/services/auth-guard";
 import { findUserById } from "@/services/users";
 import { getAdminPreviewPath, getAdminUserPath } from "@/utils/routes";
@@ -50,7 +50,7 @@ const AdminUserPage = async ({
     today,
   );
   const [days, members, activity] = await Promise.all([
-    getWeekSchedule(user.id, schedule.weekStart),
+    getWeekScheduleWithSets(user.id, schedule.weekStart),
     listMembers(),
     getRecentActivity({ userId: user.id, limit: MEMBER_ACTIVITY_LIMIT }),
   ]);

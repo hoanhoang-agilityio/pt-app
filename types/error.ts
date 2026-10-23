@@ -13,6 +13,14 @@ export interface ClassifiedError {
   detail: string;
 }
 
-export type ActionResult =
-  | { status: "success" }
-  | { status: "error"; message: string; reference?: string };
+export interface ActionErrorResult {
+  status: "error";
+  message: string;
+  reference?: string;
+}
+
+export type ActionResult = { status: "success" } | ActionErrorResult;
+
+// Saving an exercise's sets also reports a new personal best (KAN-27, D5).
+export type SaveSetsResult =
+  { status: "success"; personalBest: boolean } | ActionErrorResult;

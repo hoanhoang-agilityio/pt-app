@@ -5,7 +5,7 @@ import {
   GENERIC_ERROR_MESSAGE,
 } from "@/constants/errors";
 import { logServerError } from "@/services/logger";
-import type { ActionResult } from "@/types/error";
+import type { ActionErrorResult, ActionResult } from "@/types/error";
 import type { FormState } from "@/types/form";
 import { getErrorMessage } from "@/utils/errors";
 import { createErrorState, getFormValues } from "@/utils/form";
@@ -62,15 +62,27 @@ export const withFormErrorHandling =
     }
   };
 
-// Same for actions called directly from event handlers.
+// An action typed Promise<void> infers Result as never: it means plain success.
+type ResolvedResult<Result> = [Result] extends [never] ? ActionResult : Result;
+
+// Same for actions called directly from event handlers. An action may return
+// a richer success result (e.g. SaveSetsResult); `void` means plain success.
 export const withResultErrorHandling =
-  <Args extends unknown[]>(
+  <
+    Args extends unknown[],
+    Result extends { status: "success" } | ActionErrorResult = ActionResult,
+  >(
     context: string,
-    action: (...args: Args) => Promise<ActionResult | void>,
+    action: (...args: Args) => Promise<Result | void>,
   ) =>
-  async (...args: Args): Promise<ActionResult> => {
+  async (
+    ...args: Args
+  ): Promise<ResolvedResult<Result> | ActionErrorResult> => {
     try {
-      return (await action(...args)) ?? { status: "success" };
+      const result = await action(...args);
+
+      // Only void actions return nothing, and their result is ActionResult.
+      return (result ?? { status: "success" }) as ResolvedResult<Result>;
     } catch (error) {
       return { status: "error", ...toPublicError(context, error) };
     }

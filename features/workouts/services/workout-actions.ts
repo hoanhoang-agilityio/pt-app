@@ -7,6 +7,7 @@ import { db } from "@/db";
 import {
   exerciseCompletions,
   exercises,
+  exerciseSets,
   users,
   workoutDays,
 } from "@/db/schema";
@@ -153,6 +154,10 @@ export const deleteExerciseAction = withResultErrorHandling(
 
     if (existing) {
       await db.transaction(async (tx) => {
+        // Children first: foreign keys are not enforced (D10).
+        await tx
+          .delete(exerciseSets)
+          .where(eq(exerciseSets.exerciseId, existing.id));
         await tx
           .delete(exerciseCompletions)
           .where(eq(exerciseCompletions.exerciseId, existing.id));
@@ -263,6 +268,9 @@ export const copyWeekAction = withFormErrorHandling(
           .from(exercises)
           .where(inArray(exercises.dayId, existingIds));
 
+        await tx
+          .delete(exerciseSets)
+          .where(inArray(exerciseSets.exerciseId, replacedExercises));
         await tx
           .delete(exerciseCompletions)
           .where(inArray(exerciseCompletions.exerciseId, replacedExercises));

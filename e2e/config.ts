@@ -7,7 +7,8 @@ export const E2E_PORT = 3100;
 export const E2E_BASE_URL = `http://localhost:${E2E_PORT}`;
 export const E2E_TMP_DIR = resolve(__dirname, ".tmp");
 export const E2E_DB_PATH = resolve(E2E_TMP_DIR, "e2e.db");
-export const E2E_DB_URL = `file:${E2E_DB_PATH}`;
+// Forward slashes so the URL is also valid for libSQL on Windows.
+export const E2E_DB_URL = `file:${E2E_DB_PATH.replaceAll("\\", "/")}`;
 
 // services/env.ts prefers the TURSO_* pair, so both pairs are pinned and the
 // tokens blanked. Blank values are ignored by readEnv, not used as fallbacks.

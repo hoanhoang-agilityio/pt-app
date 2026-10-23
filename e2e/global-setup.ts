@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { relative } from "node:path";
 
 import { E2E_DB_PATH, E2E_DB_URL, E2E_ENV, E2E_TMP_DIR } from "./config";
 import { seedE2eDatabase } from "./seed";
@@ -12,7 +13,7 @@ const assertScratchDatabase = () => {
     (url) =>
       url === E2E_DB_URL &&
       url.startsWith("file:") &&
-      E2E_DB_PATH.startsWith(`${E2E_TMP_DIR}/`),
+      !relative(E2E_TMP_DIR, E2E_DB_PATH).startsWith(".."),
   );
 
   if (!isScratch) {

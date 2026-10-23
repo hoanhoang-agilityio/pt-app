@@ -33,6 +33,22 @@ describe("describeTrend", () => {
     });
   });
 
+  it("explains fewer reps at the same weight instead of '0 kg'", () => {
+    expect(describeTrend({ trend: "down", changeKg: 0 })).toEqual({
+      label: "Cùng mức, ít reps",
+      tone: "down",
+    });
+  });
+
+  it("falls back safely when changeKg is missing", () => {
+    expect(describeTrend({ trend: "up", changeKg: null }).label).toBe(
+      "Cùng mức, thêm reps",
+    );
+    expect(describeTrend({ trend: "down", changeKg: null }).label).toBe(
+      "Cùng mức, ít reps",
+    );
+  });
+
   it("shows 'Không đổi' for a tie", () => {
     expect(describeTrend({ trend: "same", changeKg: 0 })).toEqual({
       label: "Không đổi",
@@ -48,7 +64,10 @@ describe("describeBests", () => {
         weekBest: { weightKg: 42.5, reps: 8 },
         previousBest: { weightKg: 40, reps: 10 },
       }),
-    ).toEqual(["Lần trước 40 kg × 10", "Tuần này 42,5 kg × 8"]);
+    ).toEqual([
+      "Tốt nhất trước đó 40 kg × 10",
+      "Tốt nhất tuần này 42,5 kg × 8",
+    ]);
   });
 
   it("omits the previous best on a first session", () => {
@@ -57,6 +76,6 @@ describe("describeBests", () => {
         weekBest: { weightKg: 40, reps: 10 },
         previousBest: null,
       }),
-    ).toEqual(["Tuần này 40 kg × 10"]);
+    ).toEqual(["Tốt nhất tuần này 40 kg × 10"]);
   });
 });

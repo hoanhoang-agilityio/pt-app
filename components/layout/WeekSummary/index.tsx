@@ -61,7 +61,7 @@ export const WeekSummary = ({
         todayWeight={todayWeight}
       />
     </section>
-    {progress && (
+    {progress != null && (
       <section className="space-y-2">
         <h2 className={SECTION_TITLE}>Tiến bộ</h2>
         {progress}

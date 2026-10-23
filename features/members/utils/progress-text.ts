@@ -10,7 +10,7 @@ export interface TrendBadge {
 }
 
 // Badge text for a "Tiến bộ" row (KAN-34): "Lần đầu", "+2,5 kg", "−2,5 kg",
-// "Cùng mức, thêm reps" (same weight, more reps) or "Không đổi".
+// "Cùng mức, thêm reps" / "Cùng mức, ít reps" (same weight) or "Không đổi".
 export const describeTrend = ({
   trend,
   changeKg,
@@ -27,21 +27,28 @@ export const describeTrend = ({
         tone: "up",
       };
     case "down":
-      return { label: formatWeightChange(changeKg ?? 0), tone: "down" };
+      return {
+        label:
+          changeKg === null || changeKg === 0
+            ? "Cùng mức, ít reps"
+            : formatWeightChange(changeKg),
+        tone: "down",
+      };
     default:
       return { label: "Không đổi", tone: "neutral" };
   }
 };
 
-// ["Lần trước 40 kg × 10", "Tuần này 42,5 kg × 8"]; a first session has no
-// previous best. Separate lines so a row never breaks inside "kg × reps".
+// ["Tốt nhất trước đó 40 kg × 10", "Tốt nhất tuần này 42,5 kg × 8"]; the
+// previous figure is the best of all earlier weeks (F4), not last session. A
+// first session has no previous best. Separate lines so a row never breaks inside "kg × reps".
 export const describeBests = ({
   weekBest,
   previousBest,
 }: Pick<ExerciseProgressRow, "weekBest" | "previousBest">) => {
-  const current = `Tuần này ${formatSet(weekBest)}`;
+  const current = `Tốt nhất tuần này ${formatSet(weekBest)}`;
 
   return previousBest
-    ? [`Lần trước ${formatSet(previousBest)}`, current]
+    ? [`Tốt nhất trước đó ${formatSet(previousBest)}`, current]
     : [current];
 };

@@ -50,25 +50,25 @@ export const ExerciseProgressList = ({ rows }: ExerciseProgressListProps) => {
         const Icon = TONE_ICONS[badge.tone];
 
         return (
-          <li key={row.youtubeId} className="flex items-start gap-3 px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-medium text-fg">
+          <li key={row.youtubeId} className="px-4 py-3">
+            <div className="flex items-start gap-3">
+              <p className="min-w-0 flex-1 truncate text-[15px] font-medium text-fg">
                 {row.title}
               </p>
-              <p className="mt-0.5 text-xs text-muted">
-                {describeBests(row).map((line) => (
-                  <span key={line} className="block whitespace-nowrap">
-                    {line}
-                  </span>
-                ))}
-              </p>
+              <span
+                className={`flex shrink-0 items-center gap-1 text-sm font-semibold ${TONE_STYLES[badge.tone]}`}
+              >
+                <Icon className="size-4" aria-hidden />
+                {badge.label}
+              </span>
             </div>
-            <span
-              className={`flex shrink-0 items-center gap-1 text-sm font-semibold ${TONE_STYLES[badge.tone]}`}
-            >
-              <Icon className="size-4" aria-hidden />
-              {badge.label}
-            </span>
+            <p className="mt-0.5 text-xs text-muted">
+              {describeBests(row).map((line) => (
+                <span key={line} className="block">
+                  {line}
+                </span>
+              ))}
+            </p>
           </li>
         );
       })}

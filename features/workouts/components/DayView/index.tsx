@@ -3,13 +3,15 @@ import { BedDouble, PartyPopper } from "lucide-react";
 import { ProgressBar } from "@/components/common/ProgressBar";
 import { DayHeading } from "@/features/workouts/components/DayHeading";
 import { ExerciseCard } from "@/features/workouts/components/ExerciseCard";
+import { LoggedSetList } from "@/features/workouts/components/LoggedSetList";
 import { RestDayState } from "@/features/workouts/components/RestDayState";
 import { UserExerciseItem } from "@/features/workouts/components/UserExerciseItem";
-import type { ScheduleDay } from "@/features/workouts/types/workout";
+import type { ScheduleDayWithSets } from "@/features/workouts/types/workout";
 import { getDayProgress } from "@/features/workouts/utils/progress";
+import { canLogSets } from "@/features/workouts/utils/set-logger";
 
 interface DayViewProps {
-  day: ScheduleDay;
+  day: ScheduleDayWithSets;
   today: string;
   // False for the admin's read-only "view as user" preview.
   isInteractive: boolean;
@@ -47,7 +49,15 @@ export const DayView = ({ day, today, isInteractive }: DayViewProps) => {
                   canComplete={canComplete}
                 />
               ) : (
-                <ExerciseCard exercise={exercise} index={index} />
+                <ExerciseCard
+                  exercise={exercise}
+                  index={index}
+                  footer={
+                    canLogSets(exercise, canComplete) && (
+                      <LoggedSetList sets={exercise.loggedSets} />
+                    )
+                  }
+                />
               )}
             </li>
           ))}

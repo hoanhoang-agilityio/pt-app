@@ -2,11 +2,16 @@
 
 import { CompletionToggle } from "@/features/workouts/components/CompletionToggle";
 import { ExerciseCard } from "@/features/workouts/components/ExerciseCard";
+import { SetLogger } from "@/features/workouts/components/SetLogger";
 import { useExerciseCompletion } from "@/features/workouts/hooks/use-exercise-completion";
-import type { Exercise } from "@/features/workouts/types/workout";
+import type { ExerciseWithSets } from "@/features/workouts/types/workout";
+import {
+  canLogSets,
+  getLoggedSetsKey,
+} from "@/features/workouts/utils/set-logger";
 
 interface UserExerciseItemProps {
-  exercise: Exercise;
+  exercise: ExerciseWithSets;
   index: number;
   canComplete: boolean;
 }
@@ -24,12 +29,20 @@ export const UserExerciseItem = ({
       exercise={{ ...exercise, completedAt }}
       index={index}
       footer={
-        <CompletionToggle
-          completedAt={completedAt}
-          canComplete={canComplete}
-          isPending={isPending}
-          onToggle={handleToggle}
-        />
+        <>
+          {canLogSets(exercise, canComplete) && (
+            <SetLogger
+              key={getLoggedSetsKey(exercise.loggedSets)}
+              exercise={exercise}
+            />
+          )}
+          <CompletionToggle
+            completedAt={completedAt}
+            canComplete={canComplete}
+            isPending={isPending}
+            onToggle={handleToggle}
+          />
+        </>
       }
     />
   );

@@ -11,6 +11,8 @@ export const SET_LOGGER_COPY = {
   BODYWEIGHT: "Tự trọng",
   BODYWEIGHT_HINT: "Để trống kg nếu tập với trọng lượng cơ thể",
   PERSONAL_BEST: "Kỷ lục mới! 🏆",
+  PERSONAL_BEST_BADGE: "Kỷ lục mới",
+  HINT_PREFIX: "Lần trước",
   LOGGED_PREFIX: "Đã ghi:",
   NOTHING_LOGGED: "Chưa ghi hiệp nào",
 } as const;
@@ -29,3 +31,7 @@ export const describeRepsLabel = (setNumber: number) =>
 
 export const describeDeleteLabel = (setNumber: number) =>
   `Xóa hiệp ${setNumber}`;
+
+// Starts with the visible text so voice control can match it (WCAG 2.5.3).
+export const describeHintLabel = (setNumber: number, text: string) =>
+  `${SET_LOGGER_COPY.HINT_PREFIX} ${text}, dùng cho hiệp ${setNumber}`;

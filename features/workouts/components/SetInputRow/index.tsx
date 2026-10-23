@@ -1,16 +1,19 @@
-import { Trash2 } from "lucide-react";
+import { CornerDownLeft, Trash2 } from "lucide-react";
 
 import { ICON_BUTTON } from "@/constants/styles";
 import {
   describeDeleteLabel,
+  describeHintLabel,
   describeRepsLabel,
   describeWeightLabel,
   SET_LOGGER_COPY,
 } from "@/features/workouts/constants/set-logger";
-import type {
-  SetRowDraft,
-  SetRowField,
+import {
+  formatSet,
+  type SetRowDraft,
+  type SetRowField,
 } from "@/features/workouts/utils/set-logger";
+import type { LoggedSet } from "@/features/workouts/utils/sets";
 
 interface SetInputRowProps {
   index: number;
@@ -21,6 +24,9 @@ interface SetInputRowProps {
   isDisabled: boolean;
   onChange: (id: number, field: SetRowField, value: string) => void;
   onRemove: (id: number) => void;
+  // The previous session's set at this row position, if any (E7).
+  hint: LoggedSet | null;
+  onApplyHint: (id: number, hint: LoggedSet) => void;
 }
 
 // `INPUT` with less padding and centred text, so two inputs and the delete
@@ -38,8 +44,11 @@ export const SetInputRow = ({
   isDisabled,
   onChange,
   onRemove,
+  hint,
+  onApplyHint,
 }: SetInputRowProps) => {
   const setNumber = index + 1;
+  const hintText = hint ? formatSet(hint) : "";
 
   return (
     <li className="grid grid-cols-[1.75rem_1fr_1fr_2.75rem] items-center gap-2">
@@ -82,6 +91,20 @@ export const SetInputRow = ({
       >
         <Trash2 className="size-5" aria-hidden />
       </button>
+      {hint && (
+        <button
+          type="button"
+          onClick={() => onApplyHint(row.id, hint)}
+          disabled={isDisabled}
+          aria-label={describeHintLabel(setNumber, hintText)}
+          className="col-span-2 col-start-2 flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-line bg-surface px-3 text-sm text-muted transition active:scale-[0.98] disabled:opacity-50"
+        >
+          <CornerDownLeft className="size-4 shrink-0" aria-hidden />
+          <span className="truncate">
+            {SET_LOGGER_COPY.HINT_PREFIX} {hintText}
+          </span>
+        </button>
+      )}
     </li>
   );
 };

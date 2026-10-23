@@ -12,10 +12,12 @@ import { saveExerciseSetsAction } from "@/features/workouts/services/set-actions
 import type { ExerciseWithSets } from "@/features/workouts/types/workout";
 import {
   createInitialRows,
+  hintToDraftValues,
   rowsToSetInputs,
   type SetRowDraft,
   type SetRowField,
 } from "@/features/workouts/utils/set-logger";
+import type { LoggedSet } from "@/features/workouts/utils/sets";
 import { describeErrorReference } from "@/utils/errors";
 
 // Local rows for one exercise, seeded once from `loggedSets`. The caller keys
@@ -57,6 +59,15 @@ export const useExerciseSets = (
     );
   };
 
+  // One tap on a hint overwrites the row's typed values; saving stays explicit.
+  const applyHint = (id: number, hint: LoggedSet) => {
+    const values = hintToDraftValues(hint);
+
+    setRows((current) =>
+      current.map((row) => (row.id === id ? { ...row, ...values } : row)),
+    );
+  };
+
   const handleSave = () => {
     const parsed = rowsToSetInputs(rows);
 
@@ -90,6 +101,7 @@ export const useExerciseSets = (
     addRow,
     removeRow,
     updateRow,
+    applyHint,
     handleSave,
   };
 };

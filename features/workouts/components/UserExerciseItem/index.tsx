@@ -28,6 +28,7 @@ export const UserExerciseItem = ({
     <ExerciseCard
       exercise={{ ...exercise, completedAt }}
       index={index}
+      isPersonalBest={exercise.isPersonalBest}
       footer={
         <>
           {canLogSets(exercise, canComplete) && (

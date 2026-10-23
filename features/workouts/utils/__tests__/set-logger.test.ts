@@ -5,6 +5,8 @@ import {
   createInitialRows,
   formatSet,
   getLoggedSetsKey,
+  getRowHint,
+  hintToDraftValues,
   rowsToSetInputs,
   type SetRowDraft,
 } from "@/features/workouts/utils/set-logger";
@@ -140,5 +142,49 @@ describe("getLoggedSetsKey", () => {
       getLoggedSetsKey([{ weightKg: 40, reps: 11 }, sets[1]]),
     );
     expect(getLoggedSetsKey([])).toBe("");
+  });
+});
+
+describe("getRowHint", () => {
+  const previous = [
+    { weightKg: 40, reps: 10 },
+    { weightKg: null, reps: 12 },
+  ];
+
+  it("returns the previous set at the same position (E7)", () => {
+    expect(getRowHint(previous, 0)).toEqual({ weightKg: 40, reps: 10 });
+    expect(getRowHint(previous, 1)).toEqual({ weightKg: null, reps: 12 });
+  });
+
+  it("returns null past the previous count, with no history or a bad index", () => {
+    expect(getRowHint(previous, 2)).toBeNull();
+    expect(getRowHint([], 0)).toBeNull();
+    expect(getRowHint(previous, -1)).toBeNull();
+  });
+});
+
+describe("hintToDraftValues", () => {
+  it("writes a weighted hint with a decimal comma", () => {
+    expect(hintToDraftValues({ weightKg: 40, reps: 10 })).toEqual({
+      weight: "40",
+      reps: "10",
+    });
+    expect(hintToDraftValues({ weightKg: 42.5, reps: 8 }).weight).toBe("42,5");
+  });
+
+  it("leaves the weight empty for a bodyweight hint", () => {
+    expect(hintToDraftValues({ weightKg: null, reps: 12 })).toEqual({
+      weight: "",
+      reps: "12",
+    });
+  });
+
+  it("round-trips through rowsToSetInputs", () => {
+    const set = { weightKg: 42.5, reps: 8 };
+
+    expect(rowsToSetInputs([{ id: 0, ...hintToDraftValues(set) }])).toEqual({
+      ok: true,
+      sets: [set],
+    });
   });
 });

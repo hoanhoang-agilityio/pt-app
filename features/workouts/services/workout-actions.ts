@@ -70,6 +70,27 @@ const findExerciseForUser = async (exerciseId: number, userId: number) => {
   return row ?? null;
 };
 
+type SelectClient = Pick<typeof db, "select">;
+
+// Logged sets are the trainee's history, so a copy must never overwrite them.
+const targetWeekHasSets = async (
+  client: SelectClient,
+  userId: number,
+  dates: string[],
+) => {
+  const [row] = await client
+    .select({ id: exerciseSets.id })
+    .from(exerciseSets)
+    .innerJoin(exercises, eq(exercises.id, exerciseSets.exerciseId))
+    .innerJoin(workoutDays, eq(workoutDays.id, exercises.dayId))
+    .where(
+      and(eq(workoutDays.userId, userId), inArray(workoutDays.date, dates)),
+    )
+    .limit(1);
+
+  return Boolean(row);
+};
+
 export const saveDayAction = withFormErrorHandling(
   "saveDay",
   async (_previousState: FormState, formData: FormData): Promise<FormState> => {
@@ -249,7 +270,13 @@ export const copyWeekAction = withFormErrorHandling(
 
     const targetDates = getWeekDates(targetWeek);
 
-    await db.transaction(async (tx) => {
+    const copied = await db.transaction(async (tx) => {
+      // Checked inside the write transaction (libSQL opens it with BEGIN
+      // IMMEDIATE), so no set can be saved between the check and the delete.
+      if (await targetWeekHasSets(tx, targetUserId, targetDates)) {
+        return false;
+      }
+
       // The target week is replaced as a whole so the copy matches the source.
       const existingDays = await tx
         .select({ id: workoutDays.id })
@@ -306,7 +333,13 @@ export const copyWeekAction = withFormErrorHandling(
           );
         }
       }
+
+      return true;
     });
+
+    if (!copied) {
+      return createErrorState(WORKOUT_MESSAGES.COPY_TARGET_HAS_SETS);
+    }
 
     revalidateMember(userId);
     revalidateMember(targetUserId);

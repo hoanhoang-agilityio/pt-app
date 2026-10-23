@@ -138,17 +138,18 @@ Each Story was read as a developer with no context (prompt E); every question we
 
 ### KAN-21 (D1-D9)
 
-| #   | Decision                                                                                                                        |
-| --- | ------------------------------------------------------------------------------------------------------------------------------- |
-| D1  | Replace-on-save: one `saveExerciseSetsAction(exerciseId, sets[])` deletes and re-inserts the exercise's rows; no delete action. |
-| D2  | Saving an empty list clears the sets and keeps the completion.                                                                  |
-| D3  | Weight is empty (bodyweight) or 0.5-500 in steps of 0.5; 0 is rejected.                                                         |
-| D4  | No `updated_at` column; `position` is 0-based.                                                                                  |
-| D5  | Wrapped in `withResultErrorHandling`; returns `{ status, personalBest }`.                                                       |
-| D6  | Personal best = strictly better than every earlier set of that user + `youtubeId` before that date; a tie is not a record.      |
-| D7  | "Previous session" means strictly earlier dates only; the same day never counts.                                                |
-| D8  | Personal bests are computed on read, not stored.                                                                                |
-| D9  | The copy-week guard checks logged sets only (completions alone do not block it).                                                |
+| #   | Decision                                                                                                                                                                                           |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Replace-on-save: one `saveExerciseSetsAction(exerciseId, sets[])` deletes and re-inserts the exercise's rows; no delete action.                                                                    |
+| D2  | Saving an empty list clears the sets and keeps the completion.                                                                                                                                     |
+| D3  | Weight is empty (bodyweight) or 0.5-500 in steps of 0.5; 0 is rejected.                                                                                                                            |
+| D4  | No `updated_at` column; `position` is 0-based.                                                                                                                                                     |
+| D5  | Wrapped in `withResultErrorHandling`; returns `{ status, personalBest }`.                                                                                                                          |
+| D6  | Personal best = strictly better than every earlier set of that user + `youtubeId` before that date; a tie is not a record.                                                                         |
+| D7  | "Previous session" means strictly earlier dates only; the same day never counts.                                                                                                                   |
+| D8  | Personal bests are computed on read, not stored.                                                                                                                                                   |
+| D9  | The copy-week guard checks logged sets only (completions alone do not block it).                                                                                                                   |
+| D11 | (2026-10-23, answered by Hoan on KAN-35) The first-ever weighted set is not a "Kỷ lục mới": `isPersonalBest` needs at least one earlier weighted set, otherwise false ("Tiến bộ" shows "Lần đầu"). |
 
 D10 (2026-10-22, from the Jira auto-analysis, verified in code): `PRAGMA foreign_keys` is never set and every delete path removes child rows by hand, so `onDelete: cascade` is not relied on. `deleteExerciseAction`, `copyWeekAction` and `deleteMemberAction` delete `exercise_sets` explicitly, in the same transaction and before the parent rows (KAN-25).
 
@@ -178,4 +179,84 @@ D10 (2026-10-22, from the Jira auto-analysis, verified in code): `PRAGMA foreign
 
 ## Test matrix
 
-To be filled by KAN-24.
+Filled by KAN-35 (2026-10-23). Answers accepted by Hoan on KAN-35 (comment 10041): server-action criteria are manual (no DB test harness; the KAN-36 e2e suite covers the main path), validation is unit-tested through `exerciseSetsSchema` exported by KAN-27 from `features/workouts/utils/sets.ts`, future days are refused by the server and hidden in the UI.
+
+Levels: **unit** = Vitest on pure utils (`pnpm test`), **e2e** = Playwright against a seeded local DB (KAN-36), **manual** = checked by hand on a local DB before the PR is merged. Test files:
+
+- `features/workouts/utils/__tests__/sets.test.ts`: `exerciseSetsSchema`, `getBestSet`, `isPersonalBest`, `getPreviousSession`
+- `features/workouts/utils/__tests__/exercise.test.ts`: `isTimedReps`
+- `features/members/utils/__tests__/progress.test.ts`: "Tiến bộ" progress rows
+- `e2e/trainee-sets.spec.ts`: trainee flow (KAN-36)
+
+### KAN-21 Store logged sets and compute bests
+
+| ID  | Criterion (Given / When / Then)                                                                                 | Source      | Level  | Target                                                         | Owner          |
+| --- | --------------------------------------------------------------------------------------------------------------- | ----------- | ------ | -------------------------------------------------------------- | -------------- |
+| A1  | My past or today exercise / save 3 sets / 3 rows exist and the exercise is marked done                          | AC1, Q4     | e2e    | `e2e/trainee-sets.spec.ts`                                     | KAN-27, KAN-36 |
+| A2  | A future exercise / save a set / refused, nothing stored                                                        | AC2, Q7     | manual | `saveExerciseSetsAction`                                       | KAN-27         |
+| A3  | Another user's exercise id / save / refused, nothing stored                                                     | AC3         | manual | `saveExerciseSetsAction`                                       | KAN-27         |
+| A4  | Weight 40.25, 0 or 500.5 / validate / fails with a message; empty, 0.5 and 500 pass                             | AC4, D3     | unit   | `sets.test.ts` (`exerciseSetsSchema`)                          | KAN-27         |
+| A5  | Reps 0, 101 or 2.5 / validate / fails with a message; 1 and 100 pass                                            | AC4         | unit   | `sets.test.ts` (`exerciseSetsSchema`)                          | KAN-27         |
+| A6  | 11 rows / validate / fails with a message; 10 rows pass                                                         | AC4, Q14    | unit   | `sets.test.ts` (`exerciseSetsSchema`)                          | KAN-27         |
+| A7  | A done exercise with sets / save an empty list / sets cleared, completion kept                                  | D2          | manual | `saveExerciseSetsAction`                                       | KAN-27         |
+| A8  | A done exercise with sets / un-mark it / sets kept, only the check is cleared                                   | Q5          | manual | `completion-actions.ts`                                        | KAN-27         |
+| A9  | An exercise with 3 sets / save 2 sets / exactly 2 rows remain, positions 0 and 1                                | D1, D4      | manual | `saveExerciseSetsAction`                                       | KAN-27         |
+| A10 | A target week with logged sets / PT copies a week onto it / refused with a Vietnamese message, nothing changes  | AC5, Q12    | manual | `copyWeekAction`                                               | KAN-28         |
+| A11 | A target week with completions but no sets / PT copies onto it / copy succeeds                                  | D9          | manual | `copyWeekAction`                                               | KAN-28         |
+| A12 | Sets exist / delete the exercise, copy a week or delete the member / no orphan `exercise_sets` rows (SQL count) | D10, OQ1    | manual | `deleteExerciseAction`, `copyWeekAction`, `deleteMemberAction` | KAN-25, KAN-28 |
+| A13 | Sets of mixed weights / `getBestSet` / heaviest wins, a tie goes to more reps                                   | Q8          | unit   | `sets.test.ts` (`getBestSet`)                                  | KAN-26         |
+| A14 | Bodyweight sets mixed in, or only bodyweight sets / `getBestSet` / weightless ignored; all bodyweight is null   | OQ2         | unit   | `sets.test.ts` (`getBestSet`)                                  | KAN-26         |
+| A15 | An earlier best of 40 kg × 10 / `isPersonalBest` with 42.5 × 5 or 40 × 11 / true                                | D6, D8      | unit   | `sets.test.ts` (`isPersonalBest`)                              | KAN-26         |
+| A16 | An earlier best of 40 kg × 10 / `isPersonalBest` with 40 × 10 (tie) or less / false                             | D6          | unit   | `sets.test.ts` (`isPersonalBest`)                              | KAN-26         |
+| A17 | No earlier weighted set (first session, or only bodyweight before) / `isPersonalBest` / false                   | D11         | unit   | `sets.test.ts` (`isPersonalBest`)                              | KAN-26         |
+| A18 | A bodyweight-only set / `isPersonalBest` / false                                                                | OQ2         | unit   | `sets.test.ts` (`isPersonalBest`)                              | KAN-26         |
+| A19 | Sessions on several dates / `getPreviousSession` / latest strictly earlier date of the same user + `youtubeId`  | Q6, D7      | unit   | `sets.test.ts` (`getPreviousSession`)                          | KAN-26         |
+| A20 | Sets earlier the same day, by another user or with another link / `getPreviousSession` / never returned         | D7, Q6, OQ1 | unit   | `sets.test.ts` (`getPreviousSession`)                          | KAN-26         |
+| A21 | Any PR of the story / CI runs / `pnpm test && pnpm lint && pnpm typecheck` green                                | AC6         | CI     | `.github/workflows/ci.yml`                                     | KAN-25..28     |
+
+### KAN-22 Trainee logs sets while training
+
+| ID  | Criterion (Given / When / Then)                                                                               | Source       | Level  | Target                             | Owner          |
+| --- | ------------------------------------------------------------------------------------------------------------- | ------------ | ------ | ---------------------------------- | -------------- |
+| B1  | 3 sets and a previous session / open today / 3 rows, row n hints "Lần trước 40 kg × 10" from set n            | AC1, Q11, E7 | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-31, KAN-36 |
+| B2  | A hint / tap it and press "Lưu" / set stored, success toast, card shows "Đã tập xong"                         | AC2, E3, E8  | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-31, KAN-36 |
+| B3  | A set heavier than my previous best / save / "Kỷ lục mới" on that card                                        | AC3, Q10, E6 | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-31, KAN-36 |
+| B4  | A tie with the previous best, or a first-ever weighted set / save / no badge                                  | D6, D11      | manual | `UserExerciseItem`                 | KAN-29, KAN-31 |
+| B5  | A timed exercise (`30s`) / open its card / no set rows                                                        | AC4, Q3      | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
+| B6  | A future day / open its card / no set rows (the server also refuses, A2)                                      | AC4, Q7      | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
+| B7  | `isTimedReps` / `30s`, `45 sec`, `30 giây`, `1p`, `2ph`, `1 phút`, `1'`, `30"` true; `12`, `8-12`, `10` false | E4           | unit   | `exercise.test.ts` (`isTimedReps`) | KAN-29         |
+| B8  | `sets` null / open the card / 1 row; `sets` 4 / 4 rows                                                        | E1, Q1       | manual | `SetLogger`                        | KAN-30         |
+| B9  | 9 rows / add a row / 10 rows, then add is disabled; delete a row / 9 rows                                     | Q14          | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
+| B10 | A row / look at the reps input / placeholder is the PT's target `reps`                                        | E2           | manual | `SetLogger`                        | KAN-30         |
+| B11 | A save fails (e.g. weight 40.25 bypassing the input) / press "Lưu" / error toast, nothing changes             | E8, D5       | manual | `use-exercise-sets.ts`             | KAN-30         |
+| B12 | Viewport 390 px (iPhone 12) / open the day / no horizontal scroll (`scrollWidth <= innerWidth`)               | AC5          | e2e    | `e2e/trainee-sets.spec.ts`         | KAN-30, KAN-36 |
+| B13 | Admin opens `/admin/users/[id]/preview` / the logger shows read-only                                          | E5           | manual | `/preview`                         | KAN-30         |
+
+### KAN-23 PT sees logged sets and progress
+
+| ID  | Criterion (Given / When / Then)                                                                                  | Source       | Level  | Target                                              | Owner          |
+| --- | ---------------------------------------------------------------------------------------------------------------- | ------------ | ------ | --------------------------------------------------- | -------------- |
+| C1  | A trainee logged sets this week / PT opens the member page / each exercise shows "Đã ghi:" sets, no edit control | AC1, F1, Q13 | manual | `ExerciseEditorItem`                                | KAN-33         |
+| C2  | Two sessions of the same link / "Tiến bộ" / selected week's best vs the best before it, with the kg change       | AC2, F4      | unit   | `features/members/utils/__tests__/progress.test.ts` | KAN-32         |
+| C3  | Same as C2 / open the Summary tab / list renders both bests and the difference                                   | AC2, Q9      | manual | `/summary`                                          | KAN-34         |
+| C4  | A trainee with no logged sets / open the Summary tab / "Tiến bộ" empty state                                     | AC3          | manual | `/summary`                                          | KAN-34         |
+| C5  | One weighted session only / "Tiến bộ" / shows "Lần đầu"                                                          | F6, D11      | unit   | `progress.test.ts`                                  | KAN-32, KAN-34 |
+| C6  | A bodyweight-only exercise / "Tiến bộ" / excluded                                                                | F6, OQ2      | unit   | `progress.test.ts`                                  | KAN-32         |
+| C7  | The title changed across weeks (same link) / "Tiến bộ" / shows the latest title                                  | F5           | unit   | `progress.test.ts`                                  | KAN-32         |
+| C8  | A trainee sets a personal best / PT opens member activity and `/admin` / a record entry, keys `${kind}-${id}`    | Q10, F2, F3  | manual | `dashboard-queries.ts`, `ActivityItem`              | KAN-32, KAN-34 |
+| C9  | An exercise with logged sets / PT deletes it / the confirm says the sets are deleted too                         | OQ1          | manual | `ExerciseEditorItem`                                | KAN-33         |
+| C10 | Every new admin query / code review / behind `requireAdmin()` or the admin layout                                | AC4          | manual | `features/members/*`, `dashboard-queries.ts`        | KAN-32         |
+
+### Video review checklist
+
+Screen recordings for UI/UX review, made on a seeded local DB before the KAN-24 sign-off. Phone flows are recorded at 390 px wide.
+
+| ID  | Flow recorded                                                                              | Rows covered    | Owner  | Reviewer | Status  |
+| --- | ------------------------------------------------------------------------------------------ | --------------- | ------ | -------- | ------- |
+| V1  | Trainee logs sets on a 390 px phone: fill rows, add and delete a row, "Lưu", "Đã tập xong" | A1, B2, B9, B12 | KAN-30 | Hoan     | Pending |
+| V2  | Hint copy "Lần trước 40 kg × 10" per row and one tap to copy it                            | B1, B10         | KAN-31 | Hoan     | Pending |
+| V3  | "Kỷ lục mới" badge after beating the previous best (and no badge on a tie)                 | B3, B4          | KAN-31 | Hoan     | Pending |
+| V4  | Timed exercise and future day show no logger                                               | B5, B6          | KAN-30 | Hoan     | Pending |
+| V5  | Admin member page: read-only "Đã ghi:" sets, delete confirm mentions sets                  | C1, C9          | KAN-33 | Hoan     | Pending |
+| V6  | Summary "Tiến bộ": bests and change, "Lần đầu", empty state                                | C3, C4, C5      | KAN-34 | Hoan     | Pending |
+| V7  | Dashboard activity: personal-best entry on `/admin` and in member activity                 | C8              | KAN-34 | Hoan     | Pending |

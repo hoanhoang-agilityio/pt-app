@@ -52,6 +52,7 @@ export const DayView = ({ day, today, isInteractive }: DayViewProps) => {
                 <ExerciseCard
                   exercise={exercise}
                   index={index}
+                  isPersonalBest={exercise.isPersonalBest}
                   footer={
                     canLogSets(exercise, canComplete) && (
                       <LoggedSetList sets={exercise.loggedSets} />

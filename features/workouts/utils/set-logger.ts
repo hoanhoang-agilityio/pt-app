@@ -35,6 +35,23 @@ const toDraft = (set: LoggedSet | null, id: number): SetRowDraft => ({
   reps: set ? String(set.reps) : "",
 });
 
+// Row n's hint is the previous session's set n (E7); rows past the previous
+// count have none.
+export const getRowHint = (
+  previousSets: LoggedSet[],
+  index: number,
+): LoggedSet | null => previousSets[index] ?? null;
+
+// The weight and reps strings a tapped hint writes into a row; a bodyweight
+// hint leaves the weight empty (Q3).
+export const hintToDraftValues = (
+  hint: LoggedSet,
+): Pick<SetRowDraft, "weight" | "reps"> => {
+  const { weight, reps } = toDraft(hint, 0);
+
+  return { weight, reps };
+};
+
 // Saved sets win; otherwise one empty row per planned set, 1 when the PT left
 // `sets` empty (E1, Q1), never more than the row limit (Q14).
 export const createInitialRows = (

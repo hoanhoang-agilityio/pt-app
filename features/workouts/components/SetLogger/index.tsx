@@ -7,6 +7,7 @@ import { SetInputRow } from "@/features/workouts/components/SetInputRow";
 import { SET_LOGGER_COPY } from "@/features/workouts/constants/set-logger";
 import { useExerciseSets } from "@/features/workouts/hooks/use-exercise-sets";
 import type { ExerciseWithSets } from "@/features/workouts/types/workout";
+import { getRowHint } from "@/features/workouts/utils/set-logger";
 
 interface SetLoggerProps {
   exercise: ExerciseWithSets;
@@ -23,6 +24,7 @@ export const SetLogger = ({ exercise }: SetLoggerProps) => {
     addRow,
     removeRow,
     updateRow,
+    applyHint,
     handleSave,
   } = useExerciseSets(exercise);
 
@@ -48,6 +50,8 @@ export const SetLogger = ({ exercise }: SetLoggerProps) => {
             isDisabled={isPending}
             onChange={updateRow}
             onRemove={removeRow}
+            hint={getRowHint(exercise.previousSets, index)}
+            onApplyHint={applyHint}
           />
         ))}
       </ol>

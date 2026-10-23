@@ -1,13 +1,14 @@
 "use client";
 
 import clsx from "clsx";
-import { Check, ExternalLink, Play, Repeat } from "lucide-react";
+import { Check, ExternalLink, Play, Repeat, Trophy } from "lucide-react";
 import Image from "next/image";
 import { type ReactNode, useState } from "react";
 
 import { CARD } from "@/constants/styles";
 import { TIME_ZONE } from "@/constants/time";
 import { YoutubePlayer } from "@/features/workouts/components/YoutubePlayer";
+import { SET_LOGGER_COPY } from "@/features/workouts/constants/set-logger";
 import type { Exercise } from "@/features/workouts/types/workout";
 import { formatVolume } from "@/features/workouts/utils/exercise";
 import {
@@ -20,6 +21,8 @@ interface ExerciseCardProps {
   exercise: Exercise;
   index: number;
   footer?: ReactNode;
+  // "Kỷ lục mới", computed on read so it survives a reload (E6).
+  isPersonalBest?: boolean;
 }
 
 // Shows a thumbnail until tapped so a day with many exercises doesn't load
@@ -28,6 +31,7 @@ export const ExerciseCard = ({
   exercise,
   index,
   footer,
+  isPersonalBest = false,
 }: ExerciseCardProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const volume = formatVolume(exercise.sets, exercise.reps);
@@ -82,11 +86,21 @@ export const ExerciseCard = ({
         <h3 className="text-[17px] leading-snug font-semibold text-fg">
           {exercise.title}
         </h3>
-        {volume && (
-          <p className="flex w-fit items-center gap-1.5 rounded-full bg-accent/12 px-3 py-1 text-sm font-semibold text-accent">
-            <Repeat className="size-4" aria-hidden />
-            {volume}
-          </p>
+        {(volume || isPersonalBest) && (
+          <div className="flex flex-wrap gap-2">
+            {volume && (
+              <p className="flex w-fit items-center gap-1.5 rounded-full bg-accent/12 px-3 py-1 text-sm font-semibold text-accent">
+                <Repeat className="size-4" aria-hidden />
+                {volume}
+              </p>
+            )}
+            {isPersonalBest && (
+              <p className="flex w-fit items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-sm font-semibold text-accent-fg">
+                <Trophy className="size-4" aria-hidden />
+                {SET_LOGGER_COPY.PERSONAL_BEST_BADGE}
+              </p>
+            )}
+          </div>
         )}
         {exercise.description && (
           <p className="text-[15px] leading-relaxed whitespace-pre-line text-muted">

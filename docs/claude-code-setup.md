@@ -130,3 +130,13 @@ Auto review runs on every push to every PR and uses your Claude quota. To limit 
 | D07 | `/plugin`, install one plugin (e.g. a TypeScript LSP), write down an honest verdict.                             |
 | D09 | `/goal` on a bounded task; a Local routine in Desktop (Code tab > Routines > New routine > Local).               |
 | D10 | `/code-review` on a real branch, `/code-review ultra` on a seeded-bug branch, `/security-review` before commit.  |
+
+### 6. Playwright e2e (KAN-36)
+
+`pnpm test:e2e` runs `e2e/trainee-sets.spec.ts` (set-logging matrix rows A1, B1-B3, B5, B6, B9, B12) in a 390 px Chromium against `next dev` on port 3100.
+
+- Browser: `pnpm exec playwright install chromium` once (cloud sessions already have it under `PLAYWRIGHT_BROWSERS_PATH`; `@playwright/test` is pinned to the matching version, so bump both together).
+- Database: a scratch SQLite file at `e2e/.tmp/e2e.db`, recreated on every run (schema push plus seed in `e2e/global-setup.ts`). `playwright.config.ts` pins both `DATABASE_URL` and `TURSO_DATABASE_URL` to that file and blanks the tokens, because `services/env.ts` prefers the Turso pair; the setup throws for anything that is not a `file:` URL inside `e2e/.tmp`. Your `.env.local` is never used for the suite.
+- Seed dates are relative to the run date (today, one week ago, tomorrow), so no clock mocking is needed.
+- Record a video of every test: `E2E_VIDEO=1 pnpm test:e2e`; the `.webm` files land in `e2e/.tmp/results`.
+- CI: the separate `e2e` job in `ci.yml` is not a required check yet. If it goes over 3 minutes, remove it and keep this local command.

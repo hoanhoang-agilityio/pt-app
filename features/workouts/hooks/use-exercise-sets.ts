@@ -9,7 +9,7 @@ import {
 } from "@/features/workouts/constants/messages";
 import { SET_LOGGER_COPY } from "@/features/workouts/constants/set-logger";
 import { saveExerciseSetsAction } from "@/features/workouts/services/set-actions";
-import type { Exercise } from "@/features/workouts/types/workout";
+import type { ExerciseWithSets } from "@/features/workouts/types/workout";
 import {
   createInitialRows,
   rowsToSetInputs,
@@ -22,7 +22,7 @@ import { describeErrorReference } from "@/utils/errors";
 // the saved list is what is already on screen. Saving revalidates the page,
 // so the completion toggle shows "Đã tập xong" when the transition ends.
 export const useExerciseSets = (
-  exercise: Pick<Exercise, "id" | "sets" | "loggedSets">,
+  exercise: Pick<ExerciseWithSets, "id" | "sets" | "loggedSets">,
 ) => {
   const [rows, setRows] = useState<SetRowDraft[]>(() =>
     createInitialRows(exercise.loggedSets, exercise.sets),

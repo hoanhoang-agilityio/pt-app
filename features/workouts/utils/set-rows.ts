@@ -27,9 +27,12 @@ export type SetRowField = "weight" | "reps";
 export type RowsParseResult =
   { ok: true; sets: SetInput[] } | { ok: false; message: string };
 
+// Decimal comma, as the trainee types it and as `formatSet` shows it.
+const formatKg = (kg: number) => String(kg).replace(".", ",");
+
 const toDraft = (set: LoggedSet | null, id: number): SetRowDraft => ({
   id,
-  weight: set?.weightKg === null || !set ? "" : String(set.weightKg),
+  weight: !set || set.weightKg === null ? "" : formatKg(set.weightKg),
   reps: set ? String(set.reps) : "",
 });
 
@@ -94,8 +97,6 @@ export const rowsToSetInputs = (rows: SetRowDraft[]): RowsParseResult => {
           parsed.error.issues[0]?.message ?? WORKOUT_MESSAGES.INVALID_INPUT,
       };
 };
-
-const formatKg = (kg: number) => String(kg).replace(".", ",");
 
 // "40 kg × 10", "42,5 kg × 8" or "Tự trọng × 12".
 export const formatSet = ({ weightKg, reps }: LoggedSet) =>

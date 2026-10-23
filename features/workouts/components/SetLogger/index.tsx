@@ -6,10 +6,10 @@ import { BUTTON_PRIMARY, BUTTON_SECONDARY } from "@/constants/styles";
 import { SetRow } from "@/features/workouts/components/SetRow";
 import { SET_LOGGER_COPY } from "@/features/workouts/constants/set-logger";
 import { useExerciseSets } from "@/features/workouts/hooks/use-exercise-sets";
-import type { Exercise } from "@/features/workouts/types/workout";
+import type { ExerciseWithSets } from "@/features/workouts/types/workout";
 
 interface SetLoggerProps {
-  exercise: Exercise;
+  exercise: ExerciseWithSets;
 }
 
 // Weight and reps per set on today's or a past exercise card (KAN-30). The

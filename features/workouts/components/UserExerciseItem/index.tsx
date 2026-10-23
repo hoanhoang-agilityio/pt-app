@@ -4,11 +4,11 @@ import { CompletionToggle } from "@/features/workouts/components/CompletionToggl
 import { ExerciseCard } from "@/features/workouts/components/ExerciseCard";
 import { SetLogger } from "@/features/workouts/components/SetLogger";
 import { useExerciseCompletion } from "@/features/workouts/hooks/use-exercise-completion";
-import type { Exercise } from "@/features/workouts/types/workout";
+import type { ExerciseWithSets } from "@/features/workouts/types/workout";
 import { canLogSets } from "@/features/workouts/utils/set-rows";
 
 interface UserExerciseItemProps {
-  exercise: Exercise;
+  exercise: ExerciseWithSets;
   index: number;
   canComplete: boolean;
 }

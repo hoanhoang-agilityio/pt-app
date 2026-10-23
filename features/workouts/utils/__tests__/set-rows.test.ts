@@ -37,7 +37,7 @@ describe("createInitialRows", () => {
         ],
         4,
       ),
-    ).toEqual([row("42.5", "8", 0), row("", "12", 1)]);
+    ).toEqual([row("42,5", "8", 0), row("", "12", 1)]);
   });
 });
 

@@ -3,15 +3,13 @@
 import { useTransition } from "react";
 import { toast } from "sonner";
 
-import {
-  CONFIRM_MESSAGES,
-  WORKOUT_MESSAGES,
-} from "@/features/workouts/constants/messages";
+import { WORKOUT_MESSAGES } from "@/features/workouts/constants/messages";
 import {
   deleteExerciseAction,
   moveExerciseAction,
 } from "@/features/workouts/services/workout-actions";
 import type { MoveDirection } from "@/features/workouts/types/workout";
+import { getDeleteConfirmMessage } from "@/features/workouts/utils/exercise";
 import { describeErrorReference } from "@/utils/errors";
 
 export const useExerciseItemActions = (
@@ -34,13 +32,7 @@ export const useExerciseItemActions = (
   };
 
   const handleDelete = () => {
-    if (
-      !window.confirm(
-        hasSets
-          ? CONFIRM_MESSAGES.DELETE_EXERCISE_WITH_SETS
-          : CONFIRM_MESSAGES.DELETE_EXERCISE,
-      )
-    ) {
+    if (!window.confirm(getDeleteConfirmMessage(hasSets))) {
       return;
     }
 

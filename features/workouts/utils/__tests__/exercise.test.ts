@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { formatVolume, isTimedReps } from "@/features/workouts/utils/exercise";
+import { CONFIRM_MESSAGES } from "@/features/workouts/constants/messages";
+import {
+  formatVolume,
+  getDeleteConfirmMessage,
+  isTimedReps,
+} from "@/features/workouts/utils/exercise";
 
 describe("formatVolume", () => {
   it("joins sets and reps", () => {
@@ -50,5 +55,17 @@ describe("isTimedReps", () => {
     "12 mỗi bên",
   ])("treats %s as counted reps", (reps) => {
     expect(isTimedReps(reps)).toBe(false);
+  });
+});
+
+describe("getDeleteConfirmMessage", () => {
+  it("warns that logged sets go too when the exercise has sets (OQ1)", () => {
+    expect(getDeleteConfirmMessage(true)).toBe(
+      CONFIRM_MESSAGES.DELETE_EXERCISE_WITH_SETS,
+    );
+  });
+
+  it("keeps the plain message without sets", () => {
+    expect(getDeleteConfirmMessage(false)).toBe("Xóa bài tập này?");
   });
 });

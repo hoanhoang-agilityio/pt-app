@@ -15,7 +15,7 @@ import {
   rowsToSetInputs,
   type SetRowDraft,
   type SetRowField,
-} from "@/features/workouts/utils/set-rows";
+} from "@/features/workouts/utils/set-logger";
 import { describeErrorReference } from "@/utils/errors";
 
 // Local rows for one exercise, seeded once from `loggedSets`. The caller keys

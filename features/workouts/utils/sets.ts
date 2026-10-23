@@ -4,7 +4,7 @@ import {
   SET_LIMITS,
   WORKOUT_MESSAGES,
 } from "@/features/workouts/constants/messages";
-import type { ExerciseSet } from "@/features/workouts/types/workout";
+import type { BestSet, ExerciseSet } from "@/features/workouts/types/workout";
 
 // One logged set as sent by the trainee (KAN-27). Weight null = bodyweight;
 // otherwise 0.5-500 kg in steps of 0.5 (0 is rejected, D3).
@@ -75,7 +75,13 @@ export const getBestSet = <T extends LoggedSet>(
   return best;
 };
 
-const isSameExerciseBefore = (session: SetSession, key: SessionKey) =>
+// Plain { weightKg, reps } copy of a best set, without the row's other fields.
+export const toBestSet = (set: WeightedSet): BestSet => ({
+  weightKg: set.weightKg,
+  reps: set.reps,
+});
+
+export const isSameExerciseBefore = (session: SetSession, key: SessionKey) =>
   session.userId === key.userId &&
   session.youtubeId === key.youtubeId &&
   session.date < key.date;

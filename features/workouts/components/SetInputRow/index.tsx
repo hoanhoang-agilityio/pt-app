@@ -10,7 +10,7 @@ import {
 import type {
   SetRowDraft,
   SetRowField,
-} from "@/features/workouts/utils/set-rows";
+} from "@/features/workouts/utils/set-logger";
 
 interface SetInputRowProps {
   index: number;

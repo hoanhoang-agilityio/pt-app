@@ -8,7 +8,7 @@ import { RestDayState } from "@/features/workouts/components/RestDayState";
 import { UserExerciseItem } from "@/features/workouts/components/UserExerciseItem";
 import type { ScheduleDayWithSets } from "@/features/workouts/types/workout";
 import { getDayProgress } from "@/features/workouts/utils/progress";
-import { canLogSets } from "@/features/workouts/utils/set-rows";
+import { canLogSets } from "@/features/workouts/utils/set-logger";
 
 interface DayViewProps {
   day: ScheduleDayWithSets;

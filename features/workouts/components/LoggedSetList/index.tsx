@@ -1,5 +1,5 @@
 import { SET_LOGGER_COPY } from "@/features/workouts/constants/set-logger";
-import { formatSet } from "@/features/workouts/utils/set-rows";
+import { formatSet } from "@/features/workouts/utils/set-logger";
 import type { LoggedSet } from "@/features/workouts/utils/sets";
 
 interface LoggedSetListProps {

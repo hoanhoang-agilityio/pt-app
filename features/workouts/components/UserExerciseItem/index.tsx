@@ -8,7 +8,7 @@ import type { ExerciseWithSets } from "@/features/workouts/types/workout";
 import {
   canLogSets,
   getLoggedSetsKey,
-} from "@/features/workouts/utils/set-rows";
+} from "@/features/workouts/utils/set-logger";
 
 interface UserExerciseItemProps {
   exercise: ExerciseWithSets;

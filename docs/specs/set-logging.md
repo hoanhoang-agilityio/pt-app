@@ -170,14 +170,17 @@ D9 guard placement (2026-10-23, approved by Hoan on KAN-28): `copyWeekAction` ch
 
 ### KAN-23 (F1-F6)
 
-| #   | Decision                                                                                             |
-| --- | ---------------------------------------------------------------------------------------------------- |
-| F1  | Member page: a read-only "Đã ghi:" line inside `ExerciseEditorItem`.                                 |
-| F2  | `ActivityItem` gets a `kind` field; list keys are `${kind}-${id}`.                                   |
-| F3  | Personal-best entries also show in the `/admin` dashboard activity list; no new tile.                |
-| F4  | "Tiến bộ" compares the selected week's best with the best before it.                                 |
-| F5  | When the title changed across weeks, show the latest title.                                          |
-| F6  | Bodyweight-only exercises are excluded from "Tiến bộ"; an exercise with one session shows "Lần đầu". |
+| #   | Decision                                                                                                                                                             |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F1  | Member page: a read-only "Đã ghi:" line inside `ExerciseEditorItem`.                                                                                                 |
+| F2  | `ActivityItem` gets a `kind` field; list keys are `${kind}-${id}`.                                                                                                   |
+| F3  | Personal-best entries also show in the `/admin` dashboard activity list; no new tile.                                                                                |
+| F4  | "Tiến bộ" compares the selected week's best with the best before it.                                                                                                 |
+| F5  | When the title changed across weeks, show the latest title.                                                                                                          |
+| F6  | Bodyweight-only exercises are excluded from "Tiến bộ"; an exercise with one session shows "Lần đầu".                                                                 |
+| F7  | (2026-10-23, KAN-32) A record shows as two activity entries, the completion and the personal best; KAN-34 may group them visually.                                   |
+| F8  | (2026-10-23, KAN-32) The record lookback is not capped (a cap would flag false records); only the activity window is capped by `limit`.                              |
+| F9  | (2026-10-23, KAN-32) `ActivityItem.completedAt` is renamed `occurredAt`; KAN-33 reads logged sets from KAN-29's week data, so there is no separate admin sets query. |
 
 ## Test matrix
 

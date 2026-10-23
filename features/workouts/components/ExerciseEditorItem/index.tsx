@@ -5,11 +5,15 @@ import { ArrowDown, ArrowUp, Pencil, Trash2 } from "lucide-react";
 
 import { ICON_BUTTON } from "@/constants/styles";
 import { ExerciseCard } from "@/features/workouts/components/ExerciseCard";
+import { LoggedSetList } from "@/features/workouts/components/LoggedSetList";
 import { useExerciseItemActions } from "@/features/workouts/hooks/use-exercise-item-actions";
-import type { Exercise } from "@/features/workouts/types/workout";
+import type {
+  Exercise,
+  ExerciseWithSets,
+} from "@/features/workouts/types/workout";
 
 interface ExerciseEditorItemProps {
-  exercise: Exercise;
+  exercise: ExerciseWithSets;
   index: number;
   count: number;
   userId: number;
@@ -26,9 +30,11 @@ export const ExerciseEditorItem = ({
   userId,
   onEdit,
 }: ExerciseEditorItemProps) => {
+  const hasSets = exercise.loggedSets.length > 0;
   const { isPending, handleMove, handleDelete } = useExerciseItemActions(
     exercise.id,
     userId,
+    hasSets,
   );
 
   return (
@@ -37,45 +43,49 @@ export const ExerciseEditorItem = ({
         exercise={exercise}
         index={index}
         footer={
-          <div className="flex items-center gap-1 border-t border-line px-2 py-1">
-            <button
-              type="button"
-              onClick={() => handleMove("up")}
-              disabled={isPending || index === 0}
-              className={ICON_BUTTON}
-              aria-label="Đưa lên"
-            >
-              <ArrowUp className="size-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleMove("down")}
-              disabled={isPending || index === count - 1}
-              className={ICON_BUTTON}
-              aria-label="Đưa xuống"
-            >
-              <ArrowDown className="size-5" />
-            </button>
-            <span className="flex-1" />
-            <button
-              type="button"
-              onClick={() => onEdit(exercise)}
-              disabled={isPending}
-              className={clsx(TOOL_BUTTON, "text-fg")}
-            >
-              <Pencil className="size-4" aria-hidden />
-              Sửa
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isPending}
-              className={clsx(TOOL_BUTTON, "text-danger")}
-            >
-              <Trash2 className="size-4" aria-hidden />
-              Xóa
-            </button>
-          </div>
+          <>
+            {/* Read-only (Q13); nothing shown until the trainee logs a set. */}
+            {hasSets && <LoggedSetList sets={exercise.loggedSets} />}
+            <div className="flex items-center gap-1 border-t border-line px-2 py-1">
+              <button
+                type="button"
+                onClick={() => handleMove("up")}
+                disabled={isPending || index === 0}
+                className={ICON_BUTTON}
+                aria-label="Đưa lên"
+              >
+                <ArrowUp className="size-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleMove("down")}
+                disabled={isPending || index === count - 1}
+                className={ICON_BUTTON}
+                aria-label="Đưa xuống"
+              >
+                <ArrowDown className="size-5" />
+              </button>
+              <span className="flex-1" />
+              <button
+                type="button"
+                onClick={() => onEdit(exercise)}
+                disabled={isPending}
+                className={clsx(TOOL_BUTTON, "text-fg")}
+              >
+                <Pencil className="size-4" aria-hidden />
+                Sửa
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isPending}
+                className={clsx(TOOL_BUTTON, "text-danger")}
+              >
+                <Trash2 className="size-4" aria-hidden />
+                Xóa
+              </button>
+            </div>
+          </>
         }
       />
     </div>

@@ -39,5 +39,7 @@ export const EXERCISE_LIMITS = {
 
 export const CONFIRM_MESSAGES = {
   DELETE_EXERCISE: "Xóa bài tập này?",
+  DELETE_EXERCISE_WITH_SETS:
+    "Học viên đã ghi số liệu cho bài này. Xóa bài tập sẽ xóa luôn số liệu. Tiếp tục?",
   COPY_WEEK: "Lịch của tuần đích sẽ bị thay thế bằng tuần này. Tiếp tục?",
 } as const;

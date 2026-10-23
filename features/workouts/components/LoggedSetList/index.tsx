@@ -6,7 +6,8 @@ interface LoggedSetListProps {
   sets: LoggedSet[];
 }
 
-// Read-only sets for the admin's "view as user" preview (E5, Q13).
+// Read-only sets (Q13): the admin preview (E5) shows the empty fallback; the
+// member page (F1) only renders it when sets exist.
 export const LoggedSetList = ({ sets }: LoggedSetListProps) => (
   <p className="border-t border-line px-4 py-3 text-sm text-muted">
     {sets.length > 0 ? (

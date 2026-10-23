@@ -2,13 +2,13 @@ import { WeekNavigator } from "@/components/common/WeekNavigator";
 import { DayEditor } from "@/features/workouts/components/DayEditor";
 import { DayTabs } from "@/features/workouts/components/DayTabs";
 import { WeekProgress } from "@/features/workouts/components/WeekProgress";
-import type { ScheduleDay } from "@/features/workouts/types/workout";
+import type { ScheduleDayWithSets } from "@/features/workouts/types/workout";
 import { getWeekProgress } from "@/features/workouts/utils/progress";
 
 interface WorkoutWeekEditorProps {
   userId: number;
   basePath: string;
-  days: ScheduleDay[];
+  days: ScheduleDayWithSets[];
   weekStart: string;
   selectedDate: string;
   today: string;

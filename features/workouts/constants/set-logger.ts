@@ -18,6 +18,9 @@ export const SET_LOGGER_COPY = {
 export const describeMissingReps = (setNumber: number) =>
   `Nhập số lần cho hiệp ${setNumber}`;
 
+export const describeRowError = (setNumber: number, message: string) =>
+  `Hiệp ${setNumber}: ${message}`;
+
 export const describeWeightLabel = (setNumber: number) =>
   `Số kg hiệp ${setNumber}`;
 

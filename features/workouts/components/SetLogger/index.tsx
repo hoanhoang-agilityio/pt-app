@@ -3,7 +3,7 @@
 import { Plus } from "lucide-react";
 
 import { BUTTON_PRIMARY, BUTTON_SECONDARY } from "@/constants/styles";
-import { SetRow } from "@/features/workouts/components/SetRow";
+import { SetInputRow } from "@/features/workouts/components/SetInputRow";
 import { SET_LOGGER_COPY } from "@/features/workouts/constants/set-logger";
 import { useExerciseSets } from "@/features/workouts/hooks/use-exercise-sets";
 import type { ExerciseWithSets } from "@/features/workouts/types/workout";
@@ -39,7 +39,7 @@ export const SetLogger = ({ exercise }: SetLoggerProps) => {
       </div>
       <ol className="space-y-2">
         {rows.map((row, index) => (
-          <SetRow
+          <SetInputRow
             key={row.id}
             index={index}
             row={row}

@@ -5,7 +5,10 @@ import { ExerciseCard } from "@/features/workouts/components/ExerciseCard";
 import { SetLogger } from "@/features/workouts/components/SetLogger";
 import { useExerciseCompletion } from "@/features/workouts/hooks/use-exercise-completion";
 import type { ExerciseWithSets } from "@/features/workouts/types/workout";
-import { canLogSets } from "@/features/workouts/utils/set-rows";
+import {
+  canLogSets,
+  getLoggedSetsKey,
+} from "@/features/workouts/utils/set-rows";
 
 interface UserExerciseItemProps {
   exercise: ExerciseWithSets;
@@ -28,7 +31,10 @@ export const UserExerciseItem = ({
       footer={
         <>
           {canLogSets(exercise, canComplete) && (
-            <SetLogger exercise={exercise} />
+            <SetLogger
+              key={getLoggedSetsKey(exercise.loggedSets)}
+              exercise={exercise}
+            />
           )}
           <CompletionToggle
             completedAt={completedAt}

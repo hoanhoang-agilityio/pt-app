@@ -1,17 +1,19 @@
+import { formatDecimal } from "@/features/nutrition/utils/energy";
 import {
   SET_LIMITS,
   WORKOUT_MESSAGES,
 } from "@/features/workouts/constants/messages";
 import {
   describeMissingReps,
+  describeRowError,
   SET_LOGGER_COPY,
 } from "@/features/workouts/constants/set-logger";
 import type { Exercise } from "@/features/workouts/types/workout";
 import { isTimedReps } from "@/features/workouts/utils/exercise";
 import {
-  exerciseSetsSchema,
   type LoggedSet,
   type SetInput,
+  setInputSchema,
 } from "@/features/workouts/utils/sets";
 
 // One editable row of the set logger. Inputs stay strings while typing so a
@@ -27,12 +29,9 @@ export type SetRowField = "weight" | "reps";
 export type RowsParseResult =
   { ok: true; sets: SetInput[] } | { ok: false; message: string };
 
-// Decimal comma, as the trainee types it and as `formatSet` shows it.
-const formatKg = (kg: number) => String(kg).replace(".", ",");
-
 const toDraft = (set: LoggedSet | null, id: number): SetRowDraft => ({
   id,
-  weight: !set || set.weightKg === null ? "" : formatKg(set.weightKg),
+  weight: !set || set.weightKg === null ? "" : formatDecimal(set.weightKg),
   reps: set ? String(set.reps) : "",
 });
 
@@ -53,17 +52,22 @@ export const createInitialRows = (
   return Array.from({ length: count }, (_, index) => toDraft(null, index));
 };
 
-// Vietnamese keyboards may type "42,5"; both separators mean 42.5.
-const parseNumber = (value: string) => Number(value.trim().replace(",", "."));
+// Plain decimals only ("42", "42.5", "42,5"): `Number` alone would also take
+// "1e2" or "0x14". Vietnamese keyboards type the comma.
+const DECIMAL_PATTERN = /^\d+([.,]\d+)?$/;
+
+const parseDecimal = (value: string) =>
+  DECIMAL_PATTERN.test(value) ? Number(value.replace(",", ".")) : Number.NaN;
 
 // Turns the rows into the action's input. Fully blank rows are dropped, an
-// empty weight is bodyweight (Q3). Range and step use the server's schema so
-// the trainee sees the same message before a round trip; the action still
+// empty weight is bodyweight (Q3). Each row is checked with the server's
+// schema so the toast names the row before any round trip; the action still
 // validates on its own.
 export const rowsToSetInputs = (rows: SetRowDraft[]): RowsParseResult => {
   const sets: SetInput[] = [];
 
   for (const [index, row] of rows.entries()) {
+    const setNumber = index + 1;
     const weight = row.weight.trim();
     const reps = row.reps.trim();
 
@@ -71,38 +75,53 @@ export const rowsToSetInputs = (rows: SetRowDraft[]): RowsParseResult => {
       continue;
     }
     if (reps === "") {
-      return { ok: false, message: describeMissingReps(index + 1) };
+      return { ok: false, message: describeMissingReps(setNumber) };
     }
 
-    const weightKg = weight === "" ? null : parseNumber(weight);
-    const repsCount = parseNumber(reps);
+    const weightKg = weight === "" ? null : parseDecimal(weight);
+    const repsCount = parseDecimal(reps);
 
-    if (weightKg !== null && !Number.isFinite(weightKg)) {
-      return { ok: false, message: WORKOUT_MESSAGES.SET_WEIGHT_RANGE };
+    if (weightKg !== null && Number.isNaN(weightKg)) {
+      return {
+        ok: false,
+        message: describeRowError(setNumber, WORKOUT_MESSAGES.SET_WEIGHT_RANGE),
+      };
     }
-    if (!Number.isFinite(repsCount)) {
-      return { ok: false, message: WORKOUT_MESSAGES.SET_REPS_RANGE };
+    if (Number.isNaN(repsCount)) {
+      return {
+        ok: false,
+        message: describeRowError(setNumber, WORKOUT_MESSAGES.SET_REPS_RANGE),
+      };
     }
 
-    sets.push({ weightKg, reps: repsCount });
+    const parsed = setInputSchema.safeParse({ weightKg, reps: repsCount });
+
+    if (!parsed.success) {
+      return {
+        ok: false,
+        message: describeRowError(
+          setNumber,
+          parsed.error.issues[0]?.message ?? WORKOUT_MESSAGES.INVALID_INPUT,
+        ),
+      };
+    }
+    sets.push(parsed.data);
   }
 
-  const parsed = exerciseSetsSchema.safeParse(sets);
-
-  return parsed.success
-    ? { ok: true, sets: parsed.data }
-    : {
-        ok: false,
-        message:
-          parsed.error.issues[0]?.message ?? WORKOUT_MESSAGES.INVALID_INPUT,
-      };
+  return sets.length > SET_LIMITS.MAX_ROWS
+    ? { ok: false, message: WORKOUT_MESSAGES.SET_TOO_MANY }
+    : { ok: true, sets };
 };
 
 // "40 kg × 10", "42,5 kg × 8" or "Tự trọng × 12".
 export const formatSet = ({ weightKg, reps }: LoggedSet) =>
-  `${weightKg === null ? SET_LOGGER_COPY.BODYWEIGHT : `${formatKg(weightKg)} ${SET_LOGGER_COPY.WEIGHT_UNIT}`} × ${reps}`;
+  `${weightKg === null ? SET_LOGGER_COPY.BODYWEIGHT : `${formatDecimal(weightKg)} ${SET_LOGGER_COPY.WEIGHT_UNIT}`} × ${reps}`;
 
 // Set rows only on today's and past days (Q7) and never for timed exercises
 // such as "30s" (Q3).
 export const canLogSets = (exercise: Pick<Exercise, "reps">, isDue: boolean) =>
   isDue && !isTimedReps(exercise.reps);
+
+// Changes whenever the saved sets change; used as the logger's React key.
+export const getLoggedSetsKey = (sets: LoggedSet[]) =>
+  sets.map((set) => `${set.weightKg ?? "bw"}x${set.reps}`).join("|");

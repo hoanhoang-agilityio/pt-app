@@ -12,7 +12,7 @@ import type {
   SetRowField,
 } from "@/features/workouts/utils/set-rows";
 
-interface SetRowProps {
+interface SetInputRowProps {
   index: number;
   row: SetRowDraft;
   // The PT's target, e.g. "8-12", shown as the reps placeholder (E2).
@@ -24,11 +24,13 @@ interface SetRowProps {
 }
 
 // `INPUT` with less padding and centred text, so two inputs and the delete
-// button fit a 390 px phone without horizontal scroll.
+// button fit a 390 px phone without horizontal scroll. Copied rather than
+// composed: without tailwind-merge, `px-2` next to INPUT's `px-4` is not
+// guaranteed to win.
 const SET_INPUT =
   "block min-h-12 w-full min-w-0 rounded-xl border border-line bg-surface px-2 text-center text-base text-fg tabular-nums placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 disabled:opacity-60";
 
-export const SetRow = ({
+export const SetInputRow = ({
   index,
   row,
   targetReps,
@@ -36,7 +38,7 @@ export const SetRow = ({
   isDisabled,
   onChange,
   onRemove,
-}: SetRowProps) => {
+}: SetInputRowProps) => {
   const setNumber = index + 1;
 
   return (

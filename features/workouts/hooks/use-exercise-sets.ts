@@ -18,9 +18,11 @@ import {
 } from "@/features/workouts/utils/set-rows";
 import { describeErrorReference } from "@/utils/errors";
 
-// Local rows for one exercise. They are not reset from props after a save:
-// the saved list is what is already on screen. Saving revalidates the page,
-// so the completion toggle shows "Đã tập xong" when the transition ends.
+// Local rows for one exercise, seeded once from `loggedSets`. The caller keys
+// the logger by the saved sets, so rows restart only when the server's list
+// changes (a save here or on another device), never while typing. Saving
+// revalidates the page, so the completion toggle shows "Đã tập xong" when the
+// transition ends.
 export const useExerciseSets = (
   exercise: Pick<ExerciseWithSets, "id" | "sets" | "loggedSets">,
 ) => {
@@ -34,12 +36,13 @@ export const useExerciseSets = (
   const canRemove = rows.length > 1;
 
   const addRow = () => {
-    if (!canAdd) {
-      return;
-    }
     const id = nextId.current++;
 
-    setRows((current) => [...current, { id, weight: "", reps: "" }]);
+    setRows((current) =>
+      current.length < SET_LIMITS.MAX_ROWS
+        ? [...current, { id, weight: "", reps: "" }]
+        : current,
+    );
   };
 
   const removeRow = (id: number) => {

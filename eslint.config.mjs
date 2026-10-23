@@ -20,7 +20,14 @@ const eslintConfig = defineConfig([
       curly: ["error", "all"],
     },
   },
-  globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
+  globalIgnores([
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+    "e2e/.tmp/**",
+    "playwright-report/**",
+  ]),
 ]);
 
 export default eslintConfig;

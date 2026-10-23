@@ -1,0 +1,139 @@
+import { expect, type Page, test } from "@playwright/test";
+
+import { E2E_USER_NAME } from "./config";
+import { E2E_EXERCISES, getE2eDates } from "./seed";
+
+// Trainee flow of the set-logging test matrix (docs/specs/set-logging.md):
+// A1, B1, B2, B3, B5, B6, B9 and B12. The specs share one seeded DB.
+const logIn = async (page: Page) => {
+  await page.goto("/");
+  await page.getByLabel("Tên của bạn").fill(E2E_USER_NAME);
+  await page.getByRole("button", { name: "Vào tập" }).click();
+  await expect(page).toHaveURL(/\/workouts/);
+};
+
+const getCard = (page: Page, title: string) =>
+  page.locator("article").filter({ hasText: title });
+
+test.beforeEach(async ({ page }) => {
+  // Thumbnails come from YouTube; the suite must not depend on the network.
+  await page.route(/(ytimg|youtube)\.com/, (route) => route.abort());
+  await logIn(page);
+});
+
+test("B1: each row hints the previous session's set at its position", async ({
+  page,
+}) => {
+  const card = getCard(page, E2E_EXERCISES.BENCH);
+
+  await expect(
+    card.getByRole("button", {
+      name: /^Lần trước 40 kg × 10, dùng cho hiệp 1/,
+    }),
+  ).toBeVisible();
+  await expect(
+    card.getByRole("button", { name: /^Lần trước 40 kg × 8, dùng cho hiệp 2/ }),
+  ).toBeVisible();
+  await expect(
+    card.getByRole("button", {
+      name: /^Lần trước 35 kg × 10, dùng cho hiệp 3/,
+    }),
+  ).toBeVisible();
+});
+
+test("A1, B2: tapping hints and saving stores the sets and marks it done", async ({
+  page,
+}) => {
+  const card = getCard(page, E2E_EXERCISES.BENCH);
+
+  for (const setNumber of [1, 2, 3]) {
+    await card
+      .getByRole("button", { name: new RegExp(`dùng cho hiệp ${setNumber}$`) })
+      .click();
+  }
+  await expect(card.getByLabel("Số kg hiệp 1")).toHaveValue("40");
+  await expect(card.getByLabel("Số lần hiệp 2")).toHaveValue("8");
+
+  await card.getByRole("button", { name: "Lưu", exact: true }).click();
+
+  await expect(page.getByText("Đã lưu các hiệp")).toBeVisible();
+  await expect(card.getByRole("button", { name: /Đã tập xong/ })).toBeVisible();
+
+  // Survives a reload: the sets are in the database, not in client state.
+  await page.reload();
+  await expect(
+    getCard(page, E2E_EXERCISES.BENCH).getByRole("button", {
+      name: /Đã tập xong/,
+    }),
+  ).toBeVisible();
+  await expect(
+    getCard(page, E2E_EXERCISES.BENCH).getByLabel("Số kg hiệp 3"),
+  ).toHaveValue("35");
+});
+
+test("B3: beating the previous best shows the personal-best badge", async ({
+  page,
+}) => {
+  const card = getCard(page, E2E_EXERCISES.SQUAT);
+
+  await card.getByLabel("Số kg hiệp 1").fill("45");
+  await card.getByLabel("Số lần hiệp 1").fill("10");
+  await card.getByLabel("Số kg hiệp 2").fill("40");
+  await card.getByLabel("Số lần hiệp 2").fill("8");
+  await card.getByLabel("Số kg hiệp 3").fill("35");
+  await card.getByLabel("Số lần hiệp 3").fill("10");
+  await card.getByRole("button", { name: "Lưu", exact: true }).click();
+
+  await expect(page.getByText("Kỷ lục mới! 🏆")).toBeVisible();
+  await expect(card.getByText("Kỷ lục mới", { exact: true })).toBeVisible();
+});
+
+test("B5: a timed exercise has no set rows", async ({ page }) => {
+  const card = getCard(page, E2E_EXERCISES.PLANK);
+
+  await expect(card).toBeVisible();
+  await expect(card.getByLabel("Số kg hiệp 1")).toHaveCount(0);
+  await expect(
+    card.getByRole("button", { name: "Lưu", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("B6: a future day has no set rows", async ({ page }) => {
+  const { future } = getE2eDates();
+
+  await page.goto(`/workouts?week=${future}&day=${future}`);
+  const card = getCard(page, E2E_EXERCISES.FUTURE);
+
+  await expect(card).toBeVisible();
+  await expect(card.getByText("Chưa tới ngày tập")).toBeVisible();
+  await expect(card.getByLabel("Số kg hiệp 1")).toHaveCount(0);
+});
+
+test("B9: at most 10 rows; deleting a row frees a slot", async ({ page }) => {
+  const card = getCard(page, E2E_EXERCISES.ROWS);
+  const add = card.getByRole("button", { name: "Thêm hiệp" });
+
+  // Seeded with 3 rows.
+  for (let row = 3; row < 10; row += 1) {
+    await add.click();
+  }
+  await expect(card.getByLabel("Số kg hiệp 10")).toBeVisible();
+  await expect(add).toBeDisabled();
+
+  await card.getByRole("button", { name: "Xóa hiệp 10" }).click();
+  await expect(card.getByLabel("Số kg hiệp 10")).toHaveCount(0);
+  await expect(card.getByLabel("Số kg hiệp 9")).toBeVisible();
+  await expect(add).toBeEnabled();
+});
+
+test("B12: the day does not scroll horizontally at 390 px", async ({
+  page,
+}) => {
+  const { innerWidth, scrollWidth } = await page.evaluate(() => ({
+    innerWidth: window.innerWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+
+  expect(innerWidth).toBe(390);
+  expect(scrollWidth).toBeLessThanOrEqual(innerWidth);
+});

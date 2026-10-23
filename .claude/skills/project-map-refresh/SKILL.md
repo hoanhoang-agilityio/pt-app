@@ -9,7 +9,7 @@ Principle: put the context in the repo, not in the prompt. Every time something 
 
 ## Procedure
 
-1. Read `CLAUDE.md`, the `AGENTS.md` it imports (written by `next dev`; leave its block as is), `docs/claude-code-setup.md`, `docs/claude-code-standards.md` and the repo layout.
+1. Read `CLAUDE.md`, the `AGENTS.md` it imports (written by `next dev`; leave its block as is), `docs/claude-code-setup.md`, `docs/hoan-dev-skills.md` and the repo layout.
 2. Collect what is missing or stale, from the code (`package.json` scripts, `app/`, `features/`, `.claude/`, `.github/workflows/`) and from the conversation the user points to.
 3. Make sure these sections exist and are true today:
    - **Commands**: install, dev, test, lint, typecheck, format, db scripts (all `pnpm`).

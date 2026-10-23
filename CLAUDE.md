@@ -36,9 +36,9 @@ Weekly PT workout app: admins (PTs) assign daily workouts, users log in by name.
 - One Story per worktree session and per PR, plan mode first. Run `/grill-me` before planning a feature, file tickets with `actionable-ticket`.
 - Schema changes must be additive (new tables, nullable columns): the Vercel build runs `drizzle-kit push` against production.
 
-## Skills (`.claude/skills/`)
+## Skills: hoan-dev-skills (`.claude/skills/`)
 
-Working standards and checklists: `docs/claude-code-standards.md`.
+Working standards and checklists for the set: `docs/hoan-dev-skills.md`.
 
 - `grill-me`: interview in decision rounds before planning a feature bigger than a day.
 - `actionable-ticket`: KAN tickets and PR descriptions a stranger can act on.

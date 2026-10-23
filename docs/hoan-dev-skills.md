@@ -1,6 +1,6 @@
-# Claude Code working standards for pt-app
+# hoan-dev-skills: Claude Code skills and working standards for pt-app
 
-How we work with Claude Code on this repo. CLAUDE.md holds the project facts; this page holds the working habits; the procedures are skills in `.claude/skills/`.
+How we work with Claude Code on this repo. `hoan-dev-skills` is the name of the skill set in `.claude/skills/` plus this page: CLAUDE.md holds the project facts, this page holds the working habits, and each skill holds one procedure.
 
 The one idea: **put the context in the repo, not in the prompt.** A short prompt ("commit push", "take the next ticket") works because CLAUDE.md, the skills and the hooks carry the rest.
 

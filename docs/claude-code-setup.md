@@ -18,7 +18,7 @@ The repo already carries the team setup (dojo Day 01-10, Jira epic KAN-9). This 
 | `.claude/skills/ai-work-queue/`                  | Claim a KAN ticket, plan, fix, verify, move it across the board or release it.                                                  |
 | `.claude/skills/advisor-delegate/`               | Main session plans and reviews; Sonnet subagents build, Haiku runs checks.                                                      |
 | `.claude/skills/project-map-refresh/`            | Keep CLAUDE.md true when a convention changes.                                                                                  |
-| `docs/claude-code-standards.md`                  | Working standards, guardrails and checklists the skills follow.                                                                 |
+| `docs/hoan-dev-skills.md`                        | hoan-dev-skills: the working standards, guardrails and checklists the skills follow.                                            |
 | `.claude/commands/standup.md`                    | `/standup [since]`: drafts a standup from your commits and KAN tickets (see below).                                             |
 | `.mcp.json`                                      | Playwright MCP to open and check the app on http://localhost:3000; output goes to the ignored `.playwright-mcp/`.               |
 | `docs/review-false-positives.md`                 | Review findings that are by design; add rows during Day 10 and the retro.                                                       |

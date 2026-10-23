@@ -115,11 +115,6 @@ export const getWeekScheduleWithSets = async (
             lte(workoutDays.date, days[days.length - 1].date),
           ),
         )
-        .orderBy(
-          asc(workoutDays.date),
-          asc(exerciseSets.exerciseId),
-          asc(exerciseSets.position),
-        )
     : [];
 
   return attachSetsToWeek(days, userId, groupSetSessions(rows));

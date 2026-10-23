@@ -22,14 +22,33 @@ describe("isTimedReps", () => {
     },
   );
 
-  it.each(["30-45s", " 30S ", "1 Phút"])("treats %s as timed", (reps) => {
+  it.each([
+    "30-45s",
+    " 30S ",
+    "1 Phút",
+    "1 phut",
+    "30 giay",
+    "60 secs",
+    "2 min",
+    "1’",
+    "30”",
+    "1p30",
+    "30s mỗi bên",
+    "45s/side",
+  ])("treats %s as timed", (reps) => {
     expect(isTimedReps(reps)).toBe(true);
   });
 
-  it.each(["12", "8-12", "10", "", "10 reps", "tối đa"])(
-    "treats %s as counted reps",
-    (reps) => {
-      expect(isTimedReps(reps)).toBe(false);
-    },
-  );
+  it.each([
+    "12",
+    "8-12",
+    "10",
+    "",
+    "10 reps",
+    "tối đa",
+    "3 sets",
+    "12 mỗi bên",
+  ])("treats %s as counted reps", (reps) => {
+    expect(isTimedReps(reps)).toBe(false);
+  });
 });

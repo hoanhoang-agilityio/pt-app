@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { WeekNavigator } from "@/components/common/WeekNavigator";
 import { SECTION_TITLE } from "@/constants/styles";
 import { NutritionWeekSummary } from "@/features/nutrition/components/NutritionWeekSummary";
@@ -22,6 +24,9 @@ interface WeekSummaryProps {
   // Users log their own weight here; the admin only reads.
   canLogWeight: boolean;
   todayWeight: number | null;
+  // Admin-only "Tiến bộ" section, placed between the weight chart and the
+  // workouts; the user app passes nothing.
+  progress?: ReactNode;
 }
 
 // The "Tổng kết" tab: a week of training and eating side by side, shared by
@@ -38,6 +43,7 @@ export const WeekSummary = ({
   weightWeeks,
   canLogWeight,
   todayWeight,
+  progress,
 }: WeekSummaryProps) => (
   <div className="space-y-6">
     <WeekNavigator
@@ -55,6 +61,12 @@ export const WeekSummary = ({
         todayWeight={todayWeight}
       />
     </section>
+    {progress != null && (
+      <section className="space-y-2">
+        <h2 className={SECTION_TITLE}>Tiến bộ</h2>
+        {progress}
+      </section>
+    )}
     <section className="space-y-2">
       <h2 className={SECTION_TITLE}>Tập luyện</h2>
       <WorkoutWeekSummary

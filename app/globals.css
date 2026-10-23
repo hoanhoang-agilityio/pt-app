@@ -11,6 +11,7 @@
   --danger: #dc2626;
   --success: #15803d;
   --success-fg: #ffffff;
+  --warning: #b45309;
   --macro-carbs: #d97706;
   --macro-protein: #e11d48;
   --macro-fat: #0284c7;
@@ -31,6 +32,7 @@
     --danger: #f87171;
     --success: #4ade80;
     --success-fg: #052e16;
+    --warning: #fbbf24;
     --macro-carbs: #fbbf24;
     --macro-protein: #fb7185;
     --macro-fat: #38bdf8;
@@ -49,6 +51,7 @@
   --color-danger: var(--danger);
   --color-success: var(--success);
   --color-success-fg: var(--success-fg);
+  --color-warning: var(--warning);
   --color-macro-carbs: var(--macro-carbs);
   --color-macro-protein: var(--macro-protein);
   --color-macro-fat: var(--macro-fat);

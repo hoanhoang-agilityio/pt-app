@@ -28,6 +28,7 @@ Weekly PT workout app: admins (PTs) assign daily workouts, users log in by name.
 - UI copy is Vietnamese; code, comments, commits, PRs and Jira tickets are English.
 - One KAN ticket per branch, key in the branch name and commit subject, e.g. `fix(KAN-14): ...`.
 - CI (`.github/workflows/ci.yml`) runs test, lint and typecheck on every PR; keep it green.
+- `.github/workflows/jira-sync.yml` moves the KAN keys in a PR title or branch to In Review when the PR opens and to Done when it merges (secrets `JIRA_EMAIL`, `JIRA_API_TOKEN`); moving a ticket to In Progress stays manual.
 
 ## Capstone workflow
 

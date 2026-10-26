@@ -4,6 +4,7 @@ export const WORKOUT_MESSAGES = {
   EXERCISE_CREATED: "Đã thêm bài tập",
   EXERCISE_UPDATED: "Đã cập nhật bài tập",
   EXERCISE_DELETED: "Đã xóa bài tập",
+  LINK_CHANGE_NEEDS_CONFIRM: "Đổi link video cần xác nhận xóa số liệu đã ghi",
   EXERCISE_NOT_FOUND: "Bài tập không còn tồn tại",
   USER_NOT_FOUND: "Không tìm thấy user",
   COPY_EMPTY: "Tuần này chưa có nội dung để sao chép",
@@ -41,5 +42,7 @@ export const CONFIRM_MESSAGES = {
   DELETE_EXERCISE: "Xóa bài tập này?",
   DELETE_EXERCISE_WITH_SETS:
     "Học viên đã ghi số liệu cho bài này. Xóa bài tập sẽ xóa luôn số liệu. Tiếp tục?",
+  CHANGE_LINK_WITH_SETS:
+    "Học viên đã ghi số liệu cho bài này. Đổi link video sẽ xóa luôn số liệu và bắt đầu lịch sử mới. Tiếp tục?",
   COPY_WEEK: "Lịch của tuần đích sẽ bị thay thế bằng tuần này. Tiếp tục?",
 } as const;

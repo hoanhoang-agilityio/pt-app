@@ -70,6 +70,11 @@ export const exerciseSchema = z.object({
     ),
   reps: optionalText(EXERCISE_LIMITS.REPS),
   description: optionalText(EXERCISE_LIMITS.DESCRIPTION),
+  // Sent as "true" after the PT confirmed that a new link deletes logged sets.
+  confirmResetSets: z
+    .string()
+    .optional()
+    .transform((value) => value === "true"),
 });
 
 export const copyWeekSchema = z.object({

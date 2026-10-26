@@ -132,7 +132,14 @@ export const saveExerciseAction = withFormErrorHandling(
       });
     }
 
-    const { exerciseId, userId, date, youtubeUrl, ...fields } = parsed.data;
+    const {
+      exerciseId,
+      userId,
+      date,
+      youtubeUrl,
+      confirmResetSets,
+      ...fields
+    } = parsed.data;
     const values = { ...fields, youtubeId: youtubeUrl };
 
     if (exerciseId) {
@@ -142,10 +149,56 @@ export const saveExerciseAction = withFormErrorHandling(
         return createErrorState(WORKOUT_MESSAGES.EXERCISE_NOT_FOUND);
       }
 
-      await db
-        .update(exercises)
-        .set(values)
-        .where(eq(exercises.id, exerciseId));
+      // The stored link and the sets are read inside the write transaction, so
+      // a set logged meanwhile can't slip past the check (the client's idea of
+      // "has sets" is never trusted).
+      const result = await db.transaction(async (tx) => {
+        const [stored] = await tx
+          .select({ youtubeId: exercises.youtubeId })
+          .from(exercises)
+          .where(eq(exercises.id, exerciseId))
+          .limit(1);
+
+        if (!stored) {
+          return "not-found" as const;
+        }
+
+        if (stored.youtubeId !== values.youtubeId) {
+          const [loggedSet] = await tx
+            .select({ id: exerciseSets.id })
+            .from(exerciseSets)
+            .where(eq(exerciseSets.exerciseId, exerciseId))
+            .limit(1);
+
+          if (loggedSet) {
+            if (!confirmResetSets) {
+              return "needs-confirm" as const;
+            }
+            // OQ1: a new link starts a new history. The completion is kept.
+            await tx
+              .delete(exerciseSets)
+              .where(eq(exerciseSets.exerciseId, exerciseId));
+          }
+        }
+
+        await tx
+          .update(exercises)
+          .set(values)
+          .where(eq(exercises.id, exerciseId));
+        return "updated" as const;
+      });
+
+      // A refusal means the page was stale (deleted exercise, or sets logged
+      // after it loaded): refresh it so the next save gets the right prompt.
+      if (result === "not-found") {
+        revalidateMember(userId);
+        return createErrorState(WORKOUT_MESSAGES.EXERCISE_NOT_FOUND);
+      }
+      if (result === "needs-confirm") {
+        revalidateMember(userId);
+        return createErrorState(WORKOUT_MESSAGES.LINK_CHANGE_NEEDS_CONFIRM);
+      }
+
       revalidateMember(userId);
       return createSuccessState(WORKOUT_MESSAGES.EXERCISE_UPDATED);
     }

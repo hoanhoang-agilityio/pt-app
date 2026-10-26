@@ -32,7 +32,12 @@ export const E2E_PT_EXERCISES = {
   CURL: "E2E PT Curl",
   // No sets; the delete test removes it.
   TEMP: "E2E PT Temp",
+  // Has sets; the link-change test (KAN-39) replaces its video.
+  LINK: "E2E PT Link",
 } as const;
+
+// The video the link-change test switches to.
+export const E2E_NEW_VIDEO_ID = "dQw4w9WgXcQ";
 
 // Previous session of the weighted exercises: 40x10, 40x8, 35x10 (best 40 kg).
 const PREVIOUS_SETS = [
@@ -143,6 +148,7 @@ export const seedE2eDatabase = async (url: string) => {
     { title: E2E_PT_EXERCISES.PRESS, sets: 1, reps: "10" },
     { title: E2E_PT_EXERCISES.CURL, sets: 3, reps: "12" },
     { title: E2E_PT_EXERCISES.TEMP, sets: 3, reps: "12" },
+    { title: E2E_PT_EXERCISES.LINK, sets: 1, reps: "10" },
   ]);
   const findExercise = (rows: typeof todayDay, title: string) => {
     const row = rows.find((exercise) => exercise.title === title);
@@ -156,6 +162,7 @@ export const seedE2eDatabase = async (url: string) => {
   const previousSquat = findExercise(previousDay, E2E_PT_EXERCISES.SQUAT);
   const squat = findExercise(todayDay, E2E_PT_EXERCISES.SQUAT);
   const press = findExercise(todayDay, E2E_PT_EXERCISES.PRESS);
+  const link = findExercise(todayDay, E2E_PT_EXERCISES.LINK);
 
   const ptSets = [
     // Last week: best 50 kg x 10. This week: 55 kg x 8 beats it by 5 kg.
@@ -165,6 +172,8 @@ export const seedE2eDatabase = async (url: string) => {
     { exercise: squat, position: 1, weightKg: 50, reps: 10 },
     // First ever weighted set: "Lần đầu", not a record (D11).
     { exercise: press, position: 0, weightKg: 30, reps: 10 },
+    // Only for the link-change test; it is wiped there.
+    { exercise: link, position: 0, weightKg: 20, reps: 12 },
   ];
 
   await db.insert(schema.exerciseSets).values(

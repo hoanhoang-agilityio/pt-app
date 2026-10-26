@@ -26,6 +26,10 @@ interface DayEditorProps {
 export const DayEditor = ({ day, userId, isToday }: DayEditorProps) => {
   const editor = useDayEditor();
   const { exercise } = editor.exerciseSheet;
+  // Read from the live day so a set logged after the sheet opened still counts.
+  const hasSets = day.exercises.some(
+    (item) => item.id === exercise?.id && item.loggedSets.length > 0,
+  );
 
   return (
     <section className="space-y-4">
@@ -89,6 +93,7 @@ export const DayEditor = ({ day, userId, isToday }: DayEditorProps) => {
         <ExerciseForm
           key={editor.exerciseSheet.formKey}
           exercise={exercise}
+          hasSets={hasSets}
           userId={userId}
           date={day.date}
           onSaved={editor.handleExerciseSaved}

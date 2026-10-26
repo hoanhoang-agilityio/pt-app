@@ -9,8 +9,10 @@ import {
 import { toast } from "sonner";
 
 import { INITIAL_FORM_STATE } from "@/constants/form";
+import { CONFIRM_MESSAGES } from "@/features/workouts/constants/messages";
 import { saveExerciseAction } from "@/features/workouts/services/workout-actions";
 import type { Exercise } from "@/features/workouts/types/workout";
+import { shouldConfirmLinkChange } from "@/features/workouts/utils/exercise";
 import {
   getYoutubeWatchUrl,
   parseYoutubeId,
@@ -19,11 +21,13 @@ import { useFormFeedback } from "@/hooks/use-form-feedback";
 
 interface UseExerciseFormOptions {
   exercise: Exercise | null;
+  hasSets: boolean;
   onSaved: () => void;
 }
 
 export const useExerciseForm = ({
   exercise,
+  hasSets,
   onSaved,
 }: UseExerciseFormOptions) => {
   const [state, formAction, isPending] = useActionState(
@@ -43,6 +47,17 @@ export const useExerciseForm = ({
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
+
+    // OQ1: the server decides whether sets exist; this only asks the PT first.
+    if (
+      exercise &&
+      shouldConfirmLinkChange(exercise.youtubeId, youtubeId, hasSets)
+    ) {
+      if (!window.confirm(CONFIRM_MESSAGES.CHANGE_LINK_WITH_SETS)) {
+        return;
+      }
+      formData.set("confirmResetSets", "true");
+    }
 
     startTransition(() => formAction(formData));
   };

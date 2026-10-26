@@ -16,6 +16,14 @@ const TIMED_REPS =
 export const isTimedReps = (reps: string) =>
   TIMED_REPS.test(reps.normalize("NFC").toLowerCase());
 
+// OQ1: a new link starts a new history, so the PT confirms before the
+// trainee's logged sets are deleted. Only the video id counts, not the URL form.
+export const shouldConfirmLinkChange = (
+  oldId: string,
+  newId: string | null,
+  hasSets: boolean,
+) => hasSets && newId !== null && newId !== oldId;
+
 // OQ1: the PT is told the trainee's logged sets go with the exercise.
 export const getDeleteConfirmMessage = (hasSets: boolean) =>
   hasSets

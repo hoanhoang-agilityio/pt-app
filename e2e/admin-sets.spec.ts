@@ -1,11 +1,13 @@
 import { expect, type Page, test } from "@playwright/test";
 
 import { E2E_ADMIN, E2E_EMPTY_NAME, E2E_LIFTER_NAME } from "./config";
-import { E2E_PT_EXERCISES } from "./seed";
+import { E2E_NEW_VIDEO_ID, E2E_PT_EXERCISES } from "./seed";
+
+const NEW_LINK = `https://youtu.be/${E2E_NEW_VIDEO_ID}`;
 
 // PT views of the set-logging test matrix (docs/specs/set-logging.md): C1, C3,
-// C4, C8 and C9. The specs share one seeded DB and run in order; the delete
-// test that really removes an exercise comes last.
+// C4, C8, C9 and C11. The specs share one seeded DB and run in order; the
+// delete test that really removes an exercise comes last.
 const logInAsAdmin = async (page: Page) => {
   await page.goto("/admin/login");
   await page.getByLabel("Tài khoản").fill(E2E_ADMIN.username);
@@ -144,6 +146,61 @@ test("C8: a personal best shows in member activity and on the dashboard", async 
       .filter({ hasText: "lập kỷ lục" })
       .filter({ hasText: E2E_PT_EXERCISES.PRESS }),
   ).toHaveCount(0);
+});
+
+test("C11: changing the video link of an exercise with sets asks first, then wipes the sets", async ({
+  page,
+}) => {
+  await openMember(page, E2E_LIFTER_NAME);
+
+  const messages: string[] = [];
+  let shouldAccept = false;
+
+  page.on("dialog", (dialog) => {
+    messages.push(dialog.message());
+    void (shouldAccept ? dialog.accept() : dialog.dismiss());
+  });
+
+  const card = getCard(page, E2E_PT_EXERCISES.LINK);
+  // A CSS locator: the open sheet hides the page behind it from role queries.
+  const oldLink = card.locator("a", { hasText: "Mở trên YouTube" });
+  const oldHref = await oldLink.getAttribute("href");
+
+  await expect(card.getByText(/Đã ghi:.*20 kg × 12/)).toBeVisible();
+
+  const submitNewLink = async () => {
+    await page.getByLabel(/Link video YouTube/).fill(NEW_LINK);
+    await page.getByRole("button", { name: "Lưu thay đổi" }).click();
+  };
+
+  await card.getByRole("button", { name: "Sửa" }).click();
+
+  // Editing only the title never asks and never touches the sets.
+  await page.getByLabel(/Tên bài tập/).fill(`${E2E_PT_EXERCISES.LINK} `);
+  await page.getByRole("button", { name: "Lưu thay đổi" }).click();
+  await expect(page.getByText("Đã cập nhật bài tập")).toBeVisible();
+  expect(messages).toHaveLength(0);
+  await expect(card.getByText("Đã ghi:")).toBeVisible();
+
+  // Dismissing the confirm keeps the sets and the old link.
+  await card.getByRole("button", { name: "Sửa" }).click();
+  await submitNewLink();
+  await expect.poll(() => messages.length).toBe(1);
+  expect(messages[0]).toBe(
+    "Học viên đã ghi số liệu cho bài này. Đổi link video sẽ xóa luôn số liệu và bắt đầu lịch sử mới. Tiếp tục?",
+  );
+  await expect(card.getByText("Đã ghi:")).toBeVisible();
+  await expect(oldLink).toHaveAttribute("href", oldHref ?? "");
+
+  // Accepting removes the sets and shows the new link.
+  shouldAccept = true;
+  await page.getByRole("button", { name: "Lưu thay đổi" }).click();
+  await expect.poll(() => messages.length).toBe(2);
+  await expect(card.getByText("Đã ghi:")).toHaveCount(0);
+  await expect(oldLink).toHaveAttribute(
+    "href",
+    new RegExp(`${E2E_NEW_VIDEO_ID}$`),
+  );
 });
 
 test("C9: deleting an exercise warns about its sets only when it has sets", async ({

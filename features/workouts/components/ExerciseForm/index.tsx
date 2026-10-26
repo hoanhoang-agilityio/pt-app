@@ -6,6 +6,7 @@ import type { Exercise } from "@/features/workouts/types/workout";
 
 interface ExerciseFormProps {
   exercise: Exercise | null;
+  hasSets: boolean;
   userId: number;
   date: string;
   onSaved: () => void;
@@ -13,11 +14,12 @@ interface ExerciseFormProps {
 
 export const ExerciseForm = ({
   exercise,
+  hasSets,
   userId,
   date,
   onSaved,
 }: ExerciseFormProps) => {
-  const form = useExerciseForm({ exercise, onSaved });
+  const form = useExerciseForm({ exercise, hasSets, onSaved });
 
   return (
     <ExerciseFormView

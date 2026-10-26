@@ -5,7 +5,9 @@ import {
   formatVolume,
   getDeleteConfirmMessage,
   isTimedReps,
+  shouldConfirmLinkChange,
 } from "@/features/workouts/utils/exercise";
+import { parseYoutubeId } from "@/features/workouts/utils/youtube";
 
 describe("formatVolume", () => {
   it("joins sets and reps", () => {
@@ -67,5 +69,32 @@ describe("getDeleteConfirmMessage", () => {
 
   it("keeps the plain message without sets", () => {
     expect(getDeleteConfirmMessage(false)).toBe("Xóa bài tập này?");
+  });
+});
+
+describe("shouldConfirmLinkChange", () => {
+  const OLD_ID = "dQw4w9WgXcQ";
+  const NEW_ID = "9bZkp7q19f0";
+
+  it("does not ask when the video id is unchanged", () => {
+    expect(shouldConfirmLinkChange(OLD_ID, OLD_ID, true)).toBe(false);
+  });
+
+  it("asks when the video changes and the exercise has sets (OQ1)", () => {
+    expect(shouldConfirmLinkChange(OLD_ID, NEW_ID, true)).toBe(true);
+  });
+
+  it("does not ask when the video changes but there are no sets", () => {
+    expect(shouldConfirmLinkChange(OLD_ID, NEW_ID, false)).toBe(false);
+  });
+
+  it("compares video ids, so another URL form of the same video is no change", () => {
+    const newId = parseYoutubeId(`https://youtu.be/${OLD_ID}?t=30`);
+
+    expect(shouldConfirmLinkChange(OLD_ID, newId, true)).toBe(false);
+  });
+
+  it("does not ask for an unparsable link (validation reports it)", () => {
+    expect(shouldConfirmLinkChange(OLD_ID, null, true)).toBe(false);
   });
 });

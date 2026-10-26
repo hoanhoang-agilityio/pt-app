@@ -188,10 +188,14 @@ export const saveExerciseAction = withFormErrorHandling(
         return "updated" as const;
       });
 
+      // A refusal means the page was stale (deleted exercise, or sets logged
+      // after it loaded): refresh it so the next save gets the right prompt.
       if (result === "not-found") {
+        revalidateMember(userId);
         return createErrorState(WORKOUT_MESSAGES.EXERCISE_NOT_FOUND);
       }
       if (result === "needs-confirm") {
+        revalidateMember(userId);
         return createErrorState(WORKOUT_MESSAGES.LINK_CHANGE_NEEDS_CONFIRM);
       }
 

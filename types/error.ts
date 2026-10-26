@@ -24,3 +24,7 @@ export type ActionResult = { status: "success" } | ActionErrorResult;
 // Saving an exercise's sets also reports a new personal best (KAN-27, D5).
 export type SaveSetsResult =
   { status: "success"; personalBest: boolean } | ActionErrorResult;
+
+// Deleting an exercise whose sets the PT was not warned about is refused (KAN-51).
+export type DeleteExerciseResult =
+  { status: "success" } | { status: "needs-confirm" } | ActionErrorResult;

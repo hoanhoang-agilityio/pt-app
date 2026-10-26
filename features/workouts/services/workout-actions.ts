@@ -16,6 +16,7 @@ import { getWeekSchedule } from "@/features/workouts/services/workout-queries";
 import {
   copyWeekSchema,
   daySchema,
+  deleteExerciseSchema,
   exerciseRefSchema,
   exerciseSchema,
 } from "@/features/workouts/services/workout-schemas";
@@ -26,6 +27,7 @@ import {
   withResultErrorHandling,
 } from "@/services/action-errors";
 import { requireAdmin } from "@/services/auth-guard";
+import type { DeleteExerciseResult } from "@/types/error";
 import type { FormState } from "@/types/form";
 import {
   createErrorState,
@@ -220,14 +222,34 @@ export const saveExerciseAction = withFormErrorHandling(
 
 export const deleteExerciseAction = withResultErrorHandling(
   "deleteExercise",
-  async (exerciseId: number, userId: number) => {
+  async (
+    exerciseId: number,
+    userId: number,
+    options: { confirmDeleteSets?: boolean } = {},
+  ): Promise<DeleteExerciseResult> => {
     await requireAdmin();
 
-    const ref = exerciseRefSchema.parse({ exerciseId, userId });
+    const { confirmDeleteSets, ...ref } = deleteExerciseSchema.parse({
+      exerciseId,
+      userId,
+      confirmDeleteSets: options.confirmDeleteSets,
+    });
     const existing = await findExerciseForUser(ref.exerciseId, ref.userId);
 
     if (existing) {
-      await db.transaction(async (tx) => {
+      // The sets are counted inside the write transaction, so a set logged
+      // after the PT's page loaded can't be wiped without the warning.
+      const result = await db.transaction(async (tx) => {
+        const [loggedSet] = await tx
+          .select({ id: exerciseSets.id })
+          .from(exerciseSets)
+          .where(eq(exerciseSets.exerciseId, existing.id))
+          .limit(1);
+
+        if (loggedSet && !confirmDeleteSets) {
+          return "needs-confirm" as const;
+        }
+
         // Children first: foreign keys are not enforced (D10).
         await tx
           .delete(exerciseSets)
@@ -236,9 +258,17 @@ export const deleteExerciseAction = withResultErrorHandling(
           .delete(exerciseCompletions)
           .where(eq(exerciseCompletions.exerciseId, existing.id));
         await tx.delete(exercises).where(eq(exercises.id, existing.id));
+        return "deleted" as const;
       });
+
+      if (result === "needs-confirm") {
+        // The page was stale: refresh it so `hasSets` is current.
+        revalidateMember(ref.userId);
+        return { status: "needs-confirm" };
+      }
     }
     revalidateMember(ref.userId);
+    return { status: "success" };
   },
 );
 

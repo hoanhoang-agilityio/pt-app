@@ -88,3 +88,9 @@ export const exerciseRefSchema = z.object({
   exerciseId: idSchema,
   userId: idSchema,
 });
+
+// OQ1: the server refuses to delete logged sets the PT has not been warned
+// about; `confirmDeleteSets` is true only after the warning confirm.
+export const deleteExerciseSchema = exerciseRefSchema.extend({
+  confirmDeleteSets: z.boolean().optional().default(false),
+});

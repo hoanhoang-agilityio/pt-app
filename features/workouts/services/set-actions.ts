@@ -14,6 +14,7 @@ import {
   workoutDays,
 } from "@/db/schema";
 import { WORKOUT_MESSAGES } from "@/features/workouts/constants/messages";
+import { groupSetRows } from "@/features/workouts/utils/set-rows";
 import {
   areSetsEqual,
   exerciseSetsSchema,
@@ -21,7 +22,6 @@ import {
   type SetInput,
   type SetSession,
 } from "@/features/workouts/utils/sets";
-import { groupSetSessions } from "@/features/workouts/utils/week-sets";
 import { withResultErrorHandling } from "@/services/action-errors";
 import { requireUser } from "@/services/auth-guard";
 import type { SaveSetsResult } from "@/types/error";
@@ -57,7 +57,7 @@ const getEarlierSessions = async (
       ),
     );
 
-  return groupSetSessions(rows);
+  return groupSetRows(rows);
 };
 
 // Replaces the exercise's logged sets with `sets` (D1). Saving at least one

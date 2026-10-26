@@ -189,6 +189,7 @@ const getRecentPersonalBests = async ({
       exerciseTitle: exercises.title,
       youtubeId: exercises.youtubeId,
       date: workoutDays.date,
+      position: exerciseSets.position,
       weightKg: exerciseSets.weightKg,
       reps: exerciseSets.reps,
     })

@@ -15,6 +15,7 @@ export const SET_LOGGER_COPY = {
   HINT_PREFIX: "Lần trước",
   LOGGED_PREFIX: "Đã ghi:",
   NOTHING_LOGGED: "Chưa ghi hiệp nào",
+  NOTHING_TO_SAVE: "Nhập ít nhất một hiệp",
 } as const;
 
 export const describeMissingReps = (setNumber: number) =>

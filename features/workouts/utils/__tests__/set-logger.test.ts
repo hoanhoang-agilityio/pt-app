@@ -8,6 +8,7 @@ import {
   getLoggedSetsKey,
   getRowHint,
   hintToDraftValues,
+  isEmptyFirstSave,
   rowsToSetInputs,
   type SetRowDraft,
 } from "@/features/workouts/utils/set-logger";
@@ -32,7 +33,7 @@ describe("createInitialRows", () => {
     expect(createInitialRows([], 0)).toHaveLength(1);
   });
 
-  it("uses saved sets over the planned count, bodyweight as empty kg", () => {
+  it("puts saved sets first, bodyweight as empty kg, then pads to the plan", () => {
     expect(
       createInitialRows(
         [
@@ -41,7 +42,82 @@ describe("createInitialRows", () => {
         ],
         4,
       ),
-    ).toEqual([row("42,5", "8", 0), row("", "12", 1)]);
+    ).toEqual([
+      row("42,5", "8", 0),
+      row("", "12", 1),
+      row("", "", 2),
+      row("", "", 3),
+    ]);
+  });
+});
+
+describe("createInitialRows with partial saves (B17)", () => {
+  it("keeps empty rows up to the planned count after the saved ones", () => {
+    expect(createInitialRows([{ weightKg: 40, reps: 10 }], 4)).toEqual([
+      row("40", "10", 0),
+      row("", "", 1),
+      row("", "", 2),
+      row("", "", 3),
+    ]);
+  });
+
+  it("keeps all saved rows when they exceed the planned count", () => {
+    expect(
+      createInitialRows(
+        [
+          { weightKg: 40, reps: 10 },
+          { weightKg: 40, reps: 9 },
+          { weightKg: 40, reps: 8 },
+        ],
+        2,
+      ),
+    ).toHaveLength(3);
+  });
+
+  it("caps saved plus planned rows at 10", () => {
+    const saved = Array.from({ length: 12 }, () => ({
+      weightKg: 10,
+      reps: 5,
+    }));
+
+    expect(createInitialRows(saved, 4)).toHaveLength(10);
+  });
+});
+
+describe("isEmptyFirstSave (B18)", () => {
+  it("refuses an empty list when nothing is saved yet", () => {
+    expect(isEmptyFirstSave(0, 0)).toBe(true);
+  });
+
+  it("allows clearing saved sets and normal saves", () => {
+    expect(isEmptyFirstSave(0, 2)).toBe(false);
+    expect(isEmptyFirstSave(1, 0)).toBe(false);
+  });
+});
+
+describe("decimal parsing with a leading or trailing separator (B19)", () => {
+  it.each([",5", ".5", "5,", "5."])("accepts %s", (value) => {
+    const result = rowsToSetInputs([row(value, "8")]);
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("reads ',5' as 0.5 kg and '5,' as 5 kg", () => {
+    expect(rowsToSetInputs([row(",5", "8"), row("5,", "8")])).toEqual({
+      ok: true,
+      sets: [
+        { weightKg: 0.5, reps: 8 },
+        { weightKg: 5, reps: 8 },
+      ],
+    });
+  });
+
+  it("keeps reps whole: '10.' is rejected", () => {
+    expect(rowsToSetInputs([row("", "10.")]).ok).toBe(false);
+  });
+
+  it.each(["1e2", "0x14", ",", "."])("still rejects %s", (value) => {
+    expect(rowsToSetInputs([row(value, "8")]).ok).toBe(false);
   });
 });
 

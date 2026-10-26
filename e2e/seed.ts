@@ -24,6 +24,8 @@ export const E2E_EXERCISES = {
   // Timed, but sets were logged before the PT made it timed (KAN-44).
   TIMED_LOGGED: "E2E Timed with sets",
   FUTURE: "E2E Future curl",
+  // 4 planned sets, nothing logged: the partial-save test (KAN-50).
+  PARTIAL: "E2E Partial sets",
 } as const;
 
 // Exercises of the PT specs (E2E_LIFTER_NAME). SQUAT beats last week (record),
@@ -120,6 +122,7 @@ export const seedE2eDatabase = async (url: string) => {
     { title: E2E_EXERCISES.ROWS, sets: 3, reps: "10" },
     { title: E2E_EXERCISES.PLANK, sets: 3, reps: "30s" },
     { title: E2E_EXERCISES.TIMED_LOGGED, sets: 2, reps: "30s" },
+    { title: E2E_EXERCISES.PARTIAL, sets: 4, reps: "10" },
   ]);
   const timedLogged = todayExercises.find(
     (exercise) => exercise.title === E2E_EXERCISES.TIMED_LOGGED,

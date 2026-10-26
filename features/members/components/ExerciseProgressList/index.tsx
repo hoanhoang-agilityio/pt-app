@@ -52,7 +52,7 @@ export const ExerciseProgressList = ({ rows }: ExerciseProgressListProps) => {
         return (
           <li key={row.youtubeId} className="px-4 py-3">
             <div className="flex items-start gap-3">
-              <p className="min-w-0 flex-1 truncate text-[15px] font-medium text-fg">
+              <p className="min-w-0 flex-1 line-clamp-2 text-[15px] font-medium text-fg">
                 {row.title}
               </p>
               <span

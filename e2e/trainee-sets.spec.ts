@@ -4,7 +4,7 @@ import { E2E_USER_NAME } from "./config";
 import { E2E_EXERCISES, getE2eDates } from "./seed";
 
 // Trainee flow of the set-logging test matrix (docs/specs/set-logging.md):
-// A1, B1, B2, B3, B5, B6, B9, B12 and B15. The specs share one seeded DB.
+// A1, B1, B2, B3, B5, B6, B9, B12, B15 and B17. The specs share one seeded DB.
 const logIn = async (page: Page) => {
   await page.goto("/");
   await page.getByLabel("Tên của bạn").fill(E2E_USER_NAME);
@@ -139,6 +139,23 @@ test("B9: at most 10 rows; deleting a row frees a slot", async ({ page }) => {
   await expect(card.getByLabel("Số kg hiệp 10")).toHaveCount(0);
   await expect(card.getByLabel("Số kg hiệp 9")).toBeVisible();
   await expect(add).toBeEnabled();
+});
+
+test("B17: saving one of four planned sets keeps the planned rows", async ({
+  page,
+}) => {
+  const card = getCard(page, E2E_EXERCISES.PARTIAL);
+
+  await card.getByLabel("Số lần hiệp 1").fill("10");
+  await card.getByRole("button", { name: "Lưu", exact: true }).click();
+  await expect(page.getByText("Đã lưu các hiệp")).toBeVisible();
+
+  await page.reload();
+  const reloaded = getCard(page, E2E_EXERCISES.PARTIAL);
+
+  await expect(reloaded.getByLabel("Số lần hiệp 1")).toHaveValue("10");
+  await expect(reloaded.getByLabel("Số lần hiệp 4")).toBeVisible();
+  await expect(reloaded.getByLabel("Số lần hiệp 5")).toHaveCount(0);
 });
 
 test("B12: the day does not scroll horizontally at 390 px", async ({

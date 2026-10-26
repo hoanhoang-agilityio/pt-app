@@ -243,9 +243,9 @@ Levels: **unit** = Vitest on pure utils (`pnpm test`), **e2e** = Playwright agai
 | B11 | A save fails (e.g. weight 40.25 bypassing the input) / press "Lưu" / error toast, nothing changes                                                           | E8, D5              | manual | `use-exercise-sets.ts`                     | KAN-30         |
 | B12 | Viewport 390 px (iPhone 12) / open the day / no horizontal scroll (`scrollWidth <= innerWidth`)                                                             | AC5                 | e2e    | `e2e/trainee-sets.spec.ts`                 | KAN-30, KAN-36 |
 | B13 | Admin opens `/admin/users/[id]/preview` / the logger shows read-only                                                                                        | E5                  | manual | `/preview`                                 | KAN-30         |
+| B14 | A week of exercises and the user's set history / `attachSetsToWeek` / sets by position, previous-session hints, record flag (tie, first-ever false)         | E6, E7, D6, D7, D11 | unit   | `week-sets.test.ts`                        | KAN-29         |
 | B15 | A timed exercise (`30s`) that already has logged sets / open its card / "Đã ghi:" lists them read-only, no inputs or "Lưu"; without sets nothing shows (B5) | Q3, KAN-44          | e2e    | `e2e/trainee-sets.spec.ts`                 | KAN-44         |
 | B16 | `canShowLoggedSets` / timed reps with sets true; timed without sets false; non-timed false (the logger or the day view covers them)                         | Q3, KAN-44          | unit   | `set-logger.test.ts` (`canShowLoggedSets`) | KAN-44         |
-| B14 | A week of exercises and the user's set history / `attachSetsToWeek` / sets by position, previous-session hints, record flag (tie, first-ever false)         | E6, E7, D6, D7, D11 | unit   | `week-sets.test.ts`                        | KAN-29         |
 
 ### KAN-23 PT sees logged sets and progress
 

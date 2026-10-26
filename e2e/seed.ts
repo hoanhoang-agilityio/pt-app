@@ -38,6 +38,8 @@ export const E2E_PT_EXERCISES = {
   TEMP: "E2E PT Temp",
   // Has sets; the link-change test (KAN-39) replaces its video.
   LINK: "E2E PT Link",
+  // No sets when seeded; the stale-page delete test (KAN-51) logs one itself.
+  STALE: "E2E PT Stale",
 } as const;
 
 // The video the link-change test switches to.
@@ -173,6 +175,7 @@ export const seedE2eDatabase = async (url: string) => {
     { title: E2E_PT_EXERCISES.CURL, sets: 3, reps: "12" },
     { title: E2E_PT_EXERCISES.TEMP, sets: 3, reps: "12" },
     { title: E2E_PT_EXERCISES.LINK, sets: 1, reps: "10" },
+    { title: E2E_PT_EXERCISES.STALE, sets: 1, reps: "10" },
   ]);
   const findExercise = (rows: typeof todayDay, title: string) => {
     const row = rows.find((exercise) => exercise.title === title);

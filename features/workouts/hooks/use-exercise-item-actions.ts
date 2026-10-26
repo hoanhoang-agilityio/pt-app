@@ -37,7 +37,20 @@ export const useExerciseItemActions = (
     }
 
     startTransition(async () => {
-      const result = await deleteExerciseAction(exerciseId, userId);
+      let result = await deleteExerciseAction(exerciseId, userId, {
+        confirmDeleteSets: hasSets,
+      });
+
+      // Sets were logged after this page loaded: the server changed nothing
+      // and refreshed the page, so only the warning is missing.
+      if (result.status === "needs-confirm") {
+        if (!window.confirm(getDeleteConfirmMessage(true))) {
+          return;
+        }
+        result = await deleteExerciseAction(exerciseId, userId, {
+          confirmDeleteSets: true,
+        });
+      }
 
       if (result.status === "error") {
         toast.error(result.message, {
@@ -45,7 +58,9 @@ export const useExerciseItemActions = (
         });
         return;
       }
-      toast.success(WORKOUT_MESSAGES.EXERCISE_DELETED);
+      if (result.status === "success") {
+        toast.success(WORKOUT_MESSAGES.EXERCISE_DELETED);
+      }
     });
   };
 

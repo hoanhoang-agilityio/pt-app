@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { exerciseSchema } from "@/features/workouts/services/workout-schemas";
+import {
+  deleteExerciseSchema,
+  exerciseSchema,
+} from "@/features/workouts/services/workout-schemas";
 
 const VALID_INPUT = {
   exerciseId: "7",
@@ -37,5 +40,34 @@ describe("exerciseSchema confirmResetSets", () => {
 
   it("still normalises the link to a video id", () => {
     expect(exerciseSchema.parse(VALID_INPUT).youtubeUrl).toBe("dQw4w9WgXcQ");
+  });
+});
+
+describe("deleteExerciseSchema confirmDeleteSets", () => {
+  it("defaults to false when not passed", () => {
+    expect(
+      deleteExerciseSchema.parse({ exerciseId: 7, userId: 3 })
+        .confirmDeleteSets,
+    ).toBe(false);
+  });
+
+  it("keeps an explicit true", () => {
+    expect(
+      deleteExerciseSchema.parse({
+        exerciseId: 7,
+        userId: 3,
+        confirmDeleteSets: true,
+      }).confirmDeleteSets,
+    ).toBe(true);
+  });
+
+  it("rejects a non-boolean value", () => {
+    expect(
+      deleteExerciseSchema.safeParse({
+        exerciseId: 7,
+        userId: 3,
+        confirmDeleteSets: "true",
+      }).success,
+    ).toBe(false);
   });
 });

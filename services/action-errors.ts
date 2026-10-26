@@ -70,7 +70,8 @@ type ResolvedResult<Result> = [Result] extends [never] ? ActionResult : Result;
 export const withResultErrorHandling =
   <
     Args extends unknown[],
-    Result extends { status: "success" } | ActionErrorResult = ActionResult,
+    Result extends { status: "success" | "needs-confirm" } | ActionErrorResult =
+      ActionResult,
   >(
     context: string,
     action: (...args: Args) => Promise<Result | void>,

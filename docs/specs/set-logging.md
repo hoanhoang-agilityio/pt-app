@@ -195,7 +195,7 @@ Levels: **unit** = Vitest on pure utils (`pnpm test`), **e2e** = Playwright agai
 - `features/workouts/utils/__tests__/week-sets.test.ts`: `groupSetSessions`, `attachSetsToWeek` (KAN-29 mapping helper)
 - `features/members/utils/__tests__/progress.test.ts`: "Tiến bộ" progress rows
 - `e2e/trainee-sets.spec.ts`: trainee flow (KAN-36)
-- `e2e/admin-sets.spec.ts`: PT views, rows C1, C3, C4, C8, C9 (KAN-38), C11 (KAN-39)
+- `e2e/admin-sets.spec.ts`: PT views, rows C1, C3, C4, C8, C9 (KAN-38), C11 (KAN-39), C13 (KAN-51)
 
 ### KAN-21 Store logged sets and compute bests
 
@@ -267,6 +267,7 @@ Levels: **unit** = Vitest on pure utils (`pnpm test`), **e2e** = Playwright agai
 | C10 | Every new admin query / code review / behind `requireAdmin()` or the admin layout                                                                 | AC4          | manual | `features/members/*`, `dashboard-queries.ts`                              | KAN-32                 |
 | C11 | An exercise with logged sets / PT changes its video link / confirm appears; dismiss keeps sets and link, accept wipes the sets and saves the link | OQ1          | e2e    | `e2e/admin-sets.spec.ts`                                                  | KAN-39                 |
 | C12 | Same link (any URL form) or no sets / PT saves / no confirm; the server asks `confirmResetSets=true` only for a new link over existing sets       | OQ1          | unit   | `exercise.test.ts` (`shouldConfirmLinkChange`), `workout-schemas.test.ts` | KAN-39                 |
+| C13 | A page loaded before the trainee logged sets / PT deletes the exercise / the server refuses without `confirmDeleteSets`, the warning confirm appears; dismiss keeps the exercise and sets | OQ1 | e2e, unit | `e2e/admin-sets.spec.ts`, `workout-schemas.test.ts` (`deleteExerciseSchema`) | KAN-51 |
 
 ### Video review checklist
 

@@ -1,12 +1,18 @@
+import { createClient } from "@libsql/client";
 import { expect, type Page, test } from "@playwright/test";
 
-import { E2E_ADMIN, E2E_EMPTY_NAME, E2E_LIFTER_NAME } from "./config";
+import {
+  E2E_ADMIN,
+  E2E_DB_URL,
+  E2E_EMPTY_NAME,
+  E2E_LIFTER_NAME,
+} from "./config";
 import { E2E_NEW_VIDEO_ID, E2E_PT_EXERCISES } from "./seed";
 
 const NEW_LINK = `https://youtu.be/${E2E_NEW_VIDEO_ID}`;
 
 // PT views of the set-logging test matrix (docs/specs/set-logging.md): C1, C3,
-// C4, C8, C9 and C11. The specs share one seeded DB and run in order; the
+// C4, C8, C9, C11 and C13. The specs share one seeded DB and run in order; the
 // delete test that really removes an exercise comes last.
 const logInAsAdmin = async (page: Page) => {
   await page.goto("/admin/login");
@@ -233,4 +239,47 @@ test("C9: deleting an exercise warns about its sets only when it has sets", asyn
   expect(messages[1]).toBe("Xóa bài tập này?");
   await expect(getCard(page, E2E_PT_EXERCISES.TEMP)).toHaveCount(0);
   await expect(getCard(page, E2E_PT_EXERCISES.SQUAT)).toBeVisible();
+});
+
+test("C13: deleting an exercise whose sets were logged after the page loaded still warns", async ({
+  page,
+}) => {
+  await openMember(page, E2E_LIFTER_NAME);
+
+  const messages: string[] = [];
+  const card = getCard(page, E2E_PT_EXERCISES.STALE);
+
+  // The page was loaded without sets, so the PT sees no "Đã ghi" line.
+  await expect(card).toBeVisible();
+  await expect(card.getByText("Đã ghi:")).toHaveCount(0);
+
+  // The trainee logs a set after the PT's page loaded.
+  const client = createClient({ url: E2E_DB_URL });
+
+  try {
+    await client.execute({
+      sql: `INSERT INTO exercise_sets (exercise_id, user_id, position, weight_kg, reps)
+            SELECT e.id, d.user_id, 0, 25, 10
+            FROM exercises e JOIN workout_days d ON d.id = e.day_id
+            WHERE e.title = ?`,
+      args: [E2E_PT_EXERCISES.STALE],
+    });
+  } finally {
+    client.close();
+  }
+
+  // The PT accepts the plain confirm, the server asks again, the PT dismisses.
+  page.on("dialog", (dialog) => {
+    messages.push(dialog.message());
+    void (messages.length === 1 ? dialog.accept() : dialog.dismiss());
+  });
+  await card.getByRole("button", { name: "Xóa", exact: true }).click();
+  await expect.poll(() => messages.length).toBe(2);
+  expect(messages[0]).toBe("Xóa bài tập này?");
+  expect(messages[1]).toContain("xóa luôn số liệu");
+
+  // Dismissing the warning keeps the exercise and its sets, and the refreshed
+  // page now shows them.
+  await expect(card).toBeVisible();
+  await expect(card.getByText(/Đã ghi:.*25 kg × 10/)).toBeVisible();
 });

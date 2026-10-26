@@ -4,7 +4,7 @@ import { E2E_USER_NAME } from "./config";
 import { E2E_EXERCISES, getE2eDates } from "./seed";
 
 // Trainee flow of the set-logging test matrix (docs/specs/set-logging.md):
-// A1, B1, B2, B3, B5, B6, B9 and B12. The specs share one seeded DB.
+// A1, B1, B2, B3, B5, B6, B9, B12 and B15. The specs share one seeded DB.
 const logIn = async (page: Page) => {
   await page.goto("/");
   await page.getByLabel("Tên của bạn").fill(E2E_USER_NAME);
@@ -93,6 +93,21 @@ test("B5: a timed exercise has no set rows", async ({ page }) => {
 
   await expect(card).toBeVisible();
   await expect(card.getByLabel("Số kg hiệp 1")).toHaveCount(0);
+  await expect(
+    card.getByRole("button", { name: "Lưu", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("B15: a timed exercise with logged sets shows them read-only", async ({
+  page,
+}) => {
+  const card = getCard(page, E2E_EXERCISES.TIMED_LOGGED);
+
+  await expect(card.getByText("Đã ghi:")).toBeVisible();
+  await expect(card.getByText("20 kg × 30 · Tự trọng × 25")).toBeVisible();
+  await expect(card.getByLabel("Số kg hiệp 1")).toHaveCount(0);
+  await expect(card.getByLabel("Số lần hiệp 1")).toHaveCount(0);
+  await expect(card.locator("input")).toHaveCount(0);
   await expect(
     card.getByRole("button", { name: "Lưu", exact: true }),
   ).toHaveCount(0);

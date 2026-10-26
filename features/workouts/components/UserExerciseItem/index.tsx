@@ -2,11 +2,13 @@
 
 import { CompletionToggle } from "@/features/workouts/components/CompletionToggle";
 import { ExerciseCard } from "@/features/workouts/components/ExerciseCard";
+import { LoggedSetList } from "@/features/workouts/components/LoggedSetList";
 import { SetLogger } from "@/features/workouts/components/SetLogger";
 import { useExerciseCompletion } from "@/features/workouts/hooks/use-exercise-completion";
 import type { ExerciseWithSets } from "@/features/workouts/types/workout";
 import {
   canLogSets,
+  canShowLoggedSets,
   getLoggedSetsKey,
 } from "@/features/workouts/utils/set-logger";
 
@@ -36,6 +38,9 @@ export const UserExerciseItem = ({
               key={getLoggedSetsKey(exercise.loggedSets)}
               exercise={exercise}
             />
+          )}
+          {canShowLoggedSets(exercise, exercise.loggedSets.length) && (
+            <LoggedSetList sets={exercise.loggedSets} />
           )}
           <CompletionToggle
             completedAt={completedAt}

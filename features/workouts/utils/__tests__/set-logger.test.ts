@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { WORKOUT_MESSAGES } from "@/features/workouts/constants/messages";
 import {
+  canShowLoggedSets,
   createInitialRows,
   formatSet,
   getLoggedSetsKey,
@@ -186,5 +187,21 @@ describe("hintToDraftValues", () => {
       ok: true,
       sets: [set],
     });
+  });
+});
+
+describe("canShowLoggedSets", () => {
+  it("shows the read-only list for a timed exercise that has sets", () => {
+    expect(canShowLoggedSets({ reps: "30s" }, 2)).toBe(true);
+    expect(canShowLoggedSets({ reps: "1 phút" }, 1)).toBe(true);
+  });
+
+  it("hides it for a timed exercise without sets", () => {
+    expect(canShowLoggedSets({ reps: "30s" }, 0)).toBe(false);
+  });
+
+  it("leaves non-timed exercises to the logger", () => {
+    expect(canShowLoggedSets({ reps: "8-12" }, 3)).toBe(false);
+    expect(canShowLoggedSets({ reps: "10" }, 0)).toBe(false);
   });
 });

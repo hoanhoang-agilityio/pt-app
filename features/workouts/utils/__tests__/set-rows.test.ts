@@ -79,6 +79,27 @@ describe("groupSetRows", () => {
     });
   });
 
+  it("keeps interleaved exercises apart and first-seen ordered", () => {
+    const at = (exerciseId: number, position: number, reps: number) => ({
+      exerciseId,
+      date: "2026-10-19",
+      position,
+      weightKg: 40,
+      reps,
+    });
+
+    const groups = groupSetRows([
+      at(2, 1, 8),
+      at(1, 0, 10),
+      at(2, 0, 9),
+      at(1, 1, 7),
+    ]);
+
+    expect(groups.map((group) => group.exerciseId)).toEqual([2, 1]);
+    expect(groups[0].sets.map((set) => set.reps)).toEqual([9, 8]);
+    expect(groups[1].sets.map((set) => set.reps)).toEqual([10, 7]);
+  });
+
   it("returns an empty list for no rows", () => {
     expect(groupSetRows([])).toEqual([]);
   });

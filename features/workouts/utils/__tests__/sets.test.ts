@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { WORKOUT_MESSAGES } from "@/features/workouts/constants/messages";
 import {
+  areSetsEqual,
   exerciseSetsSchema,
   getBestSet,
   getPreviousSession,
@@ -266,5 +267,36 @@ describe("exerciseSetsSchema", () => {
 
   it("rejects 11 rows with a message", () => {
     expect(firstMessage(rows(11))).toBe(WORKOUT_MESSAGES.SET_TOO_MANY);
+  });
+});
+
+describe("areSetsEqual", () => {
+  it("is true for the same sets in the same order, including two empty lists", () => {
+    expect(areSetsEqual([], [])).toBe(true);
+    expect(
+      areSetsEqual([set(40, 10), set(null, 12)], [set(40, 10), set(null, 12)]),
+    ).toBe(true);
+  });
+
+  it("is false when a weight or reps differ", () => {
+    expect(areSetsEqual([set(40, 10)], [set(42.5, 10)])).toBe(false);
+    expect(areSetsEqual([set(40, 10)], [set(40, 9)])).toBe(false);
+  });
+
+  it("treats bodyweight as different from any weight", () => {
+    expect(areSetsEqual([set(null, 10)], [set(40, 10)])).toBe(false);
+    expect(areSetsEqual([set(40, 10)], [set(null, 10)])).toBe(false);
+  });
+
+  it("is false when the order differs", () => {
+    expect(
+      areSetsEqual([set(40, 10), set(35, 8)], [set(35, 8), set(40, 10)]),
+    ).toBe(false);
+  });
+
+  it("is false when a row was added or removed", () => {
+    expect(areSetsEqual([set(40, 10)], [set(40, 10), set(40, 10)])).toBe(false);
+    expect(areSetsEqual([], [set(40, 10)])).toBe(false);
+    expect(areSetsEqual([set(40, 10)], [])).toBe(false);
   });
 });

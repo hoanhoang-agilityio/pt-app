@@ -25,6 +25,7 @@ export const getExerciseProgress = async (
       youtubeId: exercises.youtubeId,
       title: exercises.title,
       date: workoutDays.date,
+      position: exerciseSets.position,
       weightKg: exerciseSets.weightKg,
       reps: exerciseSets.reps,
     })

@@ -2,26 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type { Exercise, ScheduleDay } from "@/features/workouts/types/workout";
 import type { SetSession } from "@/features/workouts/utils/sets";
-import {
-  attachSetsToWeek,
-  groupSetSessions,
-  type SetRow,
-} from "@/features/workouts/utils/week-sets";
+import { attachSetsToWeek } from "@/features/workouts/utils/week-sets";
 
 const USER = 1;
 const LINK = "dQw4w9WgXcQ";
 const OTHER_LINK = "9bZkp7q19f0";
-
-const row = (overrides: Partial<SetRow>): SetRow => ({
-  exerciseId: 1,
-  userId: USER,
-  youtubeId: LINK,
-  date: "2026-10-19",
-  position: 0,
-  weightKg: 40,
-  reps: 10,
-  ...overrides,
-});
 
 const exercise = (id: number, youtubeId = LINK): Exercise => ({
   id,
@@ -57,33 +42,6 @@ const session = (
 
 const attachOne = (target: ScheduleDay, sessions: SetSession[]) =>
   attachSetsToWeek([target], USER, sessions)[0].exercises[0];
-
-describe("groupSetSessions", () => {
-  it("groups rows by exercise and orders sets by position", () => {
-    const sessions = groupSetSessions([
-      row({ exerciseId: 2, position: 1, weightKg: 45, reps: 8 }),
-      row({ exerciseId: 1, position: 0 }),
-      row({ exerciseId: 2, position: 0, weightKg: 42.5, reps: 10 }),
-    ]);
-
-    expect(sessions).toHaveLength(2);
-    expect(sessions.find((item) => item.exerciseId === 2)?.sets).toEqual([
-      { weightKg: 42.5, reps: 10 },
-      { weightKg: 45, reps: 8 },
-    ]);
-    expect(sessions.find((item) => item.exerciseId === 1)).toEqual({
-      userId: USER,
-      youtubeId: LINK,
-      date: "2026-10-19",
-      exerciseId: 1,
-      sets: [{ weightKg: 40, reps: 10 }],
-    });
-  });
-
-  it("returns no sessions for no rows", () => {
-    expect(groupSetSessions([])).toEqual([]);
-  });
-});
 
 describe("attachSetsToWeek", () => {
   const today = day("2026-10-26", [exercise(10)]);

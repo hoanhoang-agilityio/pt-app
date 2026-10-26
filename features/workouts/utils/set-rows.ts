@@ -3,30 +3,45 @@ import type { LoggedSet } from "@/features/workouts/utils/sets";
 // A flat query row: one logged set plus whatever the caller joined to it.
 export interface SetRow extends LoggedSet {
   exerciseId: number;
+  position: number;
 }
 
-export type GroupedSetRow<R extends SetRow> = Omit<R, "weightKg" | "reps"> & {
+export type GroupedSetRow<R extends SetRow> = Omit<
+  R,
+  "weightKg" | "reps" | "position"
+> & {
   sets: LoggedSet[];
 };
 
 // Groups flat set rows into one entry per exercise, in first-seen order. The
-// first row of an exercise supplies the joined fields; sets keep row order, so
-// callers order the query by position.
+// first row of an exercise supplies the joined fields; its sets are ordered by
+// position regardless of the order the query returned them in.
 export const groupSetRows = <R extends SetRow>(
   rows: R[],
 ): GroupedSetRow<R>[] => {
-  const groups = new Map<number, GroupedSetRow<R>>();
+  const byExercise = new Map<number, R[]>();
 
   for (const row of rows) {
-    const { weightKg, reps, ...joined } = row;
-    const group = groups.get(row.exerciseId);
+    const group = byExercise.get(row.exerciseId);
 
     if (group) {
-      group.sets.push({ weightKg, reps });
+      group.push(row);
     } else {
-      groups.set(row.exerciseId, { ...joined, sets: [{ weightKg, reps }] });
+      byExercise.set(row.exerciseId, [row]);
     }
   }
 
-  return [...groups.values()];
+  return [...byExercise.values()].map((group) => {
+    const { weightKg, reps, position, ...joined } = group[0];
+    void weightKg;
+    void reps;
+    void position;
+
+    return {
+      ...joined,
+      sets: [...group]
+        .sort((a, b) => a.position - b.position)
+        .map((row) => ({ weightKg: row.weightKg, reps: row.reps })),
+    };
+  });
 };

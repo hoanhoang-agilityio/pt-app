@@ -14,10 +14,8 @@ import type {
   ScheduleDay,
   ScheduleDayWithSets,
 } from "@/features/workouts/types/workout";
-import {
-  attachSetsToWeek,
-  groupSetSessions,
-} from "@/features/workouts/utils/week-sets";
+import { groupSetRows } from "@/features/workouts/utils/set-rows";
+import { attachSetsToWeek } from "@/features/workouts/utils/week-sets";
 import { getWeekDates } from "@/utils/week";
 
 const toExercise = (
@@ -117,5 +115,5 @@ export const getWeekScheduleWithSets = async (
         )
     : [];
 
-  return attachSetsToWeek(days, userId, groupSetSessions(rows));
+  return attachSetsToWeek(days, userId, groupSetRows(rows));
 };

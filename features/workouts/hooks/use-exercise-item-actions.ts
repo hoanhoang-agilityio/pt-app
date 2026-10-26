@@ -3,10 +3,7 @@
 import { useTransition } from "react";
 import { toast } from "sonner";
 
-import {
-  CONFIRM_MESSAGES,
-  WORKOUT_MESSAGES,
-} from "@/features/workouts/constants/messages";
+import { WORKOUT_MESSAGES } from "@/features/workouts/constants/messages";
 import {
   deleteExerciseAction,
   moveExerciseAction,
@@ -47,7 +44,7 @@ export const useExerciseItemActions = (
       // Sets were logged after this page loaded: the server changed nothing
       // and refreshed the page, so only the warning is missing.
       if (result.status === "needs-confirm") {
-        if (!window.confirm(CONFIRM_MESSAGES.DELETE_EXERCISE_WITH_SETS)) {
+        if (!window.confirm(getDeleteConfirmMessage(true))) {
           return;
         }
         result = await deleteExerciseAction(exerciseId, userId, {

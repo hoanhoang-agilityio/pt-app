@@ -13,6 +13,7 @@ import type { ExerciseWithSets } from "@/features/workouts/types/workout";
 import {
   createInitialRows,
   hintToDraftValues,
+  isEmptyFirstSave,
   rowsToSetInputs,
   type SetRowDraft,
   type SetRowField,
@@ -73,6 +74,10 @@ export const useExerciseSets = (
 
     if (!parsed.ok) {
       toast.error(parsed.message);
+      return;
+    }
+    if (isEmptyFirstSave(parsed.sets.length, exercise.loggedSets.length)) {
+      toast.error(SET_LOGGER_COPY.NOTHING_TO_SAVE);
       return;
     }
 

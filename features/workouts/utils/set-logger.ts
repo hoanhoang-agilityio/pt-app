@@ -52,29 +52,43 @@ export const hintToDraftValues = (
   return { weight, reps };
 };
 
-// Saved sets win; otherwise one empty row per planned set, 1 when the PT left
-// `sets` empty (E1, Q1), never more than the row limit (Q14).
+// Saved sets come first, then empty rows up to the planned count (1 when the PT
+// left `sets` empty), so saving set 1 between sets keeps rows 2-4 and their
+// hints (E1, Q1). Never more than the row limit (Q14).
 export const createInitialRows = (
   loggedSets: LoggedSet[],
   plannedSets: number | null,
 ): SetRowDraft[] => {
-  if (loggedSets.length > 0) {
-    return loggedSets
-      .slice(0, SET_LIMITS.MAX_ROWS)
-      .map((set, index) => toDraft(set, index));
-  }
+  const saved = loggedSets.slice(0, SET_LIMITS.MAX_ROWS);
+  const count = Math.min(
+    Math.max(saved.length, plannedSets ?? 1, 1),
+    SET_LIMITS.MAX_ROWS,
+  );
 
-  const count = Math.min(Math.max(plannedSets ?? 1, 1), SET_LIMITS.MAX_ROWS);
-
-  return Array.from({ length: count }, (_, index) => toDraft(null, index));
+  return Array.from({ length: count }, (_, index) =>
+    toDraft(saved[index] ?? null, index),
+  );
 };
 
-// Plain decimals only ("42", "42.5", "42,5"): `Number` alone would also take
-// "1e2" or "0x14". Vietnamese keyboards type the comma.
-const DECIMAL_PATTERN = /^\d+([.,]\d+)?$/;
+// An all-blank first save would store nothing yet toast success; clearing
+// already saved sets with blank rows stays allowed (D2).
+export const isEmptyFirstSave = (
+  parsedSetsCount: number,
+  loggedSetsCount: number,
+) => parsedSetsCount === 0 && loggedSetsCount === 0;
+
+// Plain decimals only ("42", "42.5", "42,5", ",5", "5,"): `Number` alone would
+// also take "1e2" or "0x14". Vietnamese keyboards type the comma. The range and
+// step checks stay in the schema.
+const DECIMAL_PATTERN = /^(\d+[.,]?\d*|[.,]\d+)$/;
 
 const parseDecimal = (value: string) =>
   DECIMAL_PATTERN.test(value) ? Number(value.replace(",", ".")) : Number.NaN;
+
+// Reps keep the strict form ("8.5" still reaches the schema's integer message)
+// but take no leading or trailing separator.
+const parseReps = (value: string) =>
+  /^\d+([.,]\d+)?$/.test(value) ? Number(value.replace(",", ".")) : Number.NaN;
 
 // Turns the rows into the action's input. Fully blank rows are dropped, an
 // empty weight is bodyweight (Q3). Each row is checked with the server's
@@ -96,7 +110,7 @@ export const rowsToSetInputs = (rows: SetRowDraft[]): RowsParseResult => {
     }
 
     const weightKg = weight === "" ? null : parseDecimal(weight);
-    const repsCount = parseDecimal(reps);
+    const repsCount = parseReps(reps);
 
     if (weightKg !== null && Number.isNaN(weightKg)) {
       return {

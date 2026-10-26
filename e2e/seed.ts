@@ -21,6 +21,8 @@ export const E2E_EXERCISES = {
   SQUAT: "E2E Squat",
   ROWS: "E2E Row limit",
   PLANK: "E2E Plank",
+  // Timed, but sets were logged before the PT made it timed (KAN-44).
+  TIMED_LOGGED: "E2E Timed with sets",
   FUTURE: "E2E Future curl",
 } as const;
 
@@ -112,12 +114,31 @@ export const seedE2eDatabase = async (url: string) => {
     ),
   );
 
-  await addDay(user.id, today, [
+  const todayExercises = await addDay(user.id, today, [
     { title: E2E_EXERCISES.BENCH, sets: 3, reps: "8-12" },
     { title: E2E_EXERCISES.SQUAT, sets: 3, reps: "8-12" },
     { title: E2E_EXERCISES.ROWS, sets: 3, reps: "10" },
     { title: E2E_EXERCISES.PLANK, sets: 3, reps: "30s" },
+    { title: E2E_EXERCISES.TIMED_LOGGED, sets: 2, reps: "30s" },
   ]);
+  const timedLogged = todayExercises.find(
+    (exercise) => exercise.title === E2E_EXERCISES.TIMED_LOGGED,
+  );
+
+  if (!timedLogged) {
+    throw new Error("e2e seed: missing timed exercise with sets");
+  }
+  await db.insert(schema.exerciseSets).values(
+    [
+      { weightKg: 20, reps: 30 },
+      { weightKg: null, reps: 25 },
+    ].map((set, position) => ({
+      ...set,
+      exerciseId: timedLogged.id,
+      userId: user.id,
+      position,
+    })),
+  );
   await addDay(user.id, future, [
     { title: E2E_EXERCISES.FUTURE, sets: 3, reps: "10" },
   ]);

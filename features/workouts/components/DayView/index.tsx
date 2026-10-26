@@ -8,7 +8,10 @@ import { RestDayState } from "@/features/workouts/components/RestDayState";
 import { UserExerciseItem } from "@/features/workouts/components/UserExerciseItem";
 import type { ScheduleDayWithSets } from "@/features/workouts/types/workout";
 import { getDayProgress } from "@/features/workouts/utils/progress";
-import { canLogSets } from "@/features/workouts/utils/set-logger";
+import {
+  canLogSets,
+  canShowLoggedSets,
+} from "@/features/workouts/utils/set-logger";
 
 interface DayViewProps {
   day: ScheduleDayWithSets;
@@ -54,9 +57,11 @@ export const DayView = ({ day, today, isInteractive }: DayViewProps) => {
                   index={index}
                   isPersonalBest={exercise.isPersonalBest}
                   footer={
-                    canLogSets(exercise, canComplete) && (
-                      <LoggedSetList sets={exercise.loggedSets} />
-                    )
+                    (canLogSets(exercise, canComplete) ||
+                      canShowLoggedSets(
+                        exercise,
+                        exercise.loggedSets.length,
+                      )) && <LoggedSetList sets={exercise.loggedSets} />
                   }
                 />
               )}

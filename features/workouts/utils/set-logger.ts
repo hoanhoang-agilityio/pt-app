@@ -139,6 +139,13 @@ export const formatSet = ({ weightKg, reps }: LoggedSet) =>
 export const canLogSets = (exercise: Pick<Exercise, "reps">, isDue: boolean) =>
   isDue && !isTimedReps(exercise.reps);
 
+// Timed exercises get no inputs (Q3), but sets already logged for one (e.g.
+// before the PT changed its reps to "30s") stay visible read-only (KAN-44).
+export const canShowLoggedSets = (
+  exercise: Pick<Exercise, "reps">,
+  loggedSetsCount: number,
+) => isTimedReps(exercise.reps) && loggedSetsCount > 0;
+
 // Changes whenever the saved sets change; used as the logger's React key.
 export const getLoggedSetsKey = (sets: LoggedSet[]) =>
   sets.map((set) => `${set.weightKg ?? "bw"}x${set.reps}`).join("|");

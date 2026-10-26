@@ -10,6 +10,7 @@ import {
   bodyProfiles,
   exerciseCompletions,
   exercises,
+  exerciseSets,
   foodEntries,
   nutritionTargets,
   users,
@@ -141,6 +142,7 @@ const removeDemoUser = async () => {
     .where(eq(workoutDays.userId, demo.id));
   const dayIds = days.map((day) => day.id);
 
+  await db.delete(exerciseSets).where(eq(exerciseSets.userId, demo.id));
   await db
     .delete(exerciseCompletions)
     .where(eq(exerciseCompletions.userId, demo.id));

@@ -40,14 +40,39 @@ export const setExerciseCompletionAction = withResultErrorHandling(
     }
 
     if (isCompleted) {
-      await db
-        .insert(exerciseCompletions)
-        .values({
-          exerciseId: exercise.id,
-          userId: user.id,
-          completedAt: new Date(),
-        })
-        .onConflictDoNothing();
+      // Existence is re-checked inside the write transaction (libSQL opens it
+      // with BEGIN IMMEDIATE), so a PT deleting the exercise meanwhile can't
+      // leave an orphan completion: foreign keys are not enforced (D10).
+      const inserted = await db.transaction(async (tx) => {
+        const [stillThere] = await tx
+          .select({ id: exercises.id })
+          .from(exercises)
+          .where(eq(exercises.id, exercise.id))
+          .limit(1);
+
+        if (!stillThere) {
+          return false;
+        }
+
+        await tx
+          .insert(exerciseCompletions)
+          .values({
+            exerciseId: exercise.id,
+            userId: user.id,
+            completedAt: new Date(),
+          })
+          .onConflictDoNothing();
+        return true;
+      });
+
+      if (!inserted) {
+        // The page was stale (the PT deleted the exercise): refresh it.
+        revalidatePath(ROUTES.WORKOUTS);
+        return {
+          status: "error",
+          message: WORKOUT_MESSAGES.EXERCISE_NOT_FOUND,
+        };
+      }
     } else {
       await db
         .delete(exerciseCompletions)

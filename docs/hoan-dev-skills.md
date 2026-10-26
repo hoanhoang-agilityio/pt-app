@@ -82,6 +82,28 @@ The one idea: **put the context in the repo, not in the prompt.** A short prompt
 - [ ] Must it hold every time? Make it a hook with a test
 - [ ] Explained the same procedure twice? Make it a skill
 
+## ai-pair-workflow
+
+A second set that stacks on top of hoan-dev-skills: per-task workflows with an explicit human/Claude split. Where the two sets meet, the pair-\* skill calls the hoan-dev-skills one instead of repeating it.
+
+| Piece                       | Use when                                                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `pair-start`                | Start of any task: name the project and task type, pick the workflow                                              |
+| `pair-feature`              | New feature: requirement (`grill-me` if bigger than a day), study code, plan, build in layers, test               |
+| `pair-bugfix`               | Bug or error: facts, locate (`bug-investigator`), root cause, smallest fix with a regression test                 |
+| `pair-refactor`             | Cleanup: goal, plan and risk, characterization tests first, small verified steps                                  |
+| `pair-review`               | Review a diff or PR: Claude does the mechanical pass (plus `review-checklist`), the human gets judgment questions |
+| `pair-knowledge-log`        | Troubleshooting entries, ADRs, saved solutions under `docs/`; CLAUDE.md updates go through `project-map-refresh`  |
+| `code-scout` agent          | Read-only map of existing code before a change                                                                    |
+| `first-pass-reviewer` agent | Read-only mechanical review with `file:line` findings                                                             |
+| `safety-net-tester` agent   | Writes and runs tests only                                                                                        |
+
+Verify hooks (`.claude/hooks/pair/`, Node, no dependencies, tests in `__tests__/`):
+
+- `verify-tracker` (PostToolUse on Edit, Write, Bash): after 3 code files edited since the last test/lint/typecheck run (`PAIR_VERIFY_THRESHOLD`), tells Claude to verify before editing more.
+- `stop-verify-gate` (Stop): blocks finishing once while edits are unverified; never loops.
+- `vague-prompt-hint` (UserPromptSubmit): a short "fix it" prompt reminds Claude to collect the error, location, repro and expected result first.
+
 ## Known gaps to watch
 
 - Corrections that are not saved come back; say "remember this".

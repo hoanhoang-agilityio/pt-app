@@ -24,6 +24,7 @@ import {
 } from "@/features/workouts/utils/sets";
 import { withResultErrorHandling } from "@/services/action-errors";
 import { requireUser } from "@/services/auth-guard";
+import { logServerError } from "@/services/logger";
 import type { SaveSetsResult } from "@/types/error";
 import { getAdminUserPath } from "@/utils/routes";
 import { getTodayDate } from "@/utils/week";
@@ -169,18 +170,34 @@ export const saveExerciseSetsAction = withResultErrorHandling(
       return { status: "error", message: WORKOUT_MESSAGES.EXERCISE_NOT_FOUND };
     }
 
-    // Read-only and strictly earlier dates, so it never sees the sets above.
-    const personalBest =
-      newSets.length > 0 &&
-      isPersonalBest(
-        newSets,
-        await getEarlierSessions(user.id, exercise.youtubeId, exercise.date),
-        { userId: user.id, youtubeId: exercise.youtubeId, date: exercise.date },
-      );
-
+    // Revalidate first: the sets are stored, so the pages must refresh even if
+    // the personal-best read below fails.
     revalidatePath(ROUTES.WORKOUTS);
     revalidatePath(ROUTES.ADMIN, "layout");
     revalidatePath(getAdminUserPath(user.id), "layout");
+
+    // Read-only and strictly earlier dates, so it never sees the sets above.
+    // A failure here must not turn a stored save into an error.
+    let personalBest = false;
+
+    if (newSets.length > 0) {
+      try {
+        personalBest = isPersonalBest(
+          newSets,
+          await getEarlierSessions(user.id, exercise.youtubeId, exercise.date),
+          {
+            userId: user.id,
+            youtubeId: exercise.youtubeId,
+            date: exercise.date,
+          },
+        );
+      } catch (error) {
+        logServerError("saveExerciseSets personalBest", error, {
+          exerciseId: exercise.id,
+        });
+      }
+    }
+
     return { status: "success", personalBest };
   },
 );

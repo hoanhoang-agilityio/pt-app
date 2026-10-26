@@ -42,6 +42,10 @@ describe("isTimedReps", () => {
     "1p30",
     "30s mỗi bên",
     "45s/side",
+    "30 seconds",
+    "1 minute",
+    "2 mins",
+    "45 secs",
   ])("treats %s as timed", (reps) => {
     expect(isTimedReps(reps)).toBe(true);
   });

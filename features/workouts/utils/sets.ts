@@ -44,6 +44,16 @@ export interface SetSession {
   sets: LoggedSet[];
 }
 
+// True when both lists hold the same sets in the same order (position is the
+// index). Weight null (bodyweight) only equals null. Weights compare with
+// `===`, which is exact because they are 0.5 steps (D3); revisit if that changes.
+export const areSetsEqual = (a: LoggedSet[], b: LoggedSet[]): boolean =>
+  a.length === b.length &&
+  a.every(
+    (set, index) =>
+      set.weightKg === b[index].weightKg && set.reps === b[index].reps,
+  );
+
 // "Same exercise" means same user + same youtubeId (Q6), seen from `date`.
 export interface SessionKey {
   userId: number;

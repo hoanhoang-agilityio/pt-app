@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, lt } from "drizzle-orm";
+import { and, asc, eq, lt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -15,6 +15,7 @@ import {
 } from "@/db/schema";
 import { WORKOUT_MESSAGES } from "@/features/workouts/constants/messages";
 import {
+  areSetsEqual,
   exerciseSetsSchema,
   isPersonalBest,
   type SetInput,
@@ -102,33 +103,71 @@ export const saveExerciseSetsAction = withResultErrorHandling(
 
     const newSets = parsed.data;
 
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(exerciseSets)
-        .where(eq(exerciseSets.exerciseId, exercise.id));
+    // The exercise and the stored sets are read inside the write transaction
+    // (libSQL opens it with BEGIN IMMEDIATE), so a PT deleting the exercise
+    // meanwhile can't leave orphan rows: foreign keys are not enforced (D10).
+    // The link is re-checked too: a link change wipes the sets (OQ1), so sets
+    // saved against the old link would start the new history with stale data.
+    const outcome = await db.transaction(async (tx) => {
+      const [stillThere] = await tx
+        .select({ id: exercises.id })
+        .from(exercises)
+        .where(
+          and(
+            eq(exercises.id, exercise.id),
+            eq(exercises.youtubeId, exercise.youtubeId),
+          ),
+        )
+        .limit(1);
 
-      if (newSets.length === 0) {
-        return;
+      if (!stillThere) {
+        return "not-found" as const;
       }
 
-      await tx.insert(exerciseSets).values(
-        newSets.map((set, position) => ({
-          exerciseId: exercise.id,
-          userId: user.id,
-          position,
-          weightKg: set.weightKg,
-          reps: set.reps,
-        })),
-      );
-      await tx
-        .insert(exerciseCompletions)
-        .values({
-          exerciseId: exercise.id,
-          userId: user.id,
-          completedAt: new Date(),
-        })
-        .onConflictDoNothing();
+      const storedSets = await tx
+        .select({ weightKg: exerciseSets.weightKg, reps: exerciseSets.reps })
+        .from(exerciseSets)
+        .where(eq(exerciseSets.exerciseId, exercise.id))
+        .orderBy(asc(exerciseSets.position));
+
+      // Unchanged sets keep their rows, so `created_at` (the record's
+      // "occurred at" in recent activity) isn't bumped by a re-save.
+      if (!areSetsEqual(newSets, storedSets)) {
+        await tx
+          .delete(exerciseSets)
+          .where(eq(exerciseSets.exerciseId, exercise.id));
+
+        if (newSets.length > 0) {
+          await tx.insert(exerciseSets).values(
+            newSets.map((set, position) => ({
+              exerciseId: exercise.id,
+              userId: user.id,
+              position,
+              weightKg: set.weightKg,
+              reps: set.reps,
+            })),
+          );
+        }
+      }
+
+      if (newSets.length > 0) {
+        await tx
+          .insert(exerciseCompletions)
+          .values({
+            exerciseId: exercise.id,
+            userId: user.id,
+            completedAt: new Date(),
+          })
+          .onConflictDoNothing();
+      }
+      return "saved" as const;
     });
+
+    if (outcome === "not-found") {
+      // The page was stale (the PT deleted the exercise): refresh it.
+      revalidatePath(ROUTES.WORKOUTS);
+      return { status: "error", message: WORKOUT_MESSAGES.EXERCISE_NOT_FOUND };
+    }
 
     // Read-only and strictly earlier dates, so it never sees the sets above.
     const personalBest =

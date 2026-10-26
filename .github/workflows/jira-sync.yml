@@ -1,0 +1,30 @@
+name: Jira sync
+
+# Moves the KAN tickets named in a PR's title or branch to In Review when the
+# PR opens and to Done when it merges. Needs repo secrets JIRA_EMAIL and
+# JIRA_API_TOKEN; without them the job logs a notice and passes.
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, closed]
+
+jobs:
+  move-tickets:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec tsx scripts/jira-sync.ts
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}

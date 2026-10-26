@@ -49,6 +49,16 @@ Working standards and checklists for the set: `docs/hoan-dev-skills.md`.
 - `advisor-delegate`: main session plans and reviews; Sonnet builds, Haiku runs checks.
 - `project-map-refresh`: keep this file true when a convention changes.
 
+## Skills: ai-pair-workflow (`.claude/skills/pair-*`)
+
+Per-task workflows where the human decides and Claude executes; they call the hoan-dev-skills above where the two meet. Details: `docs/hoan-dev-skills.md`.
+
+- `pair-start`: name the project and task type, pick the workflow below.
+- `pair-feature`, `pair-bugfix`, `pair-refactor`, `pair-review`: staged workflows with a verify step after each stage.
+- `pair-knowledge-log`: troubleshooting entries, ADRs and saved solutions under `docs/`.
+- Agents in `.claude/agents/`: `code-scout` and `first-pass-reviewer` (read-only), `safety-net-tester` (test files only), plus `bug-investigator`.
+- Verify hooks in `.claude/hooks/pair/` (tests: `node --test .claude/hooks/pair/__tests__/hooks.test.mjs`).
+
 ## Never do
 
 - Never add `Co-Authored-By` or `Claude-Session` lines to commits.

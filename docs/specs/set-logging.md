@@ -45,6 +45,7 @@ Answered by the client on 2026-10-22 (comment on KAN-20). The assumptions stand,
 - OQ1: When the PT deletes an exercise or changes its YouTube link after the trainee logged sets, should the history disappear (today's cascade) or be kept? **Answer:** deleting the exercise deletes its sets; a new link starts a new history. Before deleting an exercise with logged sets, the PT's confirm says the sets go too (KAN-33). Changing the link of an exercise that has logged sets asks the same way (KAN-39): the PT confirms, the server deletes that exercise's sets and updates the link in one transaction (the completion is kept), and it refuses the change without `confirmResetSets=true`. Editing only title or reps never touches the sets.
 - OQ2: Should a set logged as bodyweight (no kg) ever count as a personal best? **Answer:** no, only sets with a weight count in v1.
 - OQ3: Is "Tiến bộ" on the Summary tab enough for the PT, or does the client also want it on the dashboard soon? **Answer:** the Summary tab is enough; personal-best entries in the dashboard activity list (F3) cover the dashboard. A tile can be a later story.
+- Note (KAN-59): Deleting a member: the existing confirm ("Xóa user này và toàn bộ lịch tập của họ? …") already covers their logged sets, so no separate set warning is shown.
 
 ## Out of scope (v1)
 
@@ -169,6 +170,8 @@ Hardened save (KAN-40): `saveExerciseSetsAction` re-checks that the exercise sti
 | E6  | The "Kỷ lục mới" badge is computed on read in KAN-29.                                                |
 | E7  | Hints match by row position (row n shows the previous session's set n).                              |
 | E8  | Toasts follow `useExerciseCompletion` (success and error).                                           |
+
+Note (KAN-59): The admin preview of a trainee's day shows the "Kỷ lục mới" badge read-only, same as the trainee view.
 
 ### KAN-23 (F1-F6)
 

@@ -58,6 +58,8 @@ test("A1, B2: tapping hints and saving stores the sets and marks it done", async
 
   await expect(page.getByText("Đã lưu các hiệp")).toBeVisible();
   await expect(card.getByRole("button", { name: /Đã tập xong/ })).toBeVisible();
+  // B2: an exact tie with history is not a personal best.
+  await expect(card.getByText("Kỷ lục mới", { exact: true })).toHaveCount(0);
 
   // Survives a reload: the sets are in the database, not in client state.
   await page.reload();
@@ -66,9 +68,20 @@ test("A1, B2: tapping hints and saving stores the sets and marks it done", async
       name: /Đã tập xong/,
     }),
   ).toBeVisible();
-  await expect(
-    getCard(page, E2E_EXERCISES.BENCH).getByLabel("Số kg hiệp 3"),
-  ).toHaveValue("35");
+  const reloadedBench = getCard(page, E2E_EXERCISES.BENCH);
+
+  for (const [index, kg, reps] of [
+    [1, "40", "10"],
+    [2, "40", "8"],
+    [3, "35", "10"],
+  ] as const) {
+    await expect(reloadedBench.getByLabel(`Số kg hiệp ${index}`)).toHaveValue(
+      kg,
+    );
+    await expect(reloadedBench.getByLabel(`Số lần hiệp ${index}`)).toHaveValue(
+      reps,
+    );
+  }
 });
 
 test("B3: beating the previous best shows the personal-best badge", async ({
@@ -161,6 +174,13 @@ test("B17: saving one of four planned sets keeps the planned rows", async ({
 test("B12: the day does not scroll horizontally at 390 px", async ({
   page,
 }) => {
+  // ROWS is on the default day; adding a row renders a wider logger.
+  await expect(getCard(page, E2E_EXERCISES.BENCH)).toBeVisible();
+  const rows = getCard(page, E2E_EXERCISES.ROWS);
+
+  await rows.getByRole("button", { name: "Thêm hiệp" }).click();
+  await expect(rows.getByLabel("Số kg hiệp 4")).toBeVisible();
+
   const { innerWidth, scrollWidth } = await page.evaluate(() => ({
     innerWidth: window.innerWidth,
     scrollWidth: document.documentElement.scrollWidth,

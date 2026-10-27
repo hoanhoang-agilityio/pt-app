@@ -282,4 +282,11 @@ test("C13: deleting an exercise whose sets were logged after the page loaded sti
   // page now shows them.
   await expect(card).toBeVisible();
   await expect(card.getByText(/Đã ghi:.*25 kg × 10/)).toBeVisible();
+
+  // The sets are in the database, not just on the refreshed client.
+  await page.reload();
+  await expect(getCard(page, E2E_PT_EXERCISES.STALE)).toBeVisible();
+  await expect(
+    getCard(page, E2E_PT_EXERCISES.STALE).getByText(/Đã ghi:.*25 kg × 10/),
+  ).toBeVisible();
 });

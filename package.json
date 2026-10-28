@@ -13,6 +13,7 @@
     "lint": "eslint --max-warnings 0",
     "format": "prettier --write .",
     "typecheck": "next typegen && tsc --noEmit",
+    "verify": "pnpm test && pnpm lint && pnpm typecheck",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:push": "drizzle-kit push",

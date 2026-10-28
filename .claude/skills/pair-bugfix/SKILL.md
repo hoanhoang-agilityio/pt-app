@@ -24,7 +24,7 @@ Find the code that produces the error. Use the `bug-investigator` or `code-scout
 
 ## Stage 3. Root cause (together)
 
-Trace the bad value backwards: where does it come from, and under which conditions is it missing or wrong? Write the root cause as one sentence: "X happens because Y when Z." Reproduce it with a failing test or a scripted repro before fixing.
+Trace the bad value backwards: where does it come from, and under which conditions is it missing or wrong? Write the root cause as one sentence: "X happens because Y when Z." Reproduce it with a failing test or a scripted repro before fixing. Once the failing test is committed, turn on fix mode (`touch .claude/fix-mode`): the test-guard hook then blocks edits to test files, so the test cannot be weakened to get green.
 
 If two causes are plausible, say so and design the repro to tell them apart. Do not fix both "just in case".
 
@@ -32,13 +32,14 @@ If two causes are plausible, say so and design the repro to tell them apart. Do 
 
 - Smallest change that removes the root cause.
 - Add defensive checks at the boundary where bad data enters, and a user-friendly message instead of a crash.
-- Keep the failing test from Stage 3; it must now pass.
+- Keep the failing test from Stage 3; it must now pass. With fix mode on, fix the code; if the test itself is wrong, ask the human, who removes `.claude/fix-mode`.
 - No refactors mixed in; note them for later.
 
 ## Stage 5. Verify (human owns)
 
 - Re-run the original repro steps and the new test.
-- Run the full test, lint and typecheck suite.
+- Run the full test, lint and typecheck suite (`pnpm verify`).
+- Turn fix mode off (`rm .claude/fix-mode`).
 - Search for the same pattern elsewhere (same API misuse, same missing check) and list the hits; fix them only if the human agrees.
 
 ## Finish

@@ -31,7 +31,10 @@ export const MacroChips = ({ totals, target }: MacroChipsProps) => (
         <p className="text-sm leading-tight font-bold text-fg tabular-nums">
           {format(totals[macro])}
           {target ? (
-            <span className="font-normal text-muted"> / {target[macro]}</span>
+            <span className="font-normal text-muted">
+              {" "}
+              / {format(target[macro])}
+            </span>
           ) : null}
         </p>
       </li>

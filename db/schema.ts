@@ -30,6 +30,10 @@ export const users = sqliteTable("users", {
   name: text("name").notNull(),
   // Lower-cased, whitespace-collapsed name used for login lookups.
   nameKey: text("name_key").notNull().unique(),
+  // The trainee's meal plan request (KAN-69, Q1): meals per day (2-6) and
+  // foods they like or avoid. Null = no request.
+  preferredMealCount: integer("preferred_meal_count"),
+  foodNote: text("food_note"),
   createdAt: createdAt(),
 });
 
@@ -244,4 +248,58 @@ export const foods = sqliteTable(
       .on(table.nameKey)
       .where(sql`${table.archivedAt} IS NULL`),
   ],
+);
+
+// Meal plan builder (KAN-69). A day with a plan has meals, a meal has foods
+// with grams. Delete paths remove the children by hand (foreign keys are not
+// enforced, D10).
+export const mealPlanDays = sqliteTable(
+  "meal_plan_days",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // Calendar date in Asia/Ho_Chi_Minh, formatted YYYY-MM-DD.
+    date: text("date").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    uniqueIndex("meal_plan_days_user_date").on(table.userId, table.date),
+  ],
+);
+
+export const mealPlanMeals = sqliteTable(
+  "meal_plan_meals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    dayId: integer("day_id")
+      .notNull()
+      .references(() => mealPlanDays.id, { onDelete: "cascade" }),
+    // 0-based order of the meal within the day.
+    position: integer("position").notNull(),
+    name: text("name").notNull(),
+    // Share of the day target in percent; null = equal split (Q4). Either
+    // every meal of a day has one (total 100) or none does.
+    sharePercent: real("share_percent"),
+    createdAt: createdAt(),
+  },
+  (table) => [index("meal_plan_meals_day").on(table.dayId)],
+);
+
+export const mealPlanItems = sqliteTable(
+  "meal_plan_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    mealId: integer("meal_id")
+      .notNull()
+      .references(() => mealPlanMeals.id, { onDelete: "cascade" }),
+    // May point at an archived food: plans keep showing it.
+    foodId: integer("food_id")
+      .notNull()
+      .references(() => foods.id),
+    grams: real("grams").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [index("meal_plan_items_meal").on(table.mealId)],
 );

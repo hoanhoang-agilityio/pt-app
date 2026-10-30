@@ -42,6 +42,56 @@ export const E2E_PT_EXERCISES = {
   STALE: "E2E PT Stale",
 } as const;
 
+// Foods of the food library specs (KAN-65). Values are per 100 g.
+export const E2E_FOODS = {
+  CHICKEN: "Ức gà (chín)",
+  CHICKEN_RAW: "Ức gà (sống)",
+  RICE: "Cơm trắng (chín)",
+  SALMON: "Cá hồi (chín)",
+} as const;
+
+const E2E_FOOD_ROWS = [
+  {
+    name: E2E_FOODS.CHICKEN,
+    group: "meat",
+    state: "cooked",
+    kcal: 165,
+    protein: 31,
+    carbs: 0,
+    fat: 3.6,
+  },
+  {
+    name: E2E_FOODS.CHICKEN_RAW,
+    group: "meat",
+    state: "raw",
+    kcal: 120,
+    protein: 22.5,
+    carbs: 0,
+    fat: 2.6,
+  },
+  {
+    name: E2E_FOODS.RICE,
+    group: "starch",
+    state: "cooked",
+    kcal: 130,
+    protein: 2.7,
+    carbs: 28.2,
+    fat: 0.3,
+    // 1 chén = 160 g
+    servingLabel: "1 chén",
+    servingGrams: 160,
+  },
+  {
+    name: E2E_FOODS.SALMON,
+    group: "seafood",
+    state: "cooked",
+    kcal: 206,
+    protein: 22.1,
+    carbs: 0,
+    fat: 12.4,
+  },
+] as const;
+
 // The video the link-change test switches to.
 export const E2E_NEW_VIDEO_ID = "dQw4w9WgXcQ";
 
@@ -218,6 +268,14 @@ export const seedE2eDatabase = async (url: string) => {
     userId: lifter.id,
     completedAt: new Date(),
   });
+
+  await db.insert(schema.foods).values(
+    E2E_FOOD_ROWS.map((food) => ({
+      ...food,
+      nameKey: toNameKey(food.name),
+      source: "e2e",
+    })),
+  );
 
   client.close();
 };

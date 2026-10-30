@@ -32,3 +32,7 @@ export const E2E_ADMIN = {
 // Trainees of the PT specs: one with logged sets, one with nothing logged.
 export const E2E_LIFTER_NAME = "E2E Lifter";
 export const E2E_EMPTY_NAME = "E2E Empty";
+
+// Trainee of the meal plan specs (KAN-69): has a manual target of
+// P 160 / C 235 / F 55 g (2,075 kcal) and no plan.
+export const E2E_PLANNER_NAME = "E2E Planner";

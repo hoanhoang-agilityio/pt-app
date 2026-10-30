@@ -1,0 +1,76 @@
+"use client";
+
+import { BottomSheet } from "@/components/common/BottomSheet";
+import { BUTTON_PRIMARY } from "@/constants/styles";
+import { useCopyDay } from "@/features/meal-plans/hooks/use-copy-day";
+import { formatFullDay } from "@/utils/week";
+
+interface CopyDaySheetProps {
+  userId: number;
+  dayId: number;
+  sourceDate: string;
+  // Dates offered (this week and next), without the source day.
+  dates: string[];
+  datesWithPlan: string[];
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+}
+
+export const CopyDaySheet = ({
+  userId,
+  dayId,
+  sourceDate,
+  dates,
+  datesWithPlan,
+  isOpen,
+  onOpenChange,
+}: CopyDaySheetProps) => {
+  const copy = useCopyDay(userId, dayId, () => onOpenChange(false));
+
+  return (
+    <BottomSheet
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
+      title="Sao chép sang ngày khác"
+      description={`Từ ${formatFullDay(sourceDate)}`}
+    >
+      <div className="space-y-4">
+        <ul className="grid grid-cols-1 gap-2">
+          {dates.map((date) => {
+            const hasPlan = datesWithPlan.includes(date);
+
+            return (
+              <li key={date}>
+                <label className="flex min-h-12 items-center gap-3 rounded-xl border border-line bg-surface px-4 py-2">
+                  <input
+                    type="checkbox"
+                    checked={copy.selected.includes(date)}
+                    onChange={() => copy.toggle(date)}
+                    className="size-5 accent-[var(--accent)]"
+                  />
+                  <span className="min-w-0 flex-1 text-[15px] text-fg">
+                    {formatFullDay(date)}
+                  </span>
+                  {hasPlan && (
+                    <span className="shrink-0 text-xs font-medium text-warning">
+                      Đã có plan, sẽ ghi đè
+                    </span>
+                  )}
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+        <button
+          type="button"
+          onClick={copy.submit}
+          disabled={copy.isPending || copy.selected.length === 0}
+          className={`${BUTTON_PRIMARY} w-full`}
+        >
+          Sao chép
+          {copy.selected.length > 0 && ` (${copy.selected.length} ngày)`}
+        </button>
+      </div>
+    </BottomSheet>
+  );
+};

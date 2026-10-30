@@ -15,7 +15,7 @@ The decisions touch three areas. One PR for all of them would be about 3x the si
 
 | Order | Story                      | What ships                                                                                                               |
 | ----- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| 1     | Energy model (KAN-70)      | C1, C2, C3: PT-set kcal adjustment, protein g/kg by sex, one on-target rule                        |
+| 1     | Energy model (KAN-70)      | C1, C2, C3: PT-set kcal adjustment, protein g/kg by sex, one on-target rule                                              |
 | 2     | Meal plan builder (KAN-69) | Q1-Q6, R1, R2, R5, S2, S5: per-day plans in the admin Dinh dưỡng tab, auto grams, copy days / last week, trainee request |
 | 3     | Trainee meal log (KAN-71)  | R6, S4, C4, C5, S3: trainee sees the plan, logs what was eaten from the library, marks meals; weekly kcal notice         |
 
@@ -76,3 +76,10 @@ UI (admin Dinh dưỡng tab, S5)
 - Scope change (Hoan, 2026-10-30): Henry & Rees BMR dropped; BMR stays Mifflin-St Jeor for all ages (C7 rejected).
 
 - Code review fixes (KAN-70): (1) with a kcal adjustment set, the target never falls below the member's BMR; the plan carries `isFlooredToBmr` and the form preview and card warn "Mục tiêu không được thấp hơn BMR, đã dùng X kcal". Legacy (null) profiles are not floored so their numbers stay. (3) `KCAL_ADJUSTMENT_LIMITS` is -1500..+1500 (was -1000..+1000) so the legacy prefill always fits. (4) A legacy profile's protein field is prefilled with its old per-goal value (2.2 / 1.8 / 2.0 g/kg), with the hint "Mặc định mới: 2,0 g/kg"; the sex default (2.0 / 1.6) is only used for new profiles.
+
+- Story 2 (KAN-69), worked example: the spec's 427 g chicken / 757 g rice are the unrounded solution (426.99 g / 756.74 g). Because grams are rounded to 5 g (Q5), the solver returns 425 g / 755 g, leaving 36.2 g fat short ("Thiếu 36 g fat"). Both numbers are pinned in `solve-grams.test.ts`.
+- Story 2: the solver weights protein and carbs 1 and fat 0.01 (`SOLVER_MACRO_WEIGHTS`), so foods are fitted to P and C first (as in the worked example) and fat only decides foods that are mostly fat (oil). A food that does not help is returned as 0 g.
+- Story 2: "fixed" foods (e.g. 300 g broccoli) are a per-item "Giữ gram" toggle kept on screen only, sent with "Tính tự động"; no extra column was added to `meal_plan_items`.
+- Story 2: adding or removing a meal resets a custom % split to equal (the total would no longer be 100). Meal targets are whole grams that add up exactly to the day target (largest remainder).
+- Story 2: a meal gap is shown from 5 g (`MEAL_GAP_MIN_GRAMS`); extra protein is never a gap. The day verdict uses `ON_TARGET` unchanged.
+- Story 2: added "Xóa plan của ngày này" (not listed in the plan) so an accidental plan can be undone. "Áp dụng tuần trước" copies every planned day of last week into empty days of the shown week and never overwrites; "Sao chép sang ngày khác" offers this and next week and overwrites (marked "sẽ ghi đè"). Deleting a member also deletes their plans.

@@ -1,0 +1,40 @@
+import clsx from "clsx";
+
+import {
+  MACRO_COLORS,
+  MACRO_LABELS,
+  MACROS,
+} from "@/features/nutrition/constants/nutrition";
+import type { MacroAmounts } from "@/features/nutrition/types/nutrition";
+
+interface MacroChipsProps {
+  totals: MacroAmounts;
+  // Shown after a slash when the meal or day has a target.
+  target?: MacroAmounts | null;
+}
+
+const round = (value: number) => Math.round(value * 10) / 10;
+
+const format = (value: number) =>
+  round(value).toLocaleString("vi-VN", { maximumFractionDigits: 1 });
+
+export const MacroChips = ({ totals, target }: MacroChipsProps) => (
+  <ul className="grid grid-cols-3 gap-2">
+    {MACROS.map((macro) => (
+      <li
+        key={macro}
+        className={clsx("rounded-xl px-2.5 py-2", MACRO_COLORS[macro].soft)}
+      >
+        <p className={clsx("text-xs font-semibold", MACRO_COLORS[macro].text)}>
+          {MACRO_LABELS[macro].name} (g)
+        </p>
+        <p className="text-sm leading-tight font-bold text-fg tabular-nums">
+          {format(totals[macro])}
+          {target ? (
+            <span className="font-normal text-muted"> / {target[macro]}</span>
+          ) : null}
+        </p>
+      </li>
+    ))}
+  </ul>
+);

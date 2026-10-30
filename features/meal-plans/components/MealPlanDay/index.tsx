@@ -1,0 +1,177 @@
+"use client";
+
+import { Copy, Percent, Plus, Trash2 } from "lucide-react";
+
+import { BUTTON_SECONDARY, SECTION_TITLE } from "@/constants/styles";
+import { CopyDaySheet } from "@/features/meal-plans/components/CopyDaySheet";
+import { DayPlanSummary } from "@/features/meal-plans/components/DayPlanSummary";
+import { EmptyDayPlan } from "@/features/meal-plans/components/EmptyDayPlan";
+import { MealCard } from "@/features/meal-plans/components/MealCard";
+import { MealSharesSheet } from "@/features/meal-plans/components/MealSharesSheet";
+import { MemberMealRequest } from "@/features/meal-plans/components/MemberMealRequest";
+import { MEAL_PLAN_LIMITS } from "@/features/meal-plans/constants/meal-plans";
+import { useMealPlanDay } from "@/features/meal-plans/hooks/use-meal-plan-day";
+import type { PlanDay, PlanFood } from "@/features/meal-plans/types/meal-plan";
+import { resolveMealCount } from "@/features/meal-plans/utils/default-meals";
+import { splitDayTarget } from "@/features/meal-plans/utils/meal-targets";
+import { sumMeals } from "@/features/meal-plans/utils/plan-totals";
+import type { MacroAmounts } from "@/features/nutrition/types/nutrition";
+
+interface MealPlanDayProps {
+  userId: number;
+  date: string;
+  weekStart: string;
+  plan: PlanDay | null;
+  // Macro target that applies on this date; null when the PT set none.
+  target: MacroAmounts | null;
+  library: PlanFood[];
+  preferredMealCount: number | null;
+  foodNote: string | null;
+  lastWeekPlanCount: number;
+  // Dates the plan can be copied to (without this day) and which of them
+  // already have a plan.
+  copyDates: string[];
+  datesWithPlan: string[];
+}
+
+// S5: the PT's plan for one day of the member's Dinh dưỡng tab.
+export const MealPlanDay = ({
+  userId,
+  date,
+  weekStart,
+  plan,
+  target,
+  library,
+  preferredMealCount,
+  foodNote,
+  lastWeekPlanCount,
+  copyDates,
+  datesWithPlan,
+}: MealPlanDayProps) => {
+  const day = useMealPlanDay(userId, plan);
+
+  if (!plan) {
+    return (
+      <section className="space-y-3" aria-label="Plan bữa ăn">
+        <h3 className={SECTION_TITLE}>Plan bữa ăn</h3>
+        <MemberMealRequest
+          preferredMealCount={preferredMealCount}
+          planMealCount={null}
+          foodNote={foodNote}
+        />
+        <EmptyDayPlan
+          userId={userId}
+          date={date}
+          weekStart={weekStart}
+          newMealCount={resolveMealCount(preferredMealCount)}
+          lastWeekPlanCount={lastWeekPlanCount}
+        />
+      </section>
+    );
+  }
+
+  const split = target
+    ? splitDayTarget(
+        target,
+        plan.meals.map((meal) => meal.sharePercent),
+      )
+    : null;
+  const mealTargets = split?.ok ? split.meals : null;
+  const hasItems = plan.meals.some((meal) => meal.items.length > 0);
+
+  return (
+    <section className="space-y-3" aria-label="Plan bữa ăn">
+      <h3 className={SECTION_TITLE}>Plan bữa ăn</h3>
+      <MemberMealRequest
+        preferredMealCount={preferredMealCount}
+        planMealCount={plan.meals.length}
+        foodNote={foodNote}
+      />
+
+      {plan.meals.map((meal, index) => (
+        <MealCard
+          key={meal.id}
+          userId={userId}
+          meal={meal}
+          index={index}
+          isFirst={index === 0}
+          isLast={index === plan.meals.length - 1}
+          isOnly={plan.meals.length === 1}
+          target={mealTargets?.[index] ?? null}
+          library={library}
+          onMove={(direction) => day.moveMeal(index, direction)}
+          isReordering={day.dayPlan.isPending}
+        />
+      ))}
+
+      <button
+        type="button"
+        onClick={() => day.dayPlan.addMeal(plan.id)}
+        disabled={
+          day.dayPlan.isPending ||
+          plan.meals.length >= MEAL_PLAN_LIMITS.MAX_MEALS_PER_DAY
+        }
+        className={`${BUTTON_SECONDARY} w-full border-dashed`}
+      >
+        <Plus className="size-5" aria-hidden />
+        Thêm bữa
+      </button>
+
+      <DayPlanSummary
+        totals={sumMeals(plan.meals)}
+        target={target}
+        hasItems={hasItems}
+      />
+
+      <div className="grid grid-cols-1 gap-2">
+        <button
+          type="button"
+          onClick={() => day.setIsCopyOpen(true)}
+          className={BUTTON_SECONDARY}
+        >
+          <Copy className="size-5" aria-hidden />
+          Sao chép sang ngày khác
+        </button>
+        <button
+          type="button"
+          onClick={() => day.setIsSharesOpen(true)}
+          disabled={!target}
+          className={BUTTON_SECONDARY}
+        >
+          <Percent className="size-5" aria-hidden />
+          Chia theo %
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          if (window.confirm("Xóa plan của ngày này?")) {
+            day.dayPlan.remove(plan.id);
+          }
+        }}
+        disabled={day.dayPlan.isPending}
+        className="inline-flex min-h-11 w-full items-center justify-center gap-2 text-sm font-medium text-danger"
+      >
+        <Trash2 className="size-4" aria-hidden />
+        Xóa plan của ngày này
+      </button>
+
+      <CopyDaySheet
+        userId={userId}
+        dayId={plan.id}
+        sourceDate={date}
+        dates={copyDates}
+        datesWithPlan={datesWithPlan}
+        isOpen={day.isCopyOpen}
+        onOpenChange={day.setIsCopyOpen}
+      />
+      <MealSharesSheet
+        userId={userId}
+        dayId={plan.id}
+        meals={plan.meals}
+        isOpen={day.isSharesOpen}
+        onOpenChange={day.setIsSharesOpen}
+      />
+    </section>
+  );
+};

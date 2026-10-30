@@ -197,3 +197,49 @@ export const weightLogs = sqliteTable(
     uniqueIndex("weight_logs_user_date").on(table.userId, table.date),
   ],
 );
+
+// Food library (KAN-65): shared by every user, edited by admins. All numbers
+// are per 100 g. "Xóa" archives a row (archivedAt) instead of deleting it so
+// later meal plans keep their numbers.
+export const foods = sqliteTable(
+  "foods",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    name: text("name").notNull(),
+    // Accent-free lower-cased name (utils/name.ts), used for search and for
+    // the uniqueness check among active foods.
+    nameKey: text("name_key").notNull(),
+    group: text("group", {
+      enum: [
+        "meat",
+        "seafood",
+        "egg_dairy",
+        "starch",
+        "vegetable",
+        "fruit",
+        "legume_nut",
+        "fat_oil",
+        "dish",
+        "other",
+      ],
+    }).notNull(),
+    // Null for prepared dishes and foods without a raw/cooked distinction.
+    state: text("state", { enum: ["raw", "cooked"] }),
+    kcal: real("kcal").notNull(),
+    protein: real("protein").notNull(),
+    carbs: real("carbs").notNull(),
+    fat: real("fat").notNull(),
+    fiber: real("fiber"),
+    // Optional household portion, e.g. "1 tô" = 500 g; both or neither.
+    servingLabel: text("serving_label"),
+    servingGrams: real("serving_grams"),
+    // Where the numbers come from, e.g. "USDA FDC 171477".
+    source: text("source").notNull().default(""),
+    archivedAt: integer("archived_at", { mode: "timestamp" }),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [index("foods_name_key").on(table.nameKey)],
+);

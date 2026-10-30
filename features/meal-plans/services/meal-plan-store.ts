@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, between, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { foods, mealPlanDays, mealPlanItems, mealPlanMeals } from "@/db/schema";
@@ -108,9 +108,73 @@ export const deleteDays = async (dayIds: number[], executor: Executor) => {
   await executor.delete(mealPlanDays).where(inArray(mealPlanDays.id, dayIds));
 };
 
-// Copies the meals and foods of `sourceDayId` into a new plan on `date`.
-export const cloneDay = async (
-  sourceDayId: number,
+// Plan days of a member from `from` to `to` (inclusive), oldest first. The one
+// "plan days in a range" query: the week view, the counts, the copy sheet and
+// "Áp dụng tuần trước" all read it.
+export const listDaysInRange = (
+  userId: number,
+  from: string,
+  to: string,
+  executor: Executor = db,
+) =>
+  executor
+    .select()
+    .from(mealPlanDays)
+    .where(
+      and(
+        eq(mealPlanDays.userId, userId),
+        between(mealPlanDays.date, from, to),
+      ),
+    )
+    .orderBy(asc(mealPlanDays.date));
+
+export interface LoadedPlan {
+  meals: (typeof mealPlanMeals.$inferSelect)[];
+  items: (typeof mealPlanItems.$inferSelect)[];
+}
+
+// Meals and items of several days in two queries; keyed by day id.
+export const loadPlans = async (dayIds: number[], executor: Executor) => {
+  const plans = new Map<number, LoadedPlan>(
+    dayIds.map((id) => [id, { meals: [], items: [] }]),
+  );
+
+  if (!dayIds.length) {
+    return plans;
+  }
+
+  const meals = await executor
+    .select()
+    .from(mealPlanMeals)
+    .where(inArray(mealPlanMeals.dayId, dayIds))
+    .orderBy(asc(mealPlanMeals.position), asc(mealPlanMeals.id));
+  const items = meals.length
+    ? await executor
+        .select()
+        .from(mealPlanItems)
+        .where(
+          inArray(
+            mealPlanItems.mealId,
+            meals.map((meal) => meal.id),
+          ),
+        )
+        .orderBy(asc(mealPlanItems.id))
+    : [];
+
+  for (const meal of meals) {
+    const plan = plans.get(meal.dayId);
+
+    plan?.meals.push(meal);
+    plan?.items.push(...items.filter((item) => item.mealId === meal.id));
+  }
+  return plans;
+};
+
+// Copies a loaded plan to a new day on `date` with one insert for the day, one
+// for its meals and one for its foods. Returns null when the member already
+// has a plan that day (e.g. created a moment ago): that day is skipped.
+export const clonePlan = async (
+  plan: LoadedPlan,
   userId: number,
   date: string,
   executor: Executor,
@@ -118,33 +182,38 @@ export const cloneDay = async (
   const [day] = await executor
     .insert(mealPlanDays)
     .values({ userId, date })
+    .onConflictDoNothing()
     .returning({ id: mealPlanDays.id });
 
-  for (const meal of await listDayMeals(sourceDayId, executor)) {
-    const [copy] = await executor
-      .insert(mealPlanMeals)
-      .values({
+  if (!day) {
+    return null;
+  }
+  if (!plan.meals.length) {
+    return day.id;
+  }
+
+  // RETURNING follows the insert order, so copies line up with the sources.
+  const copies = await executor
+    .insert(mealPlanMeals)
+    .values(
+      plan.meals.map((meal) => ({
         dayId: day.id,
         position: meal.position,
         name: meal.name,
         sharePercent: meal.sharePercent,
-      })
-      .returning({ id: mealPlanMeals.id });
-    const items = await executor
-      .select()
-      .from(mealPlanItems)
-      .where(eq(mealPlanItems.mealId, meal.id))
-      .orderBy(asc(mealPlanItems.id));
+      })),
+    )
+    .returning({ id: mealPlanMeals.id });
+  const items = plan.items.flatMap((item) => {
+    const index = plan.meals.findIndex((meal) => meal.id === item.mealId);
 
-    if (items.length) {
-      await executor.insert(mealPlanItems).values(
-        items.map((item) => ({
-          mealId: copy.id,
-          foodId: item.foodId,
-          grams: item.grams,
-        })),
-      );
-    }
+    return index < 0
+      ? []
+      : [{ mealId: copies[index].id, foodId: item.foodId, grams: item.grams }];
+  });
+
+  if (items.length) {
+    await executor.insert(mealPlanItems).values(items);
   }
   return day.id;
 };

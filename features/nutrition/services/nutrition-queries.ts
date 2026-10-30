@@ -89,3 +89,20 @@ export const getLatestTarget = async (userId: number) => {
 
   return row ? toTarget(row) : null;
 };
+
+// The target that applies on `date`: the latest one that started on or before
+// it. The week view and the meal plan solver both use this rule.
+export const getTargetForDate = async (userId: number, date: string) => {
+  const rows = await db
+    .select()
+    .from(nutritionTargets)
+    .where(
+      and(
+        eq(nutritionTargets.userId, userId),
+        lte(nutritionTargets.effectiveFrom, date),
+      ),
+    )
+    .orderBy(asc(nutritionTargets.effectiveFrom));
+
+  return findTargetForDate(rows.map(toTarget), date);
+};

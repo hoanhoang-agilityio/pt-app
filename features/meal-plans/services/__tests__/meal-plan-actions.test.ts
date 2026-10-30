@@ -1309,3 +1309,87 @@ describe("saveMealPreferencesAction", () => {
     );
   });
 });
+
+describe("clonePlan (a plan that appears while copying)", () => {
+  it("skips a day that already has a plan instead of failing or overwriting", async () => {
+    const { member, chicken } = await seed();
+
+    await actions.createDayPlanAction({ userId: member.id, date: MONDAY });
+    await actions.createDayPlanAction({ userId: member.id, date: TUESDAY });
+
+    const [monday] = await getMealPlanWeek(member.id, MONDAY);
+
+    await actions.addItemAction({
+      userId: member.id,
+      mealId: monday.meals[0].id,
+      foodId: chicken.id,
+      grams: 250,
+    });
+
+    const { clonePlan, loadPlans } =
+      await import("@/features/meal-plans/services/meal-plan-store");
+    const plan = (await loadPlans([monday.id], db)).get(monday.id)!;
+    const before = await countAll();
+
+    expect(await clonePlan(plan, member.id, TUESDAY, db)).toBeNull();
+    expect(await countAll()).toEqual(before);
+    expect(await clonePlan(plan, member.id, "2026-11-04", db)).not.toBeNull();
+    expect(
+      (await getMealPlanWeek(member.id, MONDAY))[2].meals[0].items[0].grams,
+    ).toBe(250);
+  });
+});
+
+describe("autoSolveMealAction upper bound", () => {
+  it("never saves more than 3000 g of a lean food", async () => {
+    const { member, other } = await seed();
+
+    void other;
+    await db.insert(nutritionTargets).values({
+      userId: member.id,
+      effectiveFrom: "2026-01-01",
+      protein: 0,
+      carbs: 235,
+      fat: 0,
+      source: "manual",
+    });
+    const [lettuce] = await db
+      .insert(foods)
+      .values({
+        name: "Xà lách",
+        nameKey: "xa lach",
+        group: "vegetable",
+        kcal: 4,
+        protein: 0,
+        carbs: 1,
+        fat: 0,
+      })
+      .returning();
+
+    await db.update(users).set({ preferredMealCount: 2 });
+    await actions.createDayPlanAction({ userId: member.id, date: MONDAY });
+
+    const [day] = await getMealPlanWeek(member.id, MONDAY);
+
+    await actions.removeMealAction({
+      userId: member.id,
+      mealId: day.meals[1].id,
+    });
+    await actions.addItemAction({
+      userId: member.id,
+      mealId: day.meals[0].id,
+      foodId: lettuce.id,
+    });
+
+    expect(
+      await actions.autoSolveMealAction({
+        userId: member.id,
+        mealId: day.meals[0].id,
+        fixedItemIds: [],
+      }),
+    ).toEqual({ status: "success" });
+    expect(
+      (await getMealPlanWeek(member.id, MONDAY))[0].meals[0].items[0].grams,
+    ).toBe(3000);
+  });
+});

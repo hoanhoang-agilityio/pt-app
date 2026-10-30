@@ -1,5 +1,6 @@
 import {
   GRAMS_STEP,
+  MEAL_PLAN_LIMITS,
   SOLVER_MACRO_WEIGHTS,
 } from "@/features/meal-plans/constants/meal-plans";
 import type { MacroGap, PlanFood } from "@/features/meal-plans/types/meal-plan";
@@ -149,10 +150,11 @@ const nonNegativeLeastSquares = (columns: number[][], rhs: number[]) => {
       }
 
       // Step back to the edge of the feasible region, drop what hit 0.
+      // A food already at 0 that wants to go lower (x = s = 0) steps 0.
       const alpha = Math.min(
         ...passive
           .filter((i) => s[i] <= EPSILON)
-          .map((i) => x[i] / (x[i] - s[i])),
+          .map((i) => (x[i] - s[i] > 0 ? x[i] / (x[i] - s[i]) : 0)),
       );
 
       for (let i = 0; i < count; i += 1) {
@@ -198,10 +200,18 @@ export const solveGrams = ({
   );
   const solved = foods.length ? nonNegativeLeastSquares(columns, rhs) : [];
 
-  const grams = foods.map((food, index) => ({
-    foodId: food.id,
-    grams: Math.max(0, Math.round(solved[index] / GRAMS_STEP) * GRAMS_STEP),
-  }));
+  // Never negative, never above what a plan accepts, never NaN/Infinity: what
+  // the cap leaves out shows up in the gap.
+  const grams = foods.map((food, index) => {
+    const stepped = Math.round(solved[index] / GRAMS_STEP) * GRAMS_STEP;
+
+    return {
+      foodId: food.id,
+      grams: Number.isFinite(stepped)
+        ? Math.min(Math.max(0, stepped), MEAL_PLAN_LIMITS.MAX_GRAMS)
+        : 0,
+    };
+  });
   const totals = foods.reduce<MacroAmounts>(
     (sum, food, index) => ({
       carbs: sum.carbs + (food.carbs * grams[index].grams) / 100,

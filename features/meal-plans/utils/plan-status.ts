@@ -3,6 +3,7 @@ import {
   GRAMS_STEP,
   MAX_GAP_SUGGESTIONS,
   MEAL_GAP_MIN_GRAMS,
+  MEAL_PLAN_LIMITS,
 } from "@/features/meal-plans/constants/meal-plans";
 import type {
   MacroGap,
@@ -115,11 +116,17 @@ export const suggestFoodsForGap = (
     }
   }
 
-  return picked.map((food) => ({
-    food,
-    grams: Math.max(
-      GRAMS_STEP,
-      Math.round(((gapGrams / food[macro]) * 100) / GRAMS_STEP) * GRAMS_STEP,
-    ),
-  }));
+  return (
+    picked
+      .map((food) => ({
+        food,
+        grams: Math.max(
+          GRAMS_STEP,
+          Math.round(((gapGrams / food[macro]) * 100) / GRAMS_STEP) *
+            GRAMS_STEP,
+        ),
+      }))
+      // A plan holds at most MAX_GRAMS of a food: drop what would not fit.
+      .filter(({ grams }) => grams <= MEAL_PLAN_LIMITS.MAX_GRAMS)
+  );
 };

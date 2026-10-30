@@ -1,18 +1,13 @@
 import "server-only";
 
-import { and, asc, between, desc, eq, inArray, lte } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
-import {
-  foods,
-  mealPlanDays,
-  mealPlanItems,
-  mealPlanMeals,
-  nutritionTargets,
-} from "@/db/schema";
+import { foods, mealPlanItems, mealPlanMeals } from "@/db/schema";
 import { listFoods } from "@/features/foods/services/food-queries";
+import { listDaysInRange } from "@/features/meal-plans/services/meal-plan-store";
 import type { PlanDay, PlanFood } from "@/features/meal-plans/types/meal-plan";
-import { addDays, getWeekDates } from "@/utils/week";
+import { getWeekDates } from "@/utils/week";
 
 // Archived foods are NOT filtered out: a plan keeps showing what it was built
 // with (KAN-65: "Xóa" archives).
@@ -29,46 +24,50 @@ const planFoodColumns = {
   archivedAt: foods.archivedAt,
 };
 
+const toPlanFood = (
+  row: Omit<PlanFood, "isArchived">,
+  isArchived: boolean,
+): PlanFood => ({
+  id: row.id,
+  name: row.name,
+  nameKey: row.nameKey,
+  group: row.group,
+  state: row.state,
+  kcal: row.kcal,
+  protein: row.protein,
+  carbs: row.carbs,
+  fat: row.fat,
+  isArchived,
+});
+
 // The active library the PT searches when adding a food to a meal.
 export const listPlanFoods = async (): Promise<PlanFood[]> =>
-  (await listFoods()).map((food) => ({
-    id: food.id,
-    name: food.name,
-    nameKey: food.nameKey,
-    group: food.group,
-    state: food.state,
-    kcal: food.kcal,
-    protein: food.protein,
-    carbs: food.carbs,
-    fat: food.fat,
-    isArchived: false,
-  }));
+  (await listFoods()).map((food) => toPlanFood(food, false));
 
 export const getMealPlanWeek = async (
   userId: number,
   weekStart: string,
 ): Promise<PlanDay[]> => {
   const dates = getWeekDates(weekStart);
-  const dayRows = await db
-    .select()
-    .from(mealPlanDays)
-    .where(
-      and(
-        eq(mealPlanDays.userId, userId),
-        between(mealPlanDays.date, dates[0], dates[dates.length - 1]),
-      ),
-    )
-    .orderBy(asc(mealPlanDays.date));
+  const dayRows = await listDaysInRange(
+    userId,
+    dates[0],
+    dates[dates.length - 1],
+  );
 
   if (!dayRows.length) {
     return [];
   }
 
-  const dayIds = dayRows.map((day) => day.id);
   const mealRows = await db
     .select()
     .from(mealPlanMeals)
-    .where(inArray(mealPlanMeals.dayId, dayIds))
+    .where(
+      inArray(
+        mealPlanMeals.dayId,
+        dayRows.map((day) => day.id),
+      ),
+    )
     .orderBy(asc(mealPlanMeals.position), asc(mealPlanMeals.id));
   const itemRows = mealRows.length
     ? await db
@@ -104,74 +103,20 @@ export const getMealPlanWeek = async (
           .filter((item) => item.mealId === meal.id)
           .map(({ food, ...item }) => ({
             ...item,
-            food: {
-              id: food.id,
-              name: food.name,
-              nameKey: food.nameKey,
-              group: food.group,
-              state: food.state,
-              kcal: food.kcal,
-              protein: food.protein,
-              carbs: food.carbs,
-              fat: food.fat,
-              isArchived: food.archivedAt !== null,
-            },
+            food: toPlanFood(food, food.archivedAt !== null),
           })),
       })),
   }));
 };
 
-// The macro target that applies on `date` (the latest one that started on or
-// before it), the same rule the nutrition week uses.
-export const getTargetForDate = async (userId: number, date: string) => {
-  const [row] = await db
-    .select()
-    .from(nutritionTargets)
-    .where(
-      and(
-        eq(nutritionTargets.userId, userId),
-        lte(nutritionTargets.effectiveFrom, date),
-      ),
-    )
-    .orderBy(desc(nutritionTargets.effectiveFrom))
-    .limit(1);
-
-  return row ? { carbs: row.carbs, protein: row.protein, fat: row.fat } : null;
-};
-
+// Number of days with a plan in the week starting `weekStart`.
 export const countPlanDays = async (userId: number, weekStart: string) => {
   const dates = getWeekDates(weekStart);
-  const rows = await db
-    .select({ id: mealPlanDays.id })
-    .from(mealPlanDays)
-    .where(
-      and(
-        eq(mealPlanDays.userId, userId),
-        between(mealPlanDays.date, dates[0], dates[dates.length - 1]),
-      ),
-    );
 
-  return rows.length;
+  return (await listDaysInRange(userId, dates[0], dates[dates.length - 1]))
+    .length;
 };
 
-// Dates that have a plan from `weekStart` on, for `weeks` weeks (the copy
-// sheet marks them "sẽ ghi đè").
-export const listPlanDates = async (
-  userId: number,
-  weekStart: string,
-  weeks = 2,
-) => {
-  const from = weekStart;
-  const to = addDays(weekStart, weeks * 7 - 1);
-  const rows = await db
-    .select({ date: mealPlanDays.date })
-    .from(mealPlanDays)
-    .where(
-      and(
-        eq(mealPlanDays.userId, userId),
-        between(mealPlanDays.date, from, to),
-      ),
-    );
-
-  return rows.map((row) => row.date);
-};
+// Dates with a plan from `from` to `to` (the copy sheet marks them "sẽ ghi đè").
+export const listPlanDates = async (userId: number, from: string, to: string) =>
+  (await listDaysInRange(userId, from, to)).map((day) => day.date);

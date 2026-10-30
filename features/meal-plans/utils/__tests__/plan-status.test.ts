@@ -171,4 +171,14 @@ describe("suggestFoodsForGap", () => {
   it("returns nothing when no food fits", () => {
     expect(suggestFoodsForGap("carbs", 30, library)).toEqual([]);
   });
+
+  it("drops a suggestion that would need more than 3000 g", () => {
+    // 1 g of protein per 100 g: a 40 g gap would need 4000 g.
+    const weak = [food(1, "meat", { protein: 1 })];
+
+    expect(suggestFoodsForGap("protein", 40, weak)).toEqual([]);
+    expect(
+      suggestFoodsForGap("protein", 30, weak).map(({ grams }) => grams),
+    ).toEqual([3000]);
+  });
 });

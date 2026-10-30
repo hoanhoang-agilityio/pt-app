@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, between, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import type { z } from "zod";
 
@@ -11,7 +11,6 @@ import {
   MEAL_PLAN_LIMITS,
   MEAL_PLAN_MESSAGES,
 } from "@/features/meal-plans/constants/meal-plans";
-import { getTargetForDate } from "@/features/meal-plans/services/meal-plan-queries";
 import {
   addItemSchema,
   addMealSchema,
@@ -28,14 +27,16 @@ import {
   updateItemGramsSchema,
 } from "@/features/meal-plans/services/meal-plan-schemas";
 import {
-  cloneDay,
+  clonePlan,
   deleteDays,
   deleteMeals,
   findOwnedDay,
   findOwnedItem,
   findOwnedMeal,
   listDayMeals,
+  listDaysInRange,
   listMealItems,
+  loadPlans,
 } from "@/features/meal-plans/services/meal-plan-store";
 import {
   getDefaultMealNames,
@@ -44,6 +45,7 @@ import {
 } from "@/features/meal-plans/utils/default-meals";
 import { splitDayTarget } from "@/features/meal-plans/utils/meal-targets";
 import { solveGrams } from "@/features/meal-plans/utils/solve-grams";
+import { getTargetForDate } from "@/features/nutrition/services/nutrition-queries";
 import { withResultErrorHandling } from "@/services/action-errors";
 import { requireAdmin } from "@/services/auth-guard";
 import { findUserById } from "@/services/users";
@@ -167,13 +169,14 @@ export const addMealAction = withResultErrorHandling(
       return fail(MEAL_PLAN_MESSAGES.DAY_NOT_FOUND);
     }
 
-    const meals = await listDayMeals(day.id);
+    // Read and write in one transaction so the count and the position are
+    // checked on fresh data.
+    const isAdded = await db.transaction(async (tx) => {
+      const meals = await listDayMeals(day.id, tx);
 
-    if (meals.length >= MEAL_PLAN_LIMITS.MAX_MEALS_PER_DAY) {
-      return fail(MEAL_PLAN_MESSAGES.TOO_MANY_MEALS);
-    }
-
-    await db.transaction(async (tx) => {
+      if (meals.length >= MEAL_PLAN_LIMITS.MAX_MEALS_PER_DAY) {
+        return false;
+      }
       await tx.insert(mealPlanMeals).values({
         dayId: day.id,
         position: meals.length ? meals[meals.length - 1].position + 1 : 0,
@@ -184,7 +187,12 @@ export const addMealAction = withResultErrorHandling(
         .update(mealPlanMeals)
         .set({ sharePercent: null })
         .where(eq(mealPlanMeals.dayId, day.id));
+      return true;
     });
+
+    if (!isAdded) {
+      return fail(MEAL_PLAN_MESSAGES.TOO_MANY_MEALS);
+    }
 
     refresh(data.userId);
     return ok;
@@ -208,13 +216,15 @@ export const removeMealAction = withResultErrorHandling(
       return fail(MEAL_PLAN_MESSAGES.MEAL_NOT_FOUND);
     }
 
-    const meals = await listDayMeals(found.day.id);
+    const isRemoved = await db.transaction(async (tx) => {
+      const meals = await listDayMeals(found.day.id, tx);
 
-    if (meals.length <= 1) {
-      return fail(MEAL_PLAN_MESSAGES.LAST_MEAL);
-    }
-
-    await db.transaction(async (tx) => {
+      if (
+        meals.length <= 1 ||
+        !meals.some((meal) => meal.id === found.meal.id)
+      ) {
+        return false;
+      }
       await deleteMeals([found.meal.id], tx);
 
       const rest = meals.filter((meal) => meal.id !== found.meal.id);
@@ -225,7 +235,12 @@ export const removeMealAction = withResultErrorHandling(
           .set({ position, sharePercent: null })
           .where(eq(mealPlanMeals.id, meal.id));
       }
+      return true;
     });
+
+    if (!isRemoved) {
+      return fail(MEAL_PLAN_MESSAGES.LAST_MEAL);
+    }
 
     refresh(data.userId);
     return ok;
@@ -515,6 +530,18 @@ export const autoSolveMealAction = withResultErrorHandling(
         .map((item) => ({ food: item, grams: item.grams })),
     });
 
+    // Never store what the solver could not make sense of.
+    if (
+      !result.grams.every(
+        ({ grams }) =>
+          Number.isFinite(grams) &&
+          grams >= 0 &&
+          grams <= MEAL_PLAN_LIMITS.MAX_GRAMS,
+      )
+    ) {
+      return fail(MEAL_PLAN_MESSAGES.INVALID_INPUT);
+    }
+
     await db.transaction(async (tx) => {
       for (const { foodId: itemId, grams } of result.grams) {
         // `foodId` here is the item id passed in above.
@@ -557,7 +584,7 @@ export const copyDayAction = withResultErrorHandling(
       return fail(MEAL_PLAN_MESSAGES.NO_TARGET_DAYS);
     }
 
-    await db.transaction(async (tx) => {
+    const copied = await db.transaction(async (tx) => {
       const existing = await tx
         .select({ id: mealPlanDays.id })
         .from(mealPlanDays)
@@ -567,18 +594,30 @@ export const copyDayAction = withResultErrorHandling(
             inArray(mealPlanDays.date, dates),
           ),
         );
+      const plan = (await loadPlans([source.id], tx)).get(source.id);
 
       await deleteDays(
         existing.map((day) => day.id),
         tx,
       );
+
+      let count = 0;
+
       for (const date of dates) {
-        await cloneDay(source.id, data.userId, date, tx);
+        // Null: a plan for that day appeared a moment ago, skip it.
+        if (plan && (await clonePlan(plan, data.userId, date, tx))) {
+          count += 1;
+        }
       }
+      return count;
     });
 
     refresh(data.userId);
-    return { status: "success", copied: dates.length, skipped: 0 };
+    return {
+      status: "success",
+      copied,
+      skipped: dates.length - copied,
+    };
   },
 );
 
@@ -603,56 +642,56 @@ export const applyLastWeekAction = withResultErrorHandling(
 
     const weekStart = getWeekStart(data.weekStart);
     const lastWeek = getWeekDates(addDays(weekStart, -7));
-    const sources = await db
-      .select()
-      .from(mealPlanDays)
-      .where(
-        and(
-          eq(mealPlanDays.userId, data.userId),
-          between(
-            mealPlanDays.date,
-            lastWeek[0],
-            lastWeek[lastWeek.length - 1],
-          ),
-        ),
-      )
-      .orderBy(asc(mealPlanDays.date));
+    const thisWeek = getWeekDates(weekStart);
 
-    if (!sources.length) {
+    // Everything is read inside the transaction; a day that got a plan in the
+    // meantime is skipped, never overwritten.
+    const outcome = await db.transaction(async (tx) => {
+      const sources = await listDaysInRange(
+        data.userId,
+        lastWeek[0],
+        lastWeek[lastWeek.length - 1],
+        tx,
+      );
+      const taken = new Set(
+        (
+          await listDaysInRange(
+            data.userId,
+            thisWeek[0],
+            thisWeek[thisWeek.length - 1],
+            tx,
+          )
+        ).map((day) => day.date),
+      );
+      const todo = sources.filter((day) => !taken.has(addDays(day.date, 7)));
+      const plans = await loadPlans(
+        todo.map((day) => day.id),
+        tx,
+      );
+      let copied = 0;
+
+      for (const day of todo) {
+        const plan = plans.get(day.id);
+
+        if (
+          plan &&
+          (await clonePlan(plan, data.userId, addDays(day.date, 7), tx))
+        ) {
+          copied += 1;
+        }
+      }
+      return { sources: sources.length, copied };
+    });
+
+    if (!outcome.sources) {
       return fail(MEAL_PLAN_MESSAGES.NO_LAST_WEEK);
     }
-
-    const thisWeek = getWeekDates(weekStart);
-    const taken = new Set(
-      (
-        await db
-          .select({ date: mealPlanDays.date })
-          .from(mealPlanDays)
-          .where(
-            and(
-              eq(mealPlanDays.userId, data.userId),
-              between(
-                mealPlanDays.date,
-                thisWeek[0],
-                thisWeek[thisWeek.length - 1],
-              ),
-            ),
-          )
-      ).map((day) => day.date),
-    );
-    const todo = sources.filter((day) => !taken.has(addDays(day.date, 7)));
-
-    await db.transaction(async (tx) => {
-      for (const day of todo) {
-        await cloneDay(day.id, data.userId, addDays(day.date, 7), tx);
-      }
-    });
 
     refresh(data.userId);
     return {
       status: "success",
-      copied: todo.length,
-      skipped: sources.length - todo.length,
+      copied: outcome.copied,
+      skipped: outcome.sources - outcome.copied,
     };
   },
 );

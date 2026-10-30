@@ -128,4 +128,44 @@ describe("solveGrams", () => {
       expect(grams % 5).toBe(0);
     }
   });
+
+  it("caps grams at 3000 and reports the rest as a gap", () => {
+    // Lettuce: 1 g carbs per 100 g. 235 g carbs would need 23,500 g.
+    const lettuce = { id: 7, protein: 0, carbs: 1, fat: 0 };
+    const result = solveGrams({
+      target: { protein: 0, carbs: 235, fat: 0 },
+      foods: [lettuce],
+    });
+
+    expect(result.grams).toEqual([{ foodId: 7, grams: 3000 }]);
+    expect(result.totals.carbs).toBeCloseTo(30, 6);
+    expect(result.gap.carbs).toBeCloseTo(205, 6);
+  });
+
+  it("returns finite grams for collinear foods (two pure oils)", () => {
+    const oilA = { id: 1, protein: 0, carbs: 0, fat: 100 };
+    const oilB = { id: 2, protein: 0, carbs: 0, fat: 100 };
+    const result = solveGrams({
+      target: { protein: 0, carbs: 0, fat: 55 },
+      foods: [oilA, oilB],
+    });
+
+    for (const { grams } of result.grams) {
+      expect(Number.isFinite(grams)).toBe(true);
+      expect(grams).toBeGreaterThanOrEqual(0);
+    }
+    // Together they give the 55 g of fat, within the 5 g step.
+    expect(Math.abs(result.gap.fat)).toBeLessThanOrEqual(2.5);
+  });
+
+  it("returns finite grams when a food gives nothing at all", () => {
+    const water = { id: 1, protein: 0, carbs: 0, fat: 0 };
+    const result = solveGrams({
+      target: { protein: 20, carbs: 20, fat: 5 },
+      foods: [water, { id: 2, protein: 31, carbs: 0, fat: 3.6 }],
+    });
+
+    expect(result.grams.every((g) => Number.isFinite(g.grams))).toBe(true);
+    expect(result.grams[0].grams).toBe(0);
+  });
 });

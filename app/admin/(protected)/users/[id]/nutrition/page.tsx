@@ -60,7 +60,7 @@ const AdminNutritionPage = async ({
     planDays,
     library,
     lastWeekCount,
-    planDates,
+    nextWeekPlanDates,
   ] = await Promise.all([
     getNutritionWeek(user.id, schedule.weekStart),
     getLatestTarget(user.id),
@@ -68,7 +68,11 @@ const AdminNutritionPage = async ({
     getMealPlanWeek(user.id, schedule.weekStart),
     listPlanFoods(),
     countPlanDays(user.id, addDays(schedule.weekStart, -7)),
-    listPlanDates(user.id, schedule.weekStart),
+    listPlanDates(
+      user.id,
+      addDays(schedule.weekStart, 7),
+      addDays(schedule.weekStart, 13),
+    ),
   ]);
   const selectedDay = days.find((day) => day.date === schedule.selectedDate);
   const copyDates = [
@@ -122,7 +126,10 @@ const AdminNutritionPage = async ({
             foodNote={user.foodNote}
             lastWeekPlanCount={lastWeekCount}
             copyDates={copyDates}
-            datesWithPlan={planDates}
+            datesWithPlan={[
+              ...planDays.map((day) => day.date),
+              ...nextWeekPlanDates,
+            ]}
           />
         </NutritionWeek>
       </main>

@@ -3,11 +3,11 @@
 import { useState } from "react";
 
 import { formatGrams } from "@/features/foods/utils/food-math";
-import { MEAL_PLAN_LIMITS } from "@/features/meal-plans/constants/meal-plans";
-import { parseDecimal } from "@/utils/decimal";
+import { normalizeGrams } from "@/features/meal-plans/utils/grams-input";
 
 // An amount the PT types: saved when the field loses focus and the value is a
-// valid, changed number; otherwise the field goes back to the saved grams.
+// valid number that differs from the saved one (compared at the one decimal
+// the server stores); the field then shows the value that will be stored.
 export const useGramsInput = (
   savedGrams: number,
   save: (grams: number) => void,
@@ -15,16 +15,13 @@ export const useGramsInput = (
   const [text, setText] = useState(formatGrams(savedGrams));
 
   const handleBlur = () => {
-    const grams = parseDecimal(text);
-    const isValid =
-      Number.isFinite(grams) &&
-      grams >= 0 &&
-      grams <= MEAL_PLAN_LIMITS.MAX_GRAMS;
+    const grams = normalizeGrams(text);
 
-    if (!isValid) {
+    if (grams === null) {
       setText(formatGrams(savedGrams));
       return;
     }
+    setText(formatGrams(grams));
     if (grams !== savedGrams) {
       save(grams);
     }

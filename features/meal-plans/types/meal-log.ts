@@ -14,6 +14,9 @@ export interface MealLog {
   name: string;
   isFree: boolean;
   isArchived: boolean;
+  // A library log whose food row is gone: shown with a clear name, no
+  // numbers, and refused for editing (removing is fine).
+  isMissingFood: boolean;
   // 0 = the trainee did not give an amount (free foods only).
   grams: number;
   // What the trainee typed for a free food (null = left empty); library foods

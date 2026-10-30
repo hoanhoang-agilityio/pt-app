@@ -95,6 +95,8 @@ export const MEAL_LOG_MESSAGES = {
   MEAL_NOT_FOUND: "Bữa này không còn trong plan của bạn",
   LOG_NOT_FOUND: "Món này không còn trong nhật ký",
   FOOD_NOT_FOUND: "Món này không còn trong thư viện",
+  FOOD_MISSING: "Món này không còn trong thư viện, hãy xóa rồi ghi lại",
+  MISSING_FOOD_NAME: "Món không còn trong thư viện",
   FUTURE_DAY: "Chưa tới ngày này, quay lại ghi sau nhé",
   TOO_MANY_LOGS: "Một bữa tối đa 30 món",
   NAME_REQUIRED: "Nhập tên món",

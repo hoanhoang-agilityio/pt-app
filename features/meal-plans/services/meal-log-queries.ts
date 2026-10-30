@@ -4,8 +4,11 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { foods, mealLogs, mealMarks } from "@/db/schema";
+import { MEAL_LOG_MESSAGES } from "@/features/meal-plans/constants/meal-plans";
 import type { MealLog, MealMark } from "@/features/meal-plans/types/meal-log";
 import { resolveLogNutrition } from "@/features/meal-plans/utils/meal-log";
+
+const NO_NUMBERS = { kcal: null, protein: null, carbs: null, fat: null };
 
 // Logs and marks of the given plan meals (the trainee's page and the PT's
 // view read the same). Archived foods still resolve: a log keeps its numbers.
@@ -42,17 +45,22 @@ export const getMealLogData = async (mealIds: number[]) => {
       fat: log.fat,
     };
 
+    const isMissingFood = log.foodId !== null && !food;
+
     return {
       id: log.id,
       mealId: log.mealId,
       foodId: log.foodId,
-      name: food?.name ?? log.customName ?? "",
+      name: isMissingFood
+        ? MEAL_LOG_MESSAGES.MISSING_FOOD_NAME
+        : (food?.name ?? log.customName ?? ""),
       isFree: log.foodId === null,
       isArchived: food?.archivedAt != null,
+      isMissingFood,
       grams: log.grams,
-      typed: food
-        ? { kcal: null, protein: null, carbs: null, fat: null }
-        : typed,
+      typed: log.foodId !== null ? NO_NUMBERS : typed,
+      // A missing food has nothing to scale: any numbers stored on the row
+      // are kept, otherwise none (not zeros).
       nutrition: resolveLogNutrition(log.grams, food ?? null, typed),
     };
   });

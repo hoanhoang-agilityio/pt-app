@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
@@ -327,6 +327,35 @@ describe("addMealLogAction", () => {
     expect(await countLogs()).toBe(30);
   });
 
+  it("never goes past 30 foods when adds arrive together", async () => {
+    const { member, today } = await seed();
+    const mealId = today.meals[0].id;
+
+    await db.insert(mealLogs).values(
+      Array.from({ length: 29 }, (_, index) => ({
+        userId: member.id,
+        mealId,
+        customName: `Món ${index}`,
+        grams: 10,
+      })),
+    );
+    loginAs(member.id);
+
+    const results = await Promise.all(
+      [1, 2, 3].map((n) =>
+        logActions.addMealLogAction({
+          kind: "free",
+          mealId,
+          customName: `Thêm ${n}`,
+          grams: 10,
+        }),
+      ),
+    );
+
+    expect(results.filter((r) => r.status === "success")).toHaveLength(1);
+    expect(await countLogs()).toBe(30);
+  });
+
   it("sends a signed-out visitor and an admin to login", async () => {
     const { chicken, today } = await seed();
 
@@ -473,6 +502,54 @@ describe("updateMealLogAction", () => {
       }),
     ).toMatchObject({ status: "error" });
     expect((await db.select().from(mealLogs))[0].grams).toBe(10);
+  });
+});
+
+describe("a library log whose food row is gone", () => {
+  const seedMissing = async () => {
+    const data = await seed();
+
+    // Production does not enforce foreign keys (D10), so a food id can point
+    // at nothing; the in-memory test DB does, so switch that off here.
+    await db.run(sql`PRAGMA foreign_keys = OFF`);
+    await db.insert(mealLogs).values({
+      userId: data.member.id,
+      mealId: data.today.meals[0].id,
+      foodId: 9999,
+      grams: 100,
+    });
+    loginAs(data.member.id);
+    return { ...data, log: (await db.select().from(mealLogs))[0] };
+  };
+
+  it("shows a clear name and no numbers instead of an empty row", async () => {
+    const { today } = await seedMissing();
+    const { logs } = await getMealLogData([today.meals[0].id]);
+
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({
+      name: "Món không còn trong thư viện",
+      isMissingFood: true,
+      isFree: false,
+      grams: 100,
+      nutrition: null,
+    });
+  });
+
+  it("refuses an edit with a clear error but still allows removing it", async () => {
+    const { log } = await seedMissing();
+
+    expect(
+      await logActions.updateMealLogAction({ logId: log.id, grams: 50 }),
+    ).toMatchObject({
+      status: "error",
+      message: "Món này không còn trong thư viện, hãy xóa rồi ghi lại",
+    });
+    expect((await db.select().from(mealLogs))[0].grams).toBe(100);
+    expect(await logActions.removeMealLogAction({ logId: log.id })).toEqual({
+      status: "success",
+    });
+    expect(await db.select().from(mealLogs)).toHaveLength(0);
   });
 });
 

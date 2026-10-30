@@ -7,7 +7,7 @@ import type { z } from "zod";
 import { ROUTES } from "@/constants/routes";
 import { TIME_ZONE } from "@/constants/time";
 import { db } from "@/db";
-import { mealLogs, mealMarks } from "@/db/schema";
+import { foods, mealLogs, mealMarks } from "@/db/schema";
 import { getFood } from "@/features/foods/services/food-queries";
 import {
   MEAL_LOG_LIMITS,
@@ -65,39 +65,48 @@ export const addMealLogAction = withResultErrorHandling(
       return meal.error;
     }
 
-    const existing = await db
-      .select({ id: mealLogs.id })
-      .from(mealLogs)
-      .where(eq(mealLogs.mealId, data.mealId));
+    // Library foods are looked up first (archived ones can't be logged anew).
+    const food = data.kind === "library" ? await getFood(data.foodId) : null;
 
-    if (existing.length >= MEAL_LOG_LIMITS.MAX_LOGS_PER_MEAL) {
-      return fail(MEAL_LOG_MESSAGES.TOO_MANY_LOGS);
+    if (data.kind === "library" && !food) {
+      return fail(MEAL_LOG_MESSAGES.FOOD_NOT_FOUND);
     }
 
-    if (data.kind === "library") {
-      // Archived foods can't be logged anew.
-      const food = await getFood(data.foodId);
+    // Count and insert in one transaction, so adds that arrive together can't
+    // go past the limit.
+    const isAdded = await db.transaction(async (tx) => {
+      const existing = await tx
+        .select({ id: mealLogs.id })
+        .from(mealLogs)
+        .where(eq(mealLogs.mealId, data.mealId));
 
-      if (!food) {
-        return fail(MEAL_LOG_MESSAGES.FOOD_NOT_FOUND);
+      if (existing.length >= MEAL_LOG_LIMITS.MAX_LOGS_PER_MEAL) {
+        return false;
       }
-      await db.insert(mealLogs).values({
-        userId: user.id,
-        mealId: data.mealId,
-        foodId: food.id,
-        grams: data.grams,
-      });
-    } else {
-      await db.insert(mealLogs).values({
-        userId: user.id,
-        mealId: data.mealId,
-        customName: data.customName,
-        grams: data.grams,
-        kcal: data.kcal,
-        protein: data.protein,
-        carbs: data.carbs,
-        fat: data.fat,
-      });
+      if (data.kind === "library" && food) {
+        await tx.insert(mealLogs).values({
+          userId: user.id,
+          mealId: data.mealId,
+          foodId: food.id,
+          grams: data.grams,
+        });
+      } else if (data.kind === "free") {
+        await tx.insert(mealLogs).values({
+          userId: user.id,
+          mealId: data.mealId,
+          customName: data.customName,
+          grams: data.grams,
+          kcal: data.kcal,
+          protein: data.protein,
+          carbs: data.carbs,
+          fat: data.fat,
+        });
+      }
+      return true;
+    });
+
+    if (!isAdded) {
+      return fail(MEAL_LOG_MESSAGES.TOO_MANY_LOGS);
     }
 
     refresh(user.id);
@@ -130,6 +139,15 @@ export const updateMealLogAction = withResultErrorHandling(
     }
 
     if (log.foodId !== null) {
+      // Archived foods may still be edited; a deleted row may not.
+      const [food] = await db
+        .select({ id: foods.id })
+        .from(foods)
+        .where(eq(foods.id, log.foodId));
+
+      if (!food) {
+        return fail(MEAL_LOG_MESSAGES.FOOD_MISSING);
+      }
       if (data.grams <= 0) {
         return fail(MEAL_LOG_MESSAGES.GRAMS_REQUIRED);
       }

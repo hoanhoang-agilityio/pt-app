@@ -44,7 +44,7 @@ export const MealLogList = ({
             </p>
           )}
         </div>
-        {onEdit && (
+        {onEdit && !log.isMissingFood && (
           <button
             type="button"
             onClick={() => onEdit(log)}

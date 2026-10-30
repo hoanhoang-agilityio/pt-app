@@ -2,7 +2,14 @@ import { createClient } from "@libsql/client";
 import { expect, type Page, test } from "@playwright/test";
 
 import { TIME_ZONE } from "@/constants/time";
-import { getTodayDate, getWeekStart } from "@/utils/week";
+import {
+  addDays,
+  formatDayMonth,
+  formatFullDay,
+  getTodayDate,
+  getWeekdayShortLabel,
+  getWeekStart,
+} from "@/utils/week";
 
 import { E2E_ADMIN, E2E_DB_URL, E2E_LOGGER_NAME } from "./config";
 import { E2E_FOODS } from "./seed";
@@ -138,9 +145,9 @@ test("C5: the trainee logs a library food and a free food, edits and removes one
   await page.getByLabel("Số gram").fill("180");
   await page.getByRole("button", { name: "Thêm món" }).click();
   await expect(page.getByText("Đã ghi món ăn")).toBeVisible();
-  // 180 g x 165 kcal = 297 kcal; P 55.8; F 6.48.
+  // 180 g chicken: P 55.8, F 6.48 -> 4/4/9 = 223.2 + 58.32 = 281.5 -> 282 kcal.
   await expect(breakfast).toContainText(
-    `${E2E_FOODS.CHICKEN} · 180 g297 kcal · P 55,8 · C 0 · F 6,5`,
+    `${E2E_FOODS.CHICKEN} · 180 g282 kcal · P 55,8 · C 0 · F 6,5`,
   );
 
   // Free food with some macros.
@@ -157,10 +164,22 @@ test("C5: the trainee logs a library food and a free food, edits and removes one
   await page.getByRole("button", { name: "Thêm món" }).click();
   await expect(breakfast).toContainText("Phở bò450 kcal · P 25 · C 0 · F 0");
 
-  // Eaten 297 + 450 = 747 kcal against the day's plan of 2,084 kcal.
+  // Eaten 282 + 450 = 732 kcal against the day's plan of 2,084 kcal.
   await expect(
     page.getByRole("region", { name: "Đã ăn cả ngày" }),
-  ).toContainText("747 kcal / 2084 kcal (plan)");
+  ).toContainText("732 kcal / 2084 kcal (plan)");
+
+  // The day's progress card counts the old entry and the meal logs:
+  // P 30 + 55.8 + 25 = 110.8 -> 111; C 60; F 10 + 6.48 -> 16.
+  await expect(
+    page.getByRole("progressbar", { name: "Protein: 111/160 g" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("progressbar", { name: "Carb: 60/235 g" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("progressbar", { name: "Fat: 16/55 g" }),
+  ).toBeVisible();
 
   expect(await getLogs()).toEqual([
     {
@@ -181,14 +200,14 @@ test("C5: the trainee logs a library food and a free food, edits and removes one
     },
   ]);
 
-  // Edit the chicken to 200 g: 330 kcal.
+  // Edit the chicken to 200 g: P 62, F 7.2 -> 248 + 64.8 = 312.8 -> 313 kcal.
   await page.getByRole("button", { name: `Sửa ${E2E_FOODS.CHICKEN}` }).click();
   await expect(page.getByLabel("Số gram")).toHaveValue("180");
   await page.getByLabel("Số gram").fill("200");
   await page.getByRole("button", { name: "Lưu" }).click();
   await expect(page.getByText("Đã sửa món ăn")).toBeVisible();
   await expect(breakfast).toContainText(
-    `${E2E_FOODS.CHICKEN} · 200 g330 kcal · P 62 · C 0 · F 7,2`,
+    `${E2E_FOODS.CHICKEN} · 200 g313 kcal · P 62 · C 0 · F 7,2`,
   );
   // The plan side of the chips is rounded like the rest: C 84,6 / P 70,1.
   await expect(breakfast).toContainText("/ 84,6");
@@ -205,6 +224,10 @@ test("C5: the trainee logs a library food and a free food, edits and removes one
 
   expect(logs).toHaveLength(1);
   expect(logs[0]).toMatchObject({ name: E2E_FOODS.CHICKEN, grams: 200 });
+  // Without Phở: P 30 + 62 = 92.
+  await expect(
+    page.getByRole("progressbar", { name: "Protein: 92/160 g" }),
+  ).toBeVisible();
 });
 
 test("S4: the trainee marks a meal Đạt with a note about what was over", async ({
@@ -263,7 +286,7 @@ test("S4 + S3: the PT sees the marks and logs, and is told when the plan no long
   await expect(reported).toContainText("Cơm hơi dư 30 g");
   await expect(reported).toContainText(E2E_FOODS.CHICKEN);
   await expect(reported).toContainText("200 g");
-  await expect(reported).toContainText("Đã ăn: 330 kcal · P 62 · C 0 · F 7,2");
+  await expect(reported).toContainText("Đã ăn: 313 kcal · P 62 · C 0 · F 7,2");
   await expect(meal(page, "Bữa trưa")).toContainText(
     "Học viên chưa ghi gì cho bữa này.",
   );
@@ -289,4 +312,68 @@ test("S4 + S3: the PT sees the marks and logs, and is told when the plan no long
 
   await shot(page.getByRole("main"), "05-admin-logs-and-notice");
   await shot(page, "05b-admin-top-notice");
+});
+
+test("KAN-78: overwriting or deleting a day with the trainee's logs warns that they go too", async ({
+  page,
+}) => {
+  const tomorrow = addDays(TODAY, 1);
+
+  await logInAsAdmin(page);
+  await openAdminDay(page);
+
+  // Copy today's plan to tomorrow, which has no plan: no confirmation.
+  await page.getByRole("button", { name: "Sao chép sang ngày khác" }).click();
+  await page.getByRole("dialog").getByLabel(formatFullDay(tomorrow)).check();
+  await page.getByRole("button", { name: "Sao chép (1 ngày)" }).click();
+  await expect(page.getByText("Đã sao chép sang 1 ngày")).toBeVisible();
+
+  // From tomorrow back over today, which has logs and a mark.
+  const id = await getLoggerId();
+
+  await page.goto(
+    `/admin/users/${id}/nutrition?week=${getWeekStart(tomorrow)}&day=${tomorrow}`,
+  );
+  await page.getByRole("button", { name: "Sao chép sang ngày khác" }).click();
+  await page.getByRole("dialog").getByLabel(formatFullDay(TODAY)).check();
+  await page.getByRole("button", { name: "Sao chép (1 ngày)" }).click();
+
+  const confirm = page.getByRole("alertdialog", { name: "Xác nhận ghi đè" });
+  const todayLabel = `${getWeekdayShortLabel(TODAY)} ${formatDayMonth(TODAY)}`;
+
+  await expect(confirm).toContainText(`Ghi đè plan của ${todayLabel}?`);
+  await expect(confirm).toContainText(
+    `Học viên đã ghi bữa ăn ở ${todayLabel}; ghi đè sẽ xóa nhật ký đó.`,
+  );
+  await shot(page, "kan-78-overwrite-confirm-with-logs");
+
+  // "Hủy": the logs and the mark are still there.
+  await confirm.getByRole("button", { name: "Hủy" }).click();
+  expect(await getLogs()).toHaveLength(1);
+  expect(await query("SELECT id FROM meal_marks")).toHaveLength(1);
+
+  // Deleting a day with logs says so too (dismissed here).
+  await openAdminDay(page);
+
+  let message = "";
+
+  page.once("dialog", (dialog) => {
+    message = dialog.message();
+    void dialog.dismiss();
+  });
+  await page.getByRole("button", { name: "Xóa plan của ngày này" }).click();
+  await expect.poll(() => message).toContain("xóa plan sẽ xóa nhật ký đó");
+  expect(await getLogs()).toHaveLength(1);
+
+  // "Ghi đè": the plan is replaced and the logs and the mark go with it.
+  await page.goto(
+    `/admin/users/${id}/nutrition?week=${getWeekStart(tomorrow)}&day=${tomorrow}`,
+  );
+  await page.getByRole("button", { name: "Sao chép sang ngày khác" }).click();
+  await page.getByRole("dialog").getByLabel(formatFullDay(TODAY)).check();
+  await page.getByRole("button", { name: "Sao chép (1 ngày)" }).click();
+  await confirm.getByRole("button", { name: "Ghi đè" }).click();
+  await expect(page.getByText("Đã sao chép sang 1 ngày")).toBeVisible();
+  expect(await getLogs()).toHaveLength(0);
+  expect(await query("SELECT id FROM meal_marks")).toHaveLength(0);
 });

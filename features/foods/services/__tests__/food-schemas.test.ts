@@ -133,9 +133,9 @@ describe("F6 bad input", () => {
     );
   });
 
-  it("rejects kcal above 900 per 100 g", () => {
-    expect(getErrors({ kcal: "901", confirmed: "on" }).kcal).toBe(
-      "Calo tối đa 900",
+  it("rejects kcal above 910 per 100 g (pure fat is about 900)", () => {
+    expect(getErrors({ kcal: "911", confirmed: "on" }).kcal).toBe(
+      "Calo tối đa 910",
     );
   });
 

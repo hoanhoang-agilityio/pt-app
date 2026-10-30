@@ -2,6 +2,7 @@
 //   1. creates/updates the tables from db/schema.ts (drizzle-kit push)
 //   2. creates the first admin from ADMIN_USERNAME / ADMIN_PASSWORD when the
 //      database has no admin yet (an existing admin is never overwritten)
+//   3. adds the starter food library when the foods table is empty
 //
 // Runs automatically before `next build` on Vercel (see "build" in
 // package.json); run `pnpm db:setup` to do the same by hand.
@@ -14,7 +15,8 @@ import {
   MIN_ADMIN_PASSWORD_LENGTH,
 } from "@/constants/password";
 import { db } from "@/db";
-import { admins } from "@/db/schema";
+import { admins, foods } from "@/db/schema";
+import { insertMissingSeedFoods } from "@/features/foods/services/seed-foods-service";
 import { describeDatabaseConfig } from "@/services/env";
 import { hashPassword } from "@/services/password";
 import { toUsernameKey } from "@/utils/username";
@@ -56,6 +58,23 @@ const createFirstAdmin = async () => {
   console.log(`✔ Đã tạo admin "${username}"`);
 };
 
+// Only into an empty table: once the PT edits or removes foods, the build
+// never touches them again.
+const seedFoodLibrary = async () => {
+  const [{ total }] = await db.select({ total: count() }).from(foods);
+
+  if (total > 0) {
+    console.log(
+      `▸ Đã có ${total} món trong thư viện, bỏ qua bước thêm món mẫu`,
+    );
+    return;
+  }
+
+  const added = await insertMissingSeedFoods(db);
+
+  console.log(`✔ Đã thêm ${added} món mẫu vào thư viện thực phẩm`);
+};
+
 const setupDatabase = async () => {
   if (IS_PREBUILD && !process.env.VERCEL) {
     // Local `pnpm build` must not touch the database.
@@ -64,6 +83,7 @@ const setupDatabase = async () => {
 
   pushSchema();
   await createFirstAdmin();
+  await seedFoodLibrary();
 };
 
 setupDatabase().catch((error) => {

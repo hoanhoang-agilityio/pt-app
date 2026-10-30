@@ -95,7 +95,7 @@ export const FOOD_LIMITS = {
   SERVING_LABEL_MAX: 30,
   // Per 100 g of food, a macro can't weigh more than the food itself.
   MAX_GRAMS_PER_100G: 100,
-  MAX_KCAL_PER_100G: 900,
+  MAX_KCAL_PER_100G: 910,
   MAX_SERVING_GRAMS: 5000,
   MAX_AMOUNT_GRAMS: 10000,
   // Entered kcal may differ from the 4/4/9 figure by at most this share.

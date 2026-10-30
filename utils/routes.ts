@@ -16,3 +16,8 @@ export const getAdminNutritionPath = (userId: number) =>
 
 export const getAdminSummaryPath = (userId: number) =>
   `${getAdminUserPath(userId)}/${ADMIN_SUMMARY_SEGMENT}`;
+
+export const getFoodPath = (foodId: number) => `${ROUTES.FOODS}/${foodId}`;
+
+export const getAdminFoodPath = (foodId: number) =>
+  `${ROUTES.ADMIN_FOODS}/${foodId}`;

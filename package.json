@@ -19,6 +19,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "admin:create": "tsx --env-file-if-exists=.env.local scripts/create-admin.ts",
+    "db:seed-foods": "tsx --env-file-if-exists=.env.local scripts/seed-foods.ts",
     "db:seed-demo": "tsx --env-file-if-exists=.env.local scripts/seed-demo.ts",
     "db:setup": "tsx --env-file-if-exists=.env.local scripts/setup-database.ts"
   },

@@ -1,3 +1,4 @@
+import { FOOD_LIMITS } from "@/features/foods/constants/foods";
 import type { Food, FoodAmount, MacroShare } from "@/features/foods/types/food";
 import { KCAL_PER_GRAM } from "@/features/nutrition/constants/energy";
 
@@ -29,6 +30,9 @@ export const kcalGap = (kcal: number, macros: Macros) => {
   }
   return Math.abs(kcal - fromMacros) / kcal;
 };
+
+export const isKcalGapTooLarge = (kcal: number, macros: Macros) =>
+  kcalGap(kcal, macros) > FOOD_LIMITS.KCAL_GAP_LIMIT;
 
 // Numbers for `grams` of a food whose values are per 100 g. Grams and macros
 // show one decimal, kcal is a whole number.
@@ -93,3 +97,10 @@ export const formatGrams = (grams: number) =>
 
 export const formatKcal = (kcal: number) =>
   Math.round(kcal).toLocaleString("vi-VN", { useGrouping: false });
+
+// Shown next to the kcal field and as the refusal message.
+export const describeKcalGap = (kcal: number, macros: Macros) => {
+  const percent = Math.round(kcalGap(kcal, macros) * 100);
+
+  return `Calo nhập ${formatKcal(kcal)} lệch ${percent}% so với ${formatKcal(kcalFromMacros(macros))} kcal tính từ protein/carb/fat (4/4/9).`;
+};

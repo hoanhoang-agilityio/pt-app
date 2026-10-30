@@ -6,16 +6,22 @@ import {
   FAT_CALORIE_SHARE,
   FOOD_EQUIVALENTS,
   GOALS,
+  KCAL_ADJUSTMENT_LIMITS,
   KCAL_PER_GRAM,
   MACRO_ROUNDING_GRAMS,
+  PROTEIN_PER_KG_LIMITS,
 } from "@/features/nutrition/constants/energy";
 import type {
   BodyProfile,
   EnergyPlan,
+  Goal,
   Macro,
-  MacroAmounts,
 } from "@/features/nutrition/types/nutrition";
-import { formatLang } from "@/features/nutrition/utils/nutrition";
+import {
+  calculateCalories,
+  formatLang,
+} from "@/features/nutrition/utils/nutrition";
+import { parseDecimal, parseSignedDecimal } from "@/utils/decimal";
 
 const roundTo = (value: number, step: number) =>
   Math.round(value / step) * step;
@@ -26,18 +32,30 @@ export const getAge = (birthYear: number, today: string) =>
 export const getBirthYear = (age: number, today: string) =>
   Number(today.slice(0, 4)) - age;
 
+// Mifflin-St Jeor: 10·kg + 6.25·cm − 5·age + s.
 export const calculateBmr = (
   { sex, weightKg, heightCm }: BodyProfile,
   age: number,
 ) => 10 * weightKg + 6.25 * heightCm - 5 * age + BMR_SEX_OFFSET[sex];
 
-export const calculateCalories = ({ carbs, protein, fat }: MacroAmounts) =>
-  carbs * KCAL_PER_GRAM.carbs +
-  protein * KCAL_PER_GRAM.protein +
-  fat * KCAL_PER_GRAM.fat;
+// The goal follows the sign of the PT's kcal adjustment: below zero cuts, zero
+// maintains, above zero bulks. Null (not set yet) keeps the stored goal.
+export const getGoalFromAdjustment = (kcalAdjustment: number): Goal => {
+  if (kcalAdjustment < 0) {
+    return "cut";
+  }
+  return kcalAdjustment > 0 ? "bulk" : "maintain";
+};
 
-// BMR (Mifflin-St Jeor) × activity = TDEE; the goal adjusts calories; protein
-// is set per kg of body weight, fat to a share of calories, carbs fill the rest.
+export const getGoal = ({ kcalAdjustment, goal }: BodyProfile): Goal =>
+  kcalAdjustment === null ? goal : getGoalFromAdjustment(kcalAdjustment);
+
+export { calculateCalories };
+
+// BMR (Mifflin-St Jeor) × activity = TDEE; the target is TDEE + the PT's kcal
+// adjustment; protein is set per kg of body weight, fat to a share of
+// calories, carbs fill the rest. A null adjustment or protein_per_kg falls back
+// to the legacy goal values so existing members keep their numbers.
 export const calculateEnergyPlan = (
   profile: BodyProfile,
   today: string,
@@ -45,10 +63,13 @@ export const calculateEnergyPlan = (
   const age = getAge(profile.birthYear, today);
   const bmr = calculateBmr(profile, age);
   const tdee = bmr * ACTIVITY_LEVELS[profile.activityLevel].factor;
-  const goal = GOALS[profile.goal];
-  const targetCalories = tdee * goal.calorieFactor;
+  const legacy = GOALS[profile.goal];
+  const targetCalories =
+    profile.kcalAdjustment === null
+      ? tdee * legacy.calorieFactor
+      : tdee + profile.kcalAdjustment;
   const protein = roundTo(
-    profile.weightKg * goal.proteinPerKg,
+    profile.weightKg * (profile.proteinPerKg ?? legacy.proteinPerKg),
     MACRO_ROUNDING_GRAMS,
   );
   const fat = roundTo(
@@ -92,9 +113,13 @@ export interface BodyProfileDraft {
   weightKg: string;
   activityLevel: BodyProfile["activityLevel"];
   goal: BodyProfile["goal"];
+  // Empty = not set (legacy goal values).
+  kcalAdjustment: string;
+  proteinPerKg: string;
 }
 
-const parseDecimal = (value: string) => Number(value.trim().replace(",", "."));
+const isBetween = (value: number, { min, max }: { min: number; max: number }) =>
+  value >= min && value <= max;
 
 // Live preview while the admin types; null until every number is plausible.
 export const toBodyProfile = (
@@ -104,14 +129,19 @@ export const toBodyProfile = (
   const age = parseDecimal(draft.age);
   const heightCm = parseDecimal(draft.heightCm);
   const weightKg = parseDecimal(draft.weightKg);
+  const kcalText = draft.kcalAdjustment.trim();
+  const proteinText = draft.proteinPerKg.trim();
+  const kcalAdjustment = kcalText ? parseSignedDecimal(kcalText) : null;
+  const proteinPerKg = proteinText ? parseDecimal(proteinText) : null;
   const isValid =
     Number.isInteger(age) &&
-    age >= BODY_LIMITS.AGE.min &&
-    age <= BODY_LIMITS.AGE.max &&
-    heightCm >= BODY_LIMITS.HEIGHT_CM.min &&
-    heightCm <= BODY_LIMITS.HEIGHT_CM.max &&
-    weightKg >= BODY_LIMITS.WEIGHT_KG.min &&
-    weightKg <= BODY_LIMITS.WEIGHT_KG.max;
+    isBetween(age, BODY_LIMITS.AGE) &&
+    isBetween(heightCm, BODY_LIMITS.HEIGHT_CM) &&
+    isBetween(weightKg, BODY_LIMITS.WEIGHT_KG) &&
+    (kcalAdjustment === null ||
+      (Number.isInteger(kcalAdjustment) &&
+        isBetween(kcalAdjustment, KCAL_ADJUSTMENT_LIMITS))) &&
+    (proteinPerKg === null || isBetween(proteinPerKg, PROTEIN_PER_KG_LIMITS));
 
   if (!isValid) {
     return null;
@@ -123,6 +153,8 @@ export const toBodyProfile = (
     weightKg,
     activityLevel: draft.activityLevel,
     goal: draft.goal,
+    kcalAdjustment,
+    proteinPerKg,
   };
 };
 

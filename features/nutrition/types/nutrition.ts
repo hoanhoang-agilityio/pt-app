@@ -29,6 +29,9 @@ export interface NutritionDay {
   totals: MacroAmounts;
 }
 
+// What compareToTarget judges: a macro in grams or the day's calories.
+export type ComparedMetric = Macro | "kcal";
+
 export type TargetStatus = "none" | "under" | "on" | "over";
 
 export interface MacroComparison {
@@ -59,7 +62,12 @@ export interface BodyProfile {
   heightCm: number;
   weightKg: number;
   activityLevel: ActivityLevel;
+  // Legacy; the maths use it only while kcalAdjustment is null.
   goal: Goal;
+  // Daily kcal on top of the TDEE; null = legacy goal factor.
+  kcalAdjustment: number | null;
+  // Protein g per kg of body weight; null = legacy goal value.
+  proteinPerKg: number | null;
 }
 
 export interface EnergyPlan {

@@ -21,7 +21,7 @@ export const CaloriesProgressRow = ({
 }: CaloriesProgressRowProps) => {
   const eaten = calculateCalories(totals);
   const goal = target ? calculateCalories(target) : undefined;
-  const comparison = compareToTarget(eaten, goal);
+  const comparison = compareToTarget(eaten, goal, "kcal");
 
   return (
     <li className="flex items-baseline justify-between gap-2 border-b border-line pb-3">

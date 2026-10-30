@@ -11,3 +11,15 @@ export const parseDecimal = (value: string) => {
     ? Number(text.replace(",", "."))
     : Number.NaN;
 };
+
+// Like parseDecimal, but accepts one leading "+", "-" or "−" (typographic
+// minus). NaN when the rest is not a plain decimal.
+export const parseSignedDecimal = (value: string) => {
+  const text = value.trim();
+  const isNegative = text.startsWith("-") || text.startsWith("−");
+  const isSigned = isNegative || text.startsWith("+");
+  const magnitude = parseDecimal(isSigned ? text.slice(1) : text);
+
+  // 0 - x so that "-0" is 0, not -0.
+  return isNegative ? 0 - magnitude : magnitude;
+};

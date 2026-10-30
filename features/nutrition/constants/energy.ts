@@ -34,7 +34,9 @@ export const ACTIVITY_LEVEL_ORDER: ActivityLevel[] = [
   "very_active",
 ];
 
-// Calories relative to TDEE and protein per kg of body weight, per goal.
+// Legacy fallback only: calories relative to TDEE and protein per kg of body
+// weight, per goal. Used while a member's kcal_adjustment / protein_per_kg are
+// still null; once the PT saves the profile those two fields take over.
 export const GOALS: Record<
   Goal,
   { label: string; calorieFactor: number; proteinPerKg: number }
@@ -48,6 +50,26 @@ export const GOAL_ORDER: Goal[] = ["cut", "maintain", "bulk"];
 
 // Mifflin-St Jeor: 10·kg + 6.25·cm − 5·age + s, s = +5 (male) / −161 (female).
 export const BMR_SEX_OFFSET: Record<Sex, number> = { male: 5, female: -161 };
+
+// Protein g per kg of body weight when the PT sets none: by sex.
+export const PROTEIN_PER_KG_DEFAULT: Record<Sex, number> = {
+  male: 2,
+  female: 1.6,
+};
+
+export const PROTEIN_PER_KG_LIMITS = { min: 1, max: 3 } as const;
+
+// Daily kcal added to (positive) or taken from (negative) the TDEE.
+export const KCAL_ADJUSTMENT_LIMITS = { min: -1000, max: 1000 } as const;
+
+// One rule for "on target", in grams except kcalDiff (kcal): kcal within
+// ±kcalDiff of the target's kcal, protein no more than proteinUnder below
+// target (above is fine), carbs and fat within ±carbsFat.
+export const ON_TARGET = {
+  kcalDiff: 80,
+  proteinUnder: 5,
+  carbsFat: 10,
+} as const;
 
 export const KCAL_PER_GRAM: Record<Macro, number> = {
   carbs: 4,

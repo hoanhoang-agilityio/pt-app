@@ -15,7 +15,7 @@ The decisions touch three areas. One PR for all of them would be about 3x the si
 
 | Order | Story                      | What ships                                                                                                               |
 | ----- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| 1     | Energy model (KAN-70)      | C1, C2, C3, C7: Henry & Rees BMR, PT-set kcal adjustment, protein g/kg by sex, one on-target rule                        |
+| 1     | Energy model (KAN-70)      | C1, C2, C3: PT-set kcal adjustment, protein g/kg by sex, one on-target rule                        |
 | 2     | Meal plan builder (KAN-69) | Q1-Q6, R1, R2, R5, S2, S5: per-day plans in the admin Dinh dưỡng tab, auto grams, copy days / last week, trainee request |
 | 3     | Trainee meal log (KAN-71)  | R6, S4, C4, C5, S3: trainee sees the plan, logs what was eaten from the library, marks meals; weekly kcal notice         |
 
@@ -24,15 +24,14 @@ The decisions touch three areas. One PR for all of them would be about 3x the si
 Files
 
 - `db/schema.ts`: `body_profiles.kcal_adjustment` (integer, nullable) and `body_profiles.protein_per_kg` (real, nullable). Null keeps today's behaviour for existing members until the PT saves the profile, so no target changes silently on deploy.
-- `features/nutrition/constants/energy.ts`: `HENRY_REES_1991` coefficients by sex and age band; `PROTEIN_PER_KG_DEFAULT` = male 2.0, female 1.6; `ON_TARGET` = kcal ±80, protein -5 g, carbs/fat ±10 g. `GOALS.calorieFactor` and `proteinPerKg` kept only as the fallback for null columns.
-- `features/nutrition/utils/energy.ts`: `calculateBmr()` switches to Henry & Rees; `calculateEnergyPlan()` uses `kcal_adjustment` and `protein_per_kg`; goal label derived from the adjustment sign.
+- `features/nutrition/constants/energy.ts`: `PROTEIN_PER_KG_DEFAULT` = male 2.0, female 1.6; `ON_TARGET` = kcal ±80, protein -5 g, carbs/fat ±10 g. `GOALS.calorieFactor` and `proteinPerKg` kept only as the fallback for null columns.
+- `features/nutrition/utils/energy.ts`: BMR stays Mifflin-St Jeor (Hoan, 2026-10-30); `calculateEnergyPlan()` uses `kcal_adjustment` and `protein_per_kg`; goal label derived from the adjustment sign.
 - `features/nutrition/utils/nutrition.ts`: `compareToTarget()` / `isDayOnTarget()` use `ON_TARGET` instead of `TARGET_TOLERANCE`.
 - Body profile form: "Thâm hụt / dư kcal mỗi ngày" and "Đạm (g/kg)" fields with the defaults filled in.
 
 Risks
 
-- Henry & Rees (1991) coefficients, BMR in MJ/day (× 239 = kcal), W in kg, confirmed in a secondary source (Malaysian BMR validation paper, ResearchGate 225300932) because the original paper is not reachable from the cloud: men 18-30 `0.056W + 2.800`, 30-60 `0.046W + 3.160`; women 18-30 `0.048W + 2.562`, 30-60 `0.048W + 2.448`. The paper has no bands below 18 or above 60, so those ages keep Mifflin-St Jeor. Unit tests pin every band.
-- Existing members' numbers change once the PT re-saves a profile (about 7 % lower BMR). The PT sees the new target before it applies.
+- Existing members' numbers change once the PT re-saves a profile (kcal adjustment replaces the goal factor, protein by sex). The PT sees the new target before it applies.
 
 ## Story 2: Meal plan builder (KAN-69)
 
@@ -74,4 +73,5 @@ UI (admin Dinh dưỡng tab, S5)
 
 ## Deviations
 
-None yet.
+- Scope change (Hoan, 2026-10-30): Henry & Rees BMR dropped; BMR stays Mifflin-St Jeor for all ages (C7 rejected).
+

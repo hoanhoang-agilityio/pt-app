@@ -128,8 +128,11 @@ export const NutritionWeekSummary = ({
                   "text-right",
                   day.entries.length
                     ? STATUS_CLASSES[
-                        compareToTarget(day.totals[macro], day.target?.[macro])
-                          .status
+                        compareToTarget(
+                          day.totals[macro],
+                          day.target?.[macro],
+                          macro,
+                        ).status
                       ]
                     : "text-muted",
                 )}

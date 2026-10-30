@@ -52,9 +52,6 @@ export const MEAL_SHORT_LABELS: Record<Meal, string> = {
 
 export const GRAMS_PER_LANG = 100;
 
-// Within ±10% of the target counts as "đạt".
-export const TARGET_TOLERANCE = 0.1;
-
 export const NUTRITION_LIMITS = {
   MAX_GRAMS: 2000,
   DESCRIPTION: 300,

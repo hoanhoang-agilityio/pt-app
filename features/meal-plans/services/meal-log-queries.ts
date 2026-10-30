@@ -1,9 +1,15 @@
 import "server-only";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, between, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
-import { foods, mealLogs, mealMarks } from "@/db/schema";
+import {
+  foods,
+  mealLogs,
+  mealMarks,
+  mealPlanDays,
+  mealPlanMeals,
+} from "@/db/schema";
 import { MEAL_LOG_MESSAGES } from "@/features/meal-plans/constants/meal-plans";
 import type { MealLog, MealMark } from "@/features/meal-plans/types/meal-log";
 import { resolveLogNutrition } from "@/features/meal-plans/utils/meal-log";
@@ -84,4 +90,33 @@ export const findOwnedLog = async (userId: number, logId: number) => {
     .where(and(eq(mealLogs.id, logId), eq(mealLogs.userId, userId)));
 
   return row ?? null;
+};
+
+// Plan dates from `from` to `to` where the trainee logged or marked something:
+// copying over or deleting such a day deletes that too, so the PT is told.
+export const listDatesWithLogs = async (
+  userId: number,
+  from: string,
+  to: string,
+) => {
+  const inRange = and(
+    eq(mealPlanDays.userId, userId),
+    between(mealPlanDays.date, from, to),
+  );
+  const [logged, marked] = await Promise.all([
+    db
+      .select({ date: mealPlanDays.date })
+      .from(mealLogs)
+      .innerJoin(mealPlanMeals, eq(mealPlanMeals.id, mealLogs.mealId))
+      .innerJoin(mealPlanDays, eq(mealPlanDays.id, mealPlanMeals.dayId))
+      .where(inRange),
+    db
+      .select({ date: mealPlanDays.date })
+      .from(mealMarks)
+      .innerJoin(mealPlanMeals, eq(mealPlanMeals.id, mealMarks.mealId))
+      .innerJoin(mealPlanDays, eq(mealPlanDays.id, mealPlanMeals.dayId))
+      .where(inRange),
+  ]);
+
+  return [...new Set([...logged, ...marked].map((row) => row.date))].sort();
 };

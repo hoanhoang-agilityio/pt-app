@@ -814,6 +814,45 @@ describe("getNutritionWeek with meal logs", () => {
   });
 });
 
+describe("listDatesWithLogs", () => {
+  it("lists the plan dates where this trainee logged or marked something", async () => {
+    const { listDatesWithLogs } =
+      await import("@/features/meal-plans/services/meal-log-queries");
+    const { member, other, today, tomorrow, foreign } = await seed();
+
+    await db.insert(mealLogs).values([
+      {
+        userId: member.id,
+        mealId: today.meals[0].id,
+        customName: "A",
+        grams: 1,
+      },
+      {
+        userId: member.id,
+        mealId: today.meals[1].id,
+        customName: "B",
+        grams: 1,
+      },
+    ]);
+    await db.insert(mealMarks).values([
+      { mealId: tomorrow.meals[0].id, userId: member.id, achieved: true },
+      { mealId: foreign.meals[0].id, userId: other.id, achieved: true },
+    ]);
+
+    // Today (logs, listed once) and tomorrow (a mark); the other trainee's
+    // plan day has the same date as today but is not theirs.
+    expect(await listDatesWithLogs(member.id, TODAY, TOMORROW)).toEqual([
+      TODAY,
+      TOMORROW,
+    ]);
+    // Out of range or nothing logged.
+    expect(await listDatesWithLogs(member.id, TOMORROW, TOMORROW)).toEqual([
+      TOMORROW,
+    ]);
+    expect(await listDatesWithLogs(9999, TODAY, TOMORROW)).toEqual([]);
+  });
+});
+
 describe("getPlanKcalNoticesFrom", () => {
   it("compares each planned day with the target that applies on its date", async () => {
     const { member, chicken, rice, today, tomorrow } = await seed();

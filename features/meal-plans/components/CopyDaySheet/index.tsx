@@ -7,7 +7,10 @@ import {
   BUTTON_SECONDARY,
 } from "@/constants/styles";
 import { useCopyDay } from "@/features/meal-plans/hooks/use-copy-day";
-import { formatOverwriteQuestion } from "@/features/meal-plans/utils/overwrite-message";
+import {
+  formatOverwriteLogWarning,
+  formatOverwriteQuestion,
+} from "@/features/meal-plans/utils/overwrite-message";
 import { formatFullDay } from "@/utils/week";
 
 interface CopyDaySheetProps {
@@ -17,6 +20,8 @@ interface CopyDaySheetProps {
   // Dates offered (this week and next), without the source day.
   dates: string[];
   datesWithPlan: string[];
+  // Dates where the trainee logged or marked meals: overwriting deletes those.
+  datesWithLogs: string[];
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
 }
@@ -27,11 +32,17 @@ export const CopyDaySheet = ({
   sourceDate,
   dates,
   datesWithPlan,
+  datesWithLogs,
   isOpen,
   onOpenChange,
 }: CopyDaySheetProps) => {
   const copy = useCopyDay(userId, dayId, datesWithPlan, () =>
     onOpenChange(false),
+  );
+
+  const logWarning = formatOverwriteLogWarning(
+    copy.overwriteDates,
+    datesWithLogs,
   );
 
   return (
@@ -53,6 +64,9 @@ export const CopyDaySheet = ({
           <p className="text-[15px] font-medium text-fg">
             {formatOverwriteQuestion(copy.overwriteDates)}
           </p>
+          {logWarning && (
+            <p className="text-sm font-medium text-warning">{logWarning}</p>
+          )}
           <p className="text-sm text-muted">
             Plan cũ của các ngày này sẽ bị thay bằng plan của{" "}
             {formatFullDay(sourceDate)}.

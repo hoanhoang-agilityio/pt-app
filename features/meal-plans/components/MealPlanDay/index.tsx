@@ -15,6 +15,7 @@ import type { MealLog, MealMark } from "@/features/meal-plans/types/meal-log";
 import type { PlanDay, PlanFood } from "@/features/meal-plans/types/meal-plan";
 import { resolveMealCount } from "@/features/meal-plans/utils/default-meals";
 import { splitDayTarget } from "@/features/meal-plans/utils/meal-targets";
+import { formatDeletePlanQuestion } from "@/features/meal-plans/utils/overwrite-message";
 import { sumMeals } from "@/features/meal-plans/utils/plan-totals";
 import type { MacroAmounts } from "@/features/nutrition/types/nutrition";
 
@@ -36,6 +37,7 @@ interface MealPlanDayProps {
   // already have a plan.
   copyDates: string[];
   datesWithPlan: string[];
+  datesWithLogs: string[];
 }
 
 // S5: the PT's plan for one day of the member's Dinh dưỡng tab.
@@ -53,6 +55,7 @@ export const MealPlanDay = ({
   lastWeekPlanCount,
   copyDates,
   datesWithPlan,
+  datesWithLogs,
 }: MealPlanDayProps) => {
   const day = useMealPlanDay(userId, plan);
 
@@ -153,7 +156,11 @@ export const MealPlanDay = ({
       <button
         type="button"
         onClick={() => {
-          if (window.confirm("Xóa plan của ngày này?")) {
+          if (
+            window.confirm(
+              formatDeletePlanQuestion(logs.length > 0 || marks.length > 0),
+            )
+          ) {
             day.dayPlan.remove(plan.id);
           }
         }}
@@ -170,6 +177,7 @@ export const MealPlanDay = ({
         sourceDate={date}
         dates={copyDates}
         datesWithPlan={datesWithPlan}
+        datesWithLogs={datesWithLogs}
         isOpen={day.isCopyOpen}
         onOpenChange={day.setIsCopyOpen}
       />

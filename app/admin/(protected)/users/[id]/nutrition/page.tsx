@@ -8,7 +8,10 @@ import { PAGE_CONTAINER } from "@/constants/styles";
 import { TIME_ZONE } from "@/constants/time";
 import { MealPlanDay } from "@/features/meal-plans/components/MealPlanDay";
 import { PlanKcalNotices } from "@/features/meal-plans/components/PlanKcalNotices";
-import { getMealLogData } from "@/features/meal-plans/services/meal-log-queries";
+import {
+  getMealLogData,
+  listDatesWithLogs,
+} from "@/features/meal-plans/services/meal-log-queries";
 import {
   countPlanDays,
   getMealPlanWeek,
@@ -65,6 +68,7 @@ const AdminNutritionPage = async ({
     lastWeekCount,
     nextWeekPlanDates,
     notices,
+    datesWithLogs,
   ] = await Promise.all([
     getNutritionWeek(user.id, schedule.weekStart),
     getLatestTarget(user.id),
@@ -78,6 +82,11 @@ const AdminNutritionPage = async ({
       addDays(schedule.weekStart, 13),
     ),
     getPlanKcalNoticesFrom(user.id, schedule.weekStart),
+    listDatesWithLogs(
+      user.id,
+      schedule.weekStart,
+      addDays(schedule.weekStart, 13),
+    ),
   ]);
   const selectedPlan =
     planDays.find((day) => day.date === schedule.selectedDate) ?? null;
@@ -137,6 +146,7 @@ const AdminNutritionPage = async ({
             foodNote={user.foodNote}
             lastWeekPlanCount={lastWeekCount}
             copyDates={copyDates}
+            datesWithLogs={datesWithLogs}
             datesWithPlan={[
               ...planDays.map((day) => day.date),
               ...nextWeekPlanDates,

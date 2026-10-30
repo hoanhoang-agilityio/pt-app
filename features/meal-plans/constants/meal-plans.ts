@@ -76,3 +76,32 @@ export const COMPARED_METRIC_LABELS = {
   carbs: { name: "Carb", unit: "g" },
   fat: { name: "Fat", unit: "g" },
 } as const;
+
+// Trainee meal log (KAN-71).
+export const MEAL_LOG_LIMITS = {
+  MAX_LOGS_PER_MEAL: 30,
+  CUSTOM_NAME: 60,
+  MARK_NOTE: 300,
+  MAX_KCAL: 5000,
+  MAX_MACRO_GRAMS: 1000,
+} as const;
+
+// A planned day is flagged when its kcal differ from the target by more than
+// ON_TARGET.kcalDiff; only days within this many days from the shown week
+// are checked.
+export const NOTICE_HORIZON_DAYS = 28;
+
+export const MEAL_LOG_MESSAGES = {
+  MEAL_NOT_FOUND: "Bữa này không còn trong plan của bạn",
+  LOG_NOT_FOUND: "Món này không còn trong nhật ký",
+  FOOD_NOT_FOUND: "Món này không còn trong thư viện",
+  FUTURE_DAY: "Chưa tới ngày này, quay lại ghi sau nhé",
+  TOO_MANY_LOGS: "Một bữa tối đa 30 món",
+  NAME_REQUIRED: "Nhập tên món",
+  GRAMS_REQUIRED: "Nhập số gram lớn hơn 0",
+  ADDED: "Đã ghi món ăn",
+  UPDATED: "Đã sửa món ăn",
+  REMOVED: "Đã xóa món ăn",
+  MARK_SAVED: "Đã lưu",
+  REMOVE_CONFIRM: "Xóa món này khỏi nhật ký?",
+} as const;

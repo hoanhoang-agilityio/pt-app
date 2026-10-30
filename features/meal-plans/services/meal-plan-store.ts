@@ -3,7 +3,14 @@ import "server-only";
 import { and, asc, between, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
-import { foods, mealPlanDays, mealPlanItems, mealPlanMeals } from "@/db/schema";
+import {
+  foods,
+  mealLogs,
+  mealMarks,
+  mealPlanDays,
+  mealPlanItems,
+  mealPlanMeals,
+} from "@/db/schema";
 
 // A transaction or the database itself.
 export type Executor = Pick<
@@ -86,6 +93,9 @@ export const deleteMeals = async (mealIds: number[], executor: Executor) => {
   await executor
     .delete(mealPlanItems)
     .where(inArray(mealPlanItems.mealId, mealIds));
+  // The trainee's logs and marks go with the meal (KAN-71).
+  await executor.delete(mealLogs).where(inArray(mealLogs.mealId, mealIds));
+  await executor.delete(mealMarks).where(inArray(mealMarks.mealId, mealIds));
   await executor
     .delete(mealPlanMeals)
     .where(inArray(mealPlanMeals.id, mealIds));

@@ -303,3 +303,58 @@ export const mealPlanItems = sqliteTable(
   },
   (table) => [index("meal_plan_items_meal").on(table.mealId)],
 );
+
+// Trainee meal log (KAN-71). What the trainee ate in a planned meal: a library
+// food with grams, or a free food typed by name (macros optional). Logs and
+// marks belong to the plan meal: the delete paths in meal-plan-store remove
+// them together with the meal (a deleted or overwritten plan day takes its
+// logs with it; foreign keys are not enforced, D10).
+export const mealLogs = sqliteTable(
+  "meal_logs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    mealId: integer("meal_id")
+      .notNull()
+      .references(() => mealPlanMeals.id, { onDelete: "cascade" }),
+    // Set for a library food (may be archived later); null for a free food.
+    foodId: integer("food_id").references(() => foods.id),
+    // The name of a free food; null for a library food.
+    customName: text("custom_name"),
+    // 0 = unknown amount (free foods only).
+    grams: real("grams").notNull(),
+    // Free foods only: what the trainee typed. A library food's numbers come
+    // from the library at read time.
+    kcal: real("kcal"),
+    protein: real("protein"),
+    carbs: real("carbs"),
+    fat: real("fat"),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    index("meal_logs_meal").on(table.mealId),
+    index("meal_logs_user").on(table.userId),
+  ],
+);
+
+// One mark per meal: "Đạt" and/or a note about what was short or over (S4).
+export const mealMarks = sqliteTable("meal_marks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  mealId: integer("meal_id")
+    .notNull()
+    .unique()
+    .references(() => mealPlanMeals.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  achieved: integer("achieved", { mode: "boolean" }).notNull().default(false),
+  note: text("note").notNull().default(""),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});

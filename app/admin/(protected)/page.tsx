@@ -1,9 +1,11 @@
+import { Utensils } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { WeekNavigator } from "@/components/common/WeekNavigator";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ROUTES } from "@/constants/routes";
-import { PAGE_CONTAINER, SECTION_TITLE } from "@/constants/styles";
+import { ICON_BUTTON, PAGE_CONTAINER, SECTION_TITLE } from "@/constants/styles";
 import { TIME_ZONE } from "@/constants/time";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
 import { MemberProgressList } from "@/features/dashboard/components/MemberProgressList";
@@ -57,6 +59,13 @@ const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
         title="Tổng quan"
         actions={
           <>
+            <Link
+              href={ROUTES.ADMIN_FOODS}
+              className={`${ICON_BUTTON} text-fg`}
+              aria-label="Thực phẩm"
+            >
+              <Utensils className="size-5" />
+            </Link>
             <AddMemberButton />
             <LogoutButton role="admin" />
           </>

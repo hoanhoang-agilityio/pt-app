@@ -63,7 +63,7 @@ const handleAdminArea = async (request: NextRequest) => {
     : redirectTo(ROUTES.ADMIN_LOGIN, request);
 };
 
-// User area: / (login), /workouts/*, /nutrition/* and /summary/*.
+// User area: / (login), /workouts/*, /nutrition/*, /summary/* and /foods/*.
 const handleUserArea = async (request: NextRequest) => {
   const isLoginPage = request.nextUrl.pathname === ROUTES.HOME;
   const userSession = await readSession(request, USER_COOKIE);
@@ -101,6 +101,7 @@ export const config = {
     "/workouts/:path*",
     "/nutrition/:path*",
     "/summary/:path*",
+    "/foods/:path*",
     "/admin/:path*",
   ],
 };

@@ -83,7 +83,18 @@ export const foodFormSchema = z
       .transform((value) => value === "on"),
   })
   .superRefine((food, context) => {
-    if (food.protein + food.carbs + food.fat > FOOD_LIMITS.MAX_GRAMS_PER_100G) {
+    const areNumbersInRange =
+      [food.kcal, food.protein, food.carbs, food.fat].every(
+        (value) => value >= 0 && value <= FOOD_LIMITS.MAX_KCAL_PER_100G,
+      ) &&
+      [food.protein, food.carbs, food.fat].every(
+        (value) => value <= FOOD_LIMITS.MAX_GRAMS_PER_100G,
+      );
+
+    if (
+      areNumbersInRange &&
+      food.protein + food.carbs + food.fat > FOOD_LIMITS.MAX_GRAMS_PER_100G
+    ) {
       context.addIssue({
         code: "custom",
         path: ["fat"],
@@ -116,7 +127,12 @@ export const foodFormSchema = z
       });
     }
 
-    if (!food.confirmed && isKcalGapTooLarge(food.kcal, food)) {
+    // Only compare the kcal when every number is valid on its own.
+    if (
+      areNumbersInRange &&
+      !food.confirmed &&
+      isKcalGapTooLarge(food.kcal, food)
+    ) {
       context.addIssue({
         code: "custom",
         path: ["kcal"],

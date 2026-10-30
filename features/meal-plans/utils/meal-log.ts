@@ -1,8 +1,9 @@
+import { formatGrams } from "@/features/foods/utils/food-math";
 import type { LogNutrition } from "@/features/meal-plans/types/meal-log";
 import type { PlanFood } from "@/features/meal-plans/types/meal-plan";
-import { kcalOf } from "@/features/meal-plans/utils/plan-totals";
+import { kcalOf, macrosOf } from "@/features/meal-plans/utils/plan-totals";
 
-type Per100 = Pick<PlanFood, "kcal" | "protein" | "carbs" | "fat">;
+type Per100 = Pick<PlanFood, "protein" | "carbs" | "fat">;
 
 interface TypedNumbers {
   kcal: number | null;
@@ -13,7 +14,9 @@ interface TypedNumbers {
 
 const EMPTY: LogNutrition = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
 
-// A library food: its per-100 g numbers scaled to the grams eaten (unrounded).
+// A library food: its per-100 g macros scaled to the grams eaten (unrounded),
+// kcal following from the macros (4/4/9) like the plan and the targets, so
+// eating exactly the plan shows the plan's kcal.
 // A free food: what the trainee typed, an empty macro counting as 0 and kcal
 // following from the macros (4/4/9) when left empty; null when nothing was
 // typed at all.
@@ -23,14 +26,9 @@ export const resolveLogNutrition = (
   typed: TypedNumbers,
 ): LogNutrition | null => {
   if (food) {
-    const factor = grams / 100;
+    const macros = macrosOf(food, grams);
 
-    return {
-      kcal: food.kcal * factor,
-      protein: food.protein * factor,
-      carbs: food.carbs * factor,
-      fat: food.fat * factor,
-    };
+    return { ...macros, kcal: kcalOf(macros) };
   }
   if (Object.values(typed).every((value) => value === null)) {
     return null;
@@ -59,16 +57,10 @@ export const sumLogNutrition = (parts: (LogNutrition | null)[]): LogNutrition =>
     EMPTY,
   );
 
-const round1 = (value: number) =>
-  (Math.round(value * 10) / 10).toLocaleString("vi-VN", {
-    maximumFractionDigits: 1,
-    useGrouping: false,
-  });
-
 // "330 kcal · P 62 · C 0 · F 7,2"
 export const formatNutrition = (nutrition: LogNutrition) =>
-  `${Math.round(nutrition.kcal)} kcal · P ${round1(nutrition.protein)} · C ${round1(nutrition.carbs)} · F ${round1(nutrition.fat)}`;
+  `${Math.round(nutrition.kcal)} kcal · P ${formatGrams(nutrition.protein)} · C ${formatGrams(nutrition.carbs)} · F ${formatGrams(nutrition.fat)}`;
 
 // "200 g", or nothing when the amount is unknown.
 export const formatLogGrams = (grams: number) =>
-  grams > 0 ? `${round1(grams)} g` : "";
+  grams > 0 ? `${formatGrams(grams)} g` : "";

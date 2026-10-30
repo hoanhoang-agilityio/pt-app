@@ -1,3 +1,4 @@
+import { formatGrams } from "@/features/foods/utils/food-math";
 import { parseDecimal } from "@/utils/decimal";
 
 // An optional number typed in the log form: empty is "not given" (null), a
@@ -19,9 +20,4 @@ export const parseOptionalNumber = (
 
 // Back into a field: 7.2 -> "7,2", null -> "".
 export const toFieldText = (value: number | null) =>
-  value === null
-    ? ""
-    : value.toLocaleString("vi-VN", {
-        maximumFractionDigits: 1,
-        useGrouping: false,
-      });
+  value === null ? "" : formatGrams(value);

@@ -6,15 +6,21 @@ import {
   resolveLogNutrition,
   sumLogNutrition,
 } from "@/features/meal-plans/utils/meal-log";
+import {
+  kcalOf,
+  macrosOf,
+  sumMacros,
+} from "@/features/meal-plans/utils/plan-totals";
 
 const NONE = { kcal: null, protein: null, carbs: null, fat: null };
 const CHICKEN = { kcal: 165, protein: 31, carbs: 0, fat: 3.6 };
 
 describe("resolveLogNutrition", () => {
   it("scales a library food by grams", () => {
-    // 200 g of chicken: 330 kcal, 62 g protein, 7.2 g fat.
+    // 200 g of chicken: P 62, F 7.2 -> 4/4/9 = 248 + 64.8 = 312.8 kcal (the
+    // library's own 165 kcal/100 g is not used, like everywhere else).
     expect(resolveLogNutrition(200, CHICKEN, NONE)).toEqual({
-      kcal: 330,
+      kcal: 312.8,
       protein: 62,
       carbs: 0,
       fat: 7.2,
@@ -44,15 +50,33 @@ describe("resolveLogNutrition", () => {
   });
 });
 
+describe("eating exactly the plan", () => {
+  it("gives the same kcal as the plan", () => {
+    // Plan: 200 g chicken + 300 g rice. The plan side is kcalOf(sumItems).
+    const rice = { kcal: 130, protein: 2.7, carbs: 28.2, fat: 0.3 };
+    const planned = kcalOf(
+      sumMacros([macrosOf(CHICKEN, 200), macrosOf(rice, 300)]),
+    );
+    const eaten = sumLogNutrition([
+      resolveLogNutrition(200, CHICKEN, NONE),
+      resolveLogNutrition(300, rice, NONE),
+    ]);
+
+    // P 70.1, C 84.6, F 8.1 -> 280.4 + 338.4 + 72.9 = 691.7 kcal.
+    expect(planned).toBeCloseTo(691.7, 6);
+    expect(eaten.kcal).toBeCloseTo(planned, 6);
+  });
+});
+
 describe("sumLogNutrition", () => {
   it("adds the foods and ignores those without numbers", () => {
     expect(
       sumLogNutrition([
-        { kcal: 330, protein: 62, carbs: 0, fat: 7.2 },
+        { kcal: 312.8, protein: 62, carbs: 0, fat: 7.2 },
         null,
         { kcal: 370, protein: 20, carbs: 50, fat: 10 },
       ]),
-    ).toEqual({ kcal: 700, protein: 82, carbs: 50, fat: 17.2 });
+    ).toEqual({ kcal: 682.8, protein: 82, carbs: 50, fat: 17.2 });
   });
 
   it("is all zero for nothing logged", () => {

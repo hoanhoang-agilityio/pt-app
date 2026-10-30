@@ -167,7 +167,7 @@ describe("addMealLogAction", () => {
       name: "Ức gà (chín)",
       isFree: false,
       grams: 200,
-      nutrition: { kcal: 330, protein: 62, carbs: 0, fat: 7.2 },
+      nutrition: { kcal: 312.8, protein: 62, carbs: 0, fat: 7.2 },
     });
   });
 

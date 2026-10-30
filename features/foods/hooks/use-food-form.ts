@@ -22,6 +22,7 @@ import {
   kcalFromMacros,
 } from "@/features/foods/utils/food-math";
 import { useFormFeedback } from "@/hooks/use-form-feedback";
+import type { FormState } from "@/types/form";
 
 // Accepts "3,6" as well as "3.6"; empty or text gives NaN.
 const toNumber = (text: string) =>
@@ -30,16 +31,32 @@ const toNumber = (text: string) =>
 const toText = (value: number | undefined) =>
   value === undefined ? "" : String(value);
 
+// Server errors of the last submit. Editing kcal or a macro afterwards makes
+// the kcal error stale (it compared the old numbers), so it is dropped.
+const getFieldErrors = (state: FormState, isKcalOutdated: boolean) => {
+  if (state.status !== "error") {
+    return {};
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- dropped on purpose
+  const { kcal, ...rest } = state.fieldErrors ?? {};
+
+  return isKcalOutdated ? rest : (state.fieldErrors ?? {});
+};
+
 export const useFoodForm = (food: Food | null) => {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(
     food ? updateFoodAction : createFoodAction,
     INITIAL_FORM_STATE,
   );
-  const [kcal, setKcal] = useState(toText(food?.kcal));
-  const [protein, setProtein] = useState(toText(food?.protein));
-  const [carbs, setCarbs] = useState(toText(food?.carbs));
-  const [fat, setFat] = useState(toText(food?.fat));
+  const [kcal, setKcalText] = useState(toText(food?.kcal));
+  const [protein, setProteinText] = useState(toText(food?.protein));
+  const [carbs, setCarbsText] = useState(toText(food?.carbs));
+  const [fat, setFatText] = useState(toText(food?.fat));
+  // The response whose kcal error was outdated by a later edit of the
+  // numbers it was about.
+  const [outdatedState, setOutdatedState] = useState<typeof state | null>(null);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
   // A new food goes back to the list; an edit stays on the page.
@@ -48,6 +65,12 @@ export const useFoodForm = (food: Food | null) => {
       router.push(ROUTES.ADMIN_FOODS);
     }
   });
+
+  const withOutdating =
+    (setText: (value: string) => void) => (text: string) => {
+      setText(text);
+      setOutdatedState(state);
+    };
 
   const macros = {
     protein: toNumber(protein),
@@ -78,15 +101,15 @@ export const useFoodForm = (food: Food | null) => {
 
   return {
     values: { kcal, protein, carbs, fat },
-    setKcal,
-    setProtein,
-    setCarbs,
-    setFat,
+    setKcal: withOutdating(setKcalText),
+    setProtein: withOutdating(setProteinText),
+    setCarbs: withOutdating(setCarbsText),
+    setFat: withOutdating(setFatText),
     isConfirmed,
     setIsConfirmed,
     kcalCheck,
     isPending,
-    fieldErrors: state.status === "error" ? (state.fieldErrors ?? {}) : {},
+    fieldErrors: getFieldErrors(state, outdatedState === state),
     formError:
       state.status === "error" && !state.fieldErrors
         ? state.message

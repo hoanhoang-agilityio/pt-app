@@ -11,14 +11,16 @@ import type { Food } from "@/features/foods/types/food";
 
 interface FoodListProps {
   foods: Food[];
-  getHref: (foodId: number) => string;
+  // Detail page of a food is `${basePath}/${food.id}`; a string because this
+  // is a client component and server pages can't pass it a function.
+  basePath: string;
   emptyHint?: string;
 }
 
 const CHIP =
   "inline-flex min-h-10 shrink-0 items-center rounded-full border px-4 text-sm font-semibold transition";
 
-export const FoodList = ({ foods, getHref, emptyHint }: FoodListProps) => {
+export const FoodList = ({ foods, basePath, emptyHint }: FoodListProps) => {
   const { query, setQuery, group, setGroup, groupsInUse, filteredFoods } =
     useFoodFilter(foods);
 
@@ -93,7 +95,11 @@ export const FoodList = ({ foods, getHref, emptyHint }: FoodListProps) => {
       {filteredFoods.length ? (
         <ul className="space-y-2">
           {filteredFoods.map((food) => (
-            <FoodCard key={food.id} food={food} href={getHref(food.id)} />
+            <FoodCard
+              key={food.id}
+              food={food}
+              href={`${basePath}/${food.id}`}
+            />
           ))}
         </ul>
       ) : (

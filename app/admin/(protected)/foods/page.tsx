@@ -8,7 +8,6 @@ import { BUTTON_PRIMARY, PAGE_CONTAINER } from "@/constants/styles";
 import { FoodList } from "@/features/foods/components/FoodList";
 import { listFoods } from "@/features/foods/services/food-queries";
 import { requireAdmin } from "@/services/auth-guard";
-import { getAdminFoodPath } from "@/utils/routes";
 
 export const metadata: Metadata = { title: "Thực phẩm" };
 
@@ -32,7 +31,7 @@ const AdminFoodsPage = async () => {
         </Link>
         <FoodList
           foods={foods}
-          getHref={getAdminFoodPath}
+          basePath={ROUTES.ADMIN_FOODS}
           emptyHint="Bấm Thêm món để nhập món đầu tiên."
         />
       </main>

@@ -6,7 +6,6 @@ import { PAGE_CONTAINER } from "@/constants/styles";
 import { FoodList } from "@/features/foods/components/FoodList";
 import { listFoods } from "@/features/foods/services/food-queries";
 import { requireUser } from "@/services/auth-guard";
-import { getFoodPath } from "@/utils/routes";
 
 export const metadata: Metadata = { title: "Thực phẩm" };
 
@@ -27,7 +26,7 @@ const FoodsPage = async () => {
       >
         <FoodList
           foods={foods}
-          getHref={getFoodPath}
+          basePath={ROUTES.FOODS}
           emptyHint="PT chưa thêm món nào vào thư viện."
         />
       </main>

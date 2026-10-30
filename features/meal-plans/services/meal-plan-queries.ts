@@ -5,9 +5,21 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { foods, mealPlanItems, mealPlanMeals } from "@/db/schema";
 import { listFoods } from "@/features/foods/services/food-queries";
+import { NOTICE_HORIZON_DAYS } from "@/features/meal-plans/constants/meal-plans";
 import { listDaysInRange } from "@/features/meal-plans/services/meal-plan-store";
 import type { PlanDay, PlanFood } from "@/features/meal-plans/types/meal-plan";
-import { getWeekDates } from "@/utils/week";
+import {
+  getPlanKcalNotices,
+  type PlanKcalNotice,
+} from "@/features/meal-plans/utils/plan-notice";
+import {
+  kcalOf,
+  macrosOf,
+  sumMacros,
+} from "@/features/meal-plans/utils/plan-totals";
+import { listTargetsUpTo } from "@/features/nutrition/services/nutrition-queries";
+import { findTargetForDate } from "@/features/nutrition/utils/nutrition";
+import { addDays, getWeekDates } from "@/utils/week";
 
 // Archived foods are NOT filtered out: a plan keeps showing what it was built
 // with (KAN-65: "Xóa" archives).
@@ -120,3 +132,61 @@ export const countPlanDays = async (userId: number, weekStart: string) => {
 // Dates with a plan from `from` to `to` (the copy sheet marks them "sẽ ghi đè").
 export const listPlanDates = async (userId: number, from: string, to: string) =>
   (await listDaysInRange(userId, from, to)).map((day) => day.date);
+
+// S3: planned days from `from` onward (a few weeks) whose kcal are further
+// than ON_TARGET.kcalDiff from the target that applies on that date now.
+export const getPlanKcalNoticesFrom = async (
+  userId: number,
+  from: string,
+): Promise<PlanKcalNotice[]> => {
+  const dayRows = await listDaysInRange(
+    userId,
+    from,
+    addDays(from, NOTICE_HORIZON_DAYS),
+  );
+
+  if (!dayRows.length) {
+    return [];
+  }
+
+  const rows = await db
+    .select({
+      dayId: mealPlanMeals.dayId,
+      grams: mealPlanItems.grams,
+      protein: foods.protein,
+      carbs: foods.carbs,
+      fat: foods.fat,
+    })
+    .from(mealPlanItems)
+    .innerJoin(mealPlanMeals, eq(mealPlanMeals.id, mealPlanItems.mealId))
+    .innerJoin(foods, eq(foods.id, mealPlanItems.foodId))
+    .where(
+      inArray(
+        mealPlanMeals.dayId,
+        dayRows.map((day) => day.id),
+      ),
+    );
+  // The user's targets once; each date is resolved in memory.
+  const targets = await listTargetsUpTo(
+    userId,
+    dayRows[dayRows.length - 1].date,
+  );
+
+  return getPlanKcalNotices(
+    dayRows.map((day) => {
+      const target = findTargetForDate(targets, day.date);
+
+      return {
+        date: day.date,
+        plannedKcal: kcalOf(
+          sumMacros(
+            rows
+              .filter((row) => row.dayId === day.id)
+              .map((row) => macrosOf(row, row.grams)),
+          ),
+        ),
+        targetKcal: target ? kcalOf(target) : null,
+      };
+    }),
+  );
+};

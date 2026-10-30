@@ -4,13 +4,16 @@ import { expect, type Page, test } from "@playwright/test";
 import { TIME_ZONE } from "@/constants/time";
 import {
   addDays,
+  formatDayMonth,
   formatFullDay,
   getTodayDate,
+  getWeekdayShortLabel,
   getWeekStart,
 } from "@/utils/week";
 
 import { E2E_ADMIN, E2E_DB_URL, E2E_PLANNER_NAME } from "./config";
 import { E2E_FOODS } from "./seed";
+import { shot } from "./shots";
 
 // Meal plan builder (KAN-69), PT and trainee views. The specs share one
 // seeded DB and run in order: the trainee asks for 4 meals first, then the PT
@@ -43,6 +46,19 @@ const getPlannerId = async () => {
   );
 
   return Number(row.id);
+};
+
+const getRiceGrams = async (date: string) => {
+  const [row] = await query<{ grams: number }>(
+    `SELECT i.grams FROM meal_plan_items i
+     JOIN meal_plan_meals m ON m.id = i.meal_id
+     JOIN meal_plan_days d ON d.id = m.day_id
+     JOIN foods f ON f.id = i.food_id
+     WHERE d.user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}') AND d.date = ? AND f.name = ?`,
+    [date, E2E_FOODS.RICE],
+  );
+
+  return Number(row.grams);
 };
 
 const logInAsAdmin = async (page: Page) => {
@@ -138,13 +154,19 @@ test("Q1: the trainee asks for 4 meals and a food note; both are kept", async ({
     })
     .toBeNull();
 
+  // The DB row is written before the client finishes the action, and React
+  // then resets the form to its saved values: reload so the next typing is
+  // never wiped by that reset (and the old toast is gone).
+  await page.reload();
+  await expect(page.getByLabel("Số bữa mong muốn")).toHaveValue("");
+  await expect(page.getByLabel("Món thích hoặc không ăn được")).toHaveValue("");
+
   // Back to 4 meals for the PT specs.
   await page.getByLabel("Số bữa mong muốn").selectOption("4");
   await page
     .getByLabel("Món thích hoặc không ăn được")
     .fill("Không ăn hải sản");
   await page.getByRole("button", { name: "Lưu yêu cầu" }).click();
-  await expect(page.getByText("Đã lưu yêu cầu của bạn")).toBeVisible();
   await expect
     .poll(async () => {
       const [row] = await query<{ preferred_meal_count: number | null }>(
@@ -155,6 +177,13 @@ test("Q1: the trainee asks for 4 meals and a food note; both are kept", async ({
       return Number(row.preferred_meal_count);
     })
     .toBe(4);
+
+  // What the later specs rely on survives the form's own reset.
+  await page.reload();
+  await expect(page.getByLabel("Số bữa mong muốn")).toHaveValue("4");
+  await expect(page.getByLabel("Món thích hoặc không ăn được")).toHaveValue(
+    "Không ăn hải sản",
+  );
 });
 
 test("S5: the PT builds Monday, auto solves the worked example and the day is on target", async ({
@@ -193,7 +222,9 @@ test("S5: the PT builds Monday, auto solves the worked example and the day is on
       async () =>
         (
           await query<{ name: string }>(
-            "SELECT name FROM meal_plan_meals ORDER BY id LIMIT 1",
+            `SELECT m.name FROM meal_plan_meals m
+             JOIN meal_plan_days d ON d.id = m.day_id
+             WHERE d.user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}') ORDER BY m.id LIMIT 1`,
           )
         )[0].name,
     )
@@ -290,6 +321,9 @@ test("S5: the PT builds Monday, auto solves the worked example and the day is on
   const rows = await query<{ name: string; grams: number }>(
     `SELECT foods.name AS name, meal_plan_items.grams AS grams
      FROM meal_plan_items JOIN foods ON foods.id = meal_plan_items.food_id
+     JOIN meal_plan_meals m ON m.id = meal_plan_items.meal_id
+     JOIN meal_plan_days d ON d.id = m.day_id
+     WHERE d.user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}')
      ORDER BY meal_plan_items.id`,
   );
 
@@ -334,12 +368,30 @@ test("Copy: Monday is copied to Tuesday and the copy is independent", async ({
   await openDay(page, MONDAY);
   await expect(grams(page, E2E_FOODS.RICE)).toHaveValue("755");
 
-  // Copying again to Tuesday warns that it replaces and restores 755 g.
+  // Copying again to Tuesday warns that it replaces (KAN-78).
   await page.getByRole("button", { name: "Sao chép sang ngày khác" }).click();
   await expect(page.getByText("Đã có plan, sẽ ghi đè")).toHaveCount(1);
   await page.getByRole("dialog").getByLabel(formatFullDay(TUESDAY)).check();
   await page.getByRole("button", { name: "Sao chép (1 ngày)" }).click();
+
+  const confirm = page.getByRole("alertdialog", { name: "Xác nhận ghi đè" });
+
+  await expect(confirm).toContainText(
+    `Ghi đè plan của ${getWeekdayShortLabel(TUESDAY)} ${formatDayMonth(TUESDAY)}?`,
+  );
+  await shot(page, "kan-78-overwrite-confirm");
+
+  // "Hủy" leaves Tuesday as it was: rice still 600 g, no copy happened.
+  await confirm.getByRole("button", { name: "Hủy" }).click();
+  await expect(confirm).toHaveCount(0);
+  await expect(page.getByText("Đã sao chép sang 1 ngày")).toHaveCount(0);
+  expect(await getRiceGrams(TUESDAY)).toBe(600);
+
+  // "Ghi đè" replaces it and restores 755 g.
+  await page.getByRole("button", { name: "Sao chép (1 ngày)" }).click();
+  await confirm.getByRole("button", { name: "Ghi đè" }).click();
   await expect(page.getByText("Đã sao chép sang 1 ngày")).toBeVisible();
+  expect(await getRiceGrams(TUESDAY)).toBe(755);
   await openDay(page, TUESDAY);
   await expect(grams(page, E2E_FOODS.RICE)).toHaveValue("755");
 });
@@ -356,7 +408,10 @@ test("R2: next week starts empty and 'Áp dụng tuần trước' copies the pla
     page.getByText("Sao chép 2 ngày có plan của tuần trước"),
   ).toBeVisible();
   expect(
-    await query("SELECT id FROM meal_plan_days WHERE date >= ?", [NEXT_MONDAY]),
+    await query(
+      `SELECT id FROM meal_plan_days WHERE date >= ? AND user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}')`,
+      [NEXT_MONDAY],
+    ),
   ).toHaveLength(0);
 
   await page.getByRole("button", { name: "Áp dụng tuần trước" }).click();
@@ -367,7 +422,7 @@ test("R2: next week starts empty and 'Áp dụng tuần trước' copies the pla
   await expect(grams(page, E2E_FOODS.OLIVE_OIL)).toHaveValue("35");
 
   const dates = await query<{ date: string }>(
-    "SELECT date FROM meal_plan_days WHERE date >= ? ORDER BY date",
+    `SELECT date FROM meal_plan_days WHERE date >= ? AND user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}') ORDER BY date`,
     [NEXT_MONDAY],
   );
 
@@ -424,7 +479,7 @@ test("Q4: the PT splits a day by percent and the total must be 100", async ({
   ).toHaveCount(2);
   const stored = await query<{ share_percent: number }>(
     `SELECT share_percent FROM meal_plan_meals
-     WHERE day_id = (SELECT id FROM meal_plan_days WHERE date = ?) ORDER BY position`,
+     WHERE day_id = (SELECT id FROM meal_plan_days WHERE date = ? AND user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}')) ORDER BY position`,
     [WEDNESDAY],
   );
 

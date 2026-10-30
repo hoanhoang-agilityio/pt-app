@@ -1,5 +1,5 @@
 import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
+import { drizzle, type LibSQLDatabase } from "drizzle-orm/libsql";
 
 import { TIME_ZONE } from "@/constants/time";
 import * as schema from "@/db/schema";
@@ -12,6 +12,7 @@ import {
   E2E_ADMIN,
   E2E_EMPTY_NAME,
   E2E_LIFTER_NAME,
+  E2E_LOGGER_NAME,
   E2E_PLANNER_NAME,
   E2E_USER_NAME,
 } from "./config";
@@ -145,6 +146,92 @@ export const getE2eDates = (now = new Date()) => {
     previous: addDays(today, -7),
     future: addDays(today, 1),
   };
+};
+
+// Plan of E2E Logger for `today`: three meals that add up to P 177 / C 253.8 /
+// F 40.1 g = 2,084.1 kcal, 9 kcal above the 2,075 kcal target (no notice).
+const LOGGER_PLAN = [
+  {
+    name: "Bữa sáng",
+    items: [
+      { food: E2E_FOODS.CHICKEN, grams: 200 },
+      { food: E2E_FOODS.RICE, grams: 300 },
+    ],
+  },
+  {
+    name: "Bữa trưa",
+    items: [
+      { food: E2E_FOODS.RICE, grams: 400 },
+      { food: E2E_FOODS.SALMON, grams: 200 },
+    ],
+  },
+  {
+    name: "Bữa tối",
+    items: [
+      { food: E2E_FOODS.RICE, grams: 200 },
+      { food: E2E_FOODS.CHICKEN, grams: 150 },
+    ],
+  },
+];
+
+const seedLogger = async (db: LibSQLDatabase<typeof schema>, today: string) => {
+  const [logger] = await db
+    .insert(schema.users)
+    .values({
+      name: E2E_LOGGER_NAME,
+      nameKey: toNameKey(E2E_LOGGER_NAME),
+    })
+    .returning();
+  const library = await db.select().from(schema.foods);
+  const foodId = (name: string) => {
+    const food = library.find((row) => row.name === name);
+
+    if (!food) {
+      throw new Error(`e2e seed: missing food ${name}`);
+    }
+
+    return food.id;
+  };
+
+  await db.insert(schema.nutritionTargets).values({
+    userId: logger.id,
+    effectiveFrom: "2020-01-01",
+    protein: 160,
+    carbs: 235,
+    fat: 55,
+    source: "manual",
+  });
+
+  const [day] = await db
+    .insert(schema.mealPlanDays)
+    .values({ userId: logger.id, date: today })
+    .returning();
+
+  for (const [position, meal] of LOGGER_PLAN.entries()) {
+    const [row] = await db
+      .insert(schema.mealPlanMeals)
+      .values({ dayId: day.id, position, name: meal.name })
+      .returning();
+
+    await db.insert(schema.mealPlanItems).values(
+      meal.items.map((item) => ({
+        mealId: row.id,
+        foodId: foodId(item.food),
+        grams: item.grams,
+      })),
+    );
+  }
+
+  // From before meal plans: still shown, read-only (C5).
+  await db.insert(schema.foodEntries).values({
+    userId: logger.id,
+    date: today,
+    meal: "lunch",
+    description: "Cơm gà ăn trước khi có plan",
+    carbs: 60,
+    protein: 30,
+    fat: 10,
+  });
 };
 
 export const seedE2eDatabase = async (url: string) => {
@@ -325,6 +412,8 @@ export const seedE2eDatabase = async (url: string) => {
     fat: 55,
     source: "manual",
   });
+
+  await seedLogger(db, today);
 
   client.close();
 };

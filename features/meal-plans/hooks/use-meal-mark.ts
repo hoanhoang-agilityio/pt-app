@@ -1,0 +1,37 @@
+"use client";
+
+import { useState } from "react";
+
+import { MEAL_LOG_MESSAGES } from "@/features/meal-plans/constants/meal-plans";
+import { useMealPlanAction } from "@/features/meal-plans/hooks/use-meal-plan-action";
+import { setMealMarkAction } from "@/features/meal-plans/services/meal-log-actions";
+import type { MealMark } from "@/features/meal-plans/types/meal-log";
+
+// "Đạt" and the note of one meal. The note is saved with its own button;
+// "Đạt" saves at once and keeps the note as typed.
+export const useMealMark = (mealId: number, mark: MealMark | null) => {
+  const { isPending, run } = useMealPlanAction();
+  const [note, setNote] = useState(mark?.note ?? "");
+  const achieved = mark?.achieved ?? false;
+
+  const save = (nextAchieved: boolean, nextNote: string) =>
+    run(
+      () =>
+        setMealMarkAction({
+          mealId,
+          achieved: nextAchieved,
+          note: nextNote,
+        }),
+      { successMessage: MEAL_LOG_MESSAGES.MARK_SAVED },
+    );
+
+  return {
+    achieved,
+    note,
+    setNote,
+    isPending,
+    isNoteChanged: note.trim() !== (mark?.note ?? ""),
+    toggleAchieved: () => save(!achieved, note),
+    saveNote: () => save(achieved, note),
+  };
+};

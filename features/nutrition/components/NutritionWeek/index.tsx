@@ -13,6 +13,8 @@ interface NutritionWeekProps {
   selectedDate: string;
   today: string;
   isEditable: boolean;
+  // The trainee's page: the old free-text log is read-only history (KAN-71).
+  isLegacyLog?: boolean;
   // Shown between the day tabs and the day (the PT's meal plan).
   children?: ReactNode;
 }
@@ -21,7 +23,7 @@ const getMarker = (day: NutritionDay) => {
   if (isDayOnTarget(day)) {
     return "check";
   }
-  return day.entries.length ? "dot" : "none";
+  return day.loggedCount ? "dot" : "none";
 };
 
 export const NutritionWeek = ({
@@ -31,6 +33,7 @@ export const NutritionWeek = ({
   selectedDate,
   today,
   isEditable,
+  isLegacyLog = false,
   children,
 }: NutritionWeekProps) => {
   const selectedDay = days.find((day) => day.date === selectedDate) ?? days[0];
@@ -52,7 +55,7 @@ export const NutritionWeek = ({
           items={days.map((day) => ({
             date: day.date,
             marker: getMarker(day),
-            description: `${day.entries.length ? `, ${day.entries.length} bữa đã ghi` : ""}${isDayOnTarget(day) ? ", đạt mục tiêu" : ""}`,
+            description: `${day.loggedCount ? `, ${day.loggedCount} món đã ghi` : ""}${isDayOnTarget(day) ? ", đạt mục tiêu" : ""}`,
           }))}
         />
       </div>
@@ -61,6 +64,7 @@ export const NutritionWeek = ({
         day={selectedDay}
         today={today}
         isEditable={isEditable}
+        isLegacyLog={isLegacyLog}
       />
     </div>
   );

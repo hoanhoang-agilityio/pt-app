@@ -2,13 +2,11 @@ import {
   KCAL_PER_GRAM,
   ON_TARGET,
 } from "@/features/nutrition/constants/energy";
-import {
-  GRAMS_PER_LANG,
-  MACROS,
-} from "@/features/nutrition/constants/nutrition";
+import { MACROS } from "@/features/nutrition/constants/nutrition";
 import type {
   ComparedMetric,
   FoodEntry,
+  Macro,
   MacroAmounts,
   MacroComparison,
   NutritionDay,
@@ -28,6 +26,29 @@ export const sumEntries = (entries: FoodEntry[]): MacroAmounts =>
     }),
     EMPTY_AMOUNTS,
   );
+
+// A day from the old free-text entries and the macros of the foods logged in
+// the meal plan (KAN-71). Totals are whole grams, like the old entries.
+export const buildNutritionDay = (
+  date: string,
+  target: NutritionTarget | null,
+  entries: FoodEntry[],
+  mealLogs: MacroAmounts[],
+): NutritionDay => {
+  const fromEntries = sumEntries(entries);
+  const sum = (macro: Macro) =>
+    Math.round(
+      mealLogs.reduce((total, log) => total + log[macro], fromEntries[macro]),
+    );
+
+  return {
+    date,
+    target,
+    entries,
+    loggedCount: entries.length + mealLogs.length,
+    totals: { carbs: sum("carbs"), protein: sum("protein"), fat: sum("fat") },
+  };
+};
 
 // Targets sorted by effectiveFrom ascending; the latest one that started on
 // or before the date applies.
@@ -80,9 +101,9 @@ export const compareToTarget = (
 // A logged day is on target when kcal (4/4/9 from the macros), protein, carbs
 // and fat are all "on"; macros without a target are ignored.
 export const isDayOnTarget = (day: NutritionDay) => {
-  const { target, totals, entries } = day;
+  const { target, totals, loggedCount } = day;
 
-  if (!target || !entries.length) {
+  if (!target || !loggedCount) {
     return false;
   }
 
@@ -101,7 +122,7 @@ export const isDayOnTarget = (day: NutritionDay) => {
 export const summarizeNutritionWeek = (
   days: NutritionDay[],
 ): NutritionWeekSummary => {
-  const loggedDays = days.filter((day) => day.entries.length > 0);
+  const loggedDays = days.filter((day) => day.loggedCount > 0);
   const totals = loggedDays.reduce(
     (sum, day) => ({
       carbs: sum.carbs + day.totals.carbs,
@@ -122,7 +143,3 @@ export const summarizeNutritionWeek = (
     onTargetDays: days.filter(isDayOnTarget).length,
   };
 };
-
-// 250 → "2,5 lạng"
-export const formatLang = (grams: number) =>
-  `${(grams / GRAMS_PER_LANG).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} lạng`;

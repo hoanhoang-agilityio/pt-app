@@ -7,8 +7,10 @@ import { FoodPicker } from "@/features/meal-plans/components/FoodPicker";
 import { MacroChips } from "@/features/meal-plans/components/MacroChips";
 import { MealGapNotice } from "@/features/meal-plans/components/MealGapNotice";
 import { MealItemRow } from "@/features/meal-plans/components/MealItemRow";
+import { MealLogSummary } from "@/features/meal-plans/components/MealLogSummary";
 import { useMealCard } from "@/features/meal-plans/hooks/use-meal-card";
 import { useMealNameInput } from "@/features/meal-plans/hooks/use-meal-name-input";
+import type { MealLog, MealMark } from "@/features/meal-plans/types/meal-log";
 import type {
   MealTarget,
   PlanFood,
@@ -27,6 +29,9 @@ interface MealCardProps {
   // Null when the member has no nutrition target on this date.
   target: MealTarget | null;
   library: PlanFood[];
+  // What the trainee logged and marked for this meal (read-only here).
+  logs: MealLog[];
+  mark: MealMark | null;
   onMove: (direction: -1 | 1) => void;
   isReordering: boolean;
 }
@@ -42,6 +47,8 @@ export const MealCard = ({
   isOnly,
   target,
   library,
+  logs,
+  mark,
   onMove,
   isReordering,
 }: MealCardProps) => {
@@ -194,6 +201,8 @@ export const MealCard = ({
           )}
         </div>
       )}
+
+      <MealLogSummary logs={logs} mark={mark} />
     </section>
   );
 };

@@ -36,3 +36,8 @@ export const E2E_EMPTY_NAME = "E2E Empty";
 // Trainee of the meal plan specs (KAN-69): has a manual target of
 // P 160 / C 235 / F 55 g (2,075 kcal) and no plan.
 export const E2E_PLANNER_NAME = "E2E Planner";
+
+// Trainee of the meal log specs (KAN-71): a manual target of
+// P 160 / C 235 / F 55 g (2,075 kcal), a seeded plan for today of 2,084 kcal
+// and one old free-text food entry.
+export const E2E_LOGGER_NAME = "E2E Logger";

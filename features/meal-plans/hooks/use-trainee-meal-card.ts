@@ -1,0 +1,40 @@
+"use client";
+
+import { useState } from "react";
+
+import { MEAL_LOG_MESSAGES } from "@/features/meal-plans/constants/meal-plans";
+import { useMealPlanAction } from "@/features/meal-plans/hooks/use-meal-plan-action";
+import { removeMealLogAction } from "@/features/meal-plans/services/meal-log-actions";
+import type { MealLog } from "@/features/meal-plans/types/meal-log";
+
+interface SheetState {
+  isOpen: boolean;
+  // The log being edited; null = add.
+  editing: MealLog | null;
+}
+
+export const useTraineeMealCard = () => {
+  const { isPending, run } = useMealPlanAction();
+  const [sheet, setSheet] = useState<SheetState>({
+    isOpen: false,
+    editing: null,
+  });
+
+  return {
+    sheet,
+    isPending,
+    openAdd: () => setSheet({ isOpen: true, editing: null }),
+    openEdit: (log: MealLog) => setSheet({ isOpen: true, editing: log }),
+    // Keeps `editing` while closing so the sheet doesn't flash.
+    setIsOpen: (isOpen: boolean) =>
+      setSheet((previous) => ({ ...previous, isOpen })),
+    remove: (log: MealLog) => {
+      if (!window.confirm(MEAL_LOG_MESSAGES.REMOVE_CONFIRM)) {
+        return;
+      }
+      run(() => removeMealLogAction({ logId: log.id }), {
+        successMessage: MEAL_LOG_MESSAGES.REMOVED,
+      });
+    },
+  };
+};

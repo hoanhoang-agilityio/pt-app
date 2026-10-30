@@ -83,19 +83,6 @@ export const FAT_CALORIE_SHARE = 0.25;
 export const MACRO_ROUNDING_GRAMS = 5;
 export const CALORIE_ROUNDING = 10;
 
-// Rough everyday equivalents, to picture a macro target as food.
-export const FOOD_EQUIVALENTS: Record<
-  Macro,
-  { food: string; gramsPerUnit: number; unit: string }
-> = {
-  // Cooked white rice ≈ 28 g carbs per 100 g.
-  carbs: { food: "cơm chín", gramsPerUnit: 0.28, unit: "g" },
-  // Cooked chicken breast ≈ 31 g protein per 100 g.
-  protein: { food: "ức gà chín", gramsPerUnit: 0.31, unit: "g" },
-  // One tablespoon of cooking oil ≈ 14 g fat.
-  fat: { food: "dầu ăn", gramsPerUnit: 14, unit: "thìa" },
-};
-
 export const BODY_LIMITS = {
   AGE: { min: 12, max: 90 },
   HEIGHT_CM: { min: 120, max: 230 },

@@ -26,6 +26,10 @@ export interface NutritionDay {
   date: string;
   target: NutritionTarget | null;
   entries: FoodEntry[];
+  // Old free-text entries plus the foods logged in the meal plan; the day
+  // counts as logged when this is above 0.
+  loggedCount: number;
+  // Macros of the entries and the meal logs together, whole grams.
   totals: MacroAmounts;
 }
 

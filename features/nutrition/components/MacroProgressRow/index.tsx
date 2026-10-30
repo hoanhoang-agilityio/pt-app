@@ -6,7 +6,6 @@ import {
 } from "@/features/nutrition/constants/nutrition";
 import { STATUS_TEXT_CLASSES } from "@/features/nutrition/constants/progress";
 import type { Macro } from "@/features/nutrition/types/nutrition";
-import { describeFoodEquivalent } from "@/features/nutrition/utils/energy";
 import { compareToTarget } from "@/features/nutrition/utils/nutrition";
 import { formatComparison } from "@/features/nutrition/utils/progress-text";
 
@@ -58,10 +57,7 @@ export const MacroProgressRow = ({
               style={{ width: `${width}%` }}
             />
           </div>
-          <p className="flex justify-between gap-2 text-xs text-muted">
-            <span className="truncate">
-              {describeFoodEquivalent(macro, target)}
-            </span>
+          <p className="flex justify-end gap-2 text-xs text-muted">
             <span
               className={clsx(
                 "shrink-0 font-semibold",

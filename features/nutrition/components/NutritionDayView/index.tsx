@@ -10,12 +10,15 @@ interface NutritionDayViewProps {
   day: NutritionDay;
   today: string;
   isEditable: boolean;
+  // Old free-text entries: read-only history, hidden when there are none.
+  isLegacyLog?: boolean;
 }
 
 export const NutritionDayView = ({
   day,
   today,
   isEditable,
+  isLegacyLog = false,
 }: NutritionDayViewProps) => {
   const isFuture = day.date > today;
   const getEmptyMessage = () => {
@@ -26,6 +29,14 @@ export const NutritionDayView = ({
       ? "Chưa tới ngày này, quay lại ghi sau nhé."
       : "Chưa ghi bữa ăn nào cho ngày này.";
   };
+
+  // Old entries are history on the trainee's page and hidden when there are
+  // none. The PT's page shows the section too when nothing at all was logged,
+  // so the empty message stays true; foods logged in the plan show in its
+  // meal cards.
+  const showLog = isLegacyLog
+    ? day.entries.length > 0
+    : day.entries.length > 0 || day.loggedCount === 0;
 
   return (
     <section className="space-y-4">
@@ -49,7 +60,7 @@ export const NutritionDayView = ({
             <p className="text-sm text-muted">
               PT chưa đặt mục tiêu dinh dưỡng cho ngày này.
             </p>
-            {day.entries.length > 0 && (
+            {day.loggedCount > 0 && (
               <MacroProgressList totals={day.totals} target={null} />
             )}
           </>
@@ -65,15 +76,19 @@ export const NutritionDayView = ({
         )}
       </div>
 
-      <div className="space-y-2">
-        <h3 className={SECTION_TITLE}>Đã ăn</h3>
-        <FoodLog
-          date={day.date}
-          entries={day.entries}
-          isEditable={isEditable && !isFuture}
-          emptyMessage={getEmptyMessage()}
-        />
-      </div>
+      {showLog && (
+        <div className="space-y-2">
+          <h3 className={SECTION_TITLE}>
+            {isLegacyLog ? "Nhật ký cũ" : "Đã ăn"}
+          </h3>
+          <FoodLog
+            date={day.date}
+            entries={day.entries}
+            isEditable={isEditable && !isFuture}
+            emptyMessage={getEmptyMessage()}
+          />
+        </div>
+      )}
     </section>
   );
 };

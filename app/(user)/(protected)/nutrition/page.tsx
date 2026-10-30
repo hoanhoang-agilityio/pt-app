@@ -8,6 +8,12 @@ import { LogoutButton } from "@/features/auth/components/LogoutButton";
 import { RememberUser } from "@/features/auth/components/RememberUser";
 import { FoodLibraryLink } from "@/features/foods/components/FoodLibraryLink";
 import { MealPreferencesForm } from "@/features/meal-plans/components/MealPreferencesForm";
+import { TraineeMealPlan } from "@/features/meal-plans/components/TraineeMealPlan";
+import { getMealLogData } from "@/features/meal-plans/services/meal-log-queries";
+import {
+  getMealPlanWeek,
+  listPlanFoods,
+} from "@/features/meal-plans/services/meal-plan-queries";
 import { BodyProfileCard } from "@/features/nutrition/components/BodyProfileCard";
 import { NutritionWeek } from "@/features/nutrition/components/NutritionWeek";
 import { getBodyProfile } from "@/features/nutrition/services/body-profile-queries";
@@ -29,11 +35,19 @@ const NutritionPage = async ({ searchParams }: PageProps<"/nutrition">) => {
     { week: readSearchParam(params.week), day: readSearchParam(params.day) },
     today,
   );
-  const [days, bodyProfile, latestTarget] = await Promise.all([
-    getNutritionWeek(user.id, weekStart),
-    getBodyProfile(user.id),
-    getLatestTarget(user.id),
-  ]);
+  const [days, bodyProfile, latestTarget, planDays, library] =
+    await Promise.all([
+      getNutritionWeek(user.id, weekStart),
+      getBodyProfile(user.id),
+      getLatestTarget(user.id),
+      getMealPlanWeek(user.id, weekStart),
+      listPlanFoods(),
+    ]);
+  const selectedPlan =
+    planDays.find((day) => day.date === selectedDate) ?? null;
+  const { logs, marks } = await getMealLogData(
+    selectedPlan?.meals.map((meal) => meal.id) ?? [],
+  );
   const profileCard = (
     <BodyProfileCard
       editor="user"
@@ -61,8 +75,22 @@ const NutritionPage = async ({ searchParams }: PageProps<"/nutrition">) => {
           weekStart={weekStart}
           selectedDate={selectedDate}
           today={today}
-          isEditable
-        />
+          isEditable={false}
+          isLegacyLog
+        >
+          <TraineeMealPlan
+            // A fresh tree per day: sheets and half-typed notes reset.
+            key={selectedDate}
+            plan={selectedPlan}
+            target={
+              days.find((day) => day.date === selectedDate)?.target ?? null
+            }
+            logs={logs}
+            marks={marks}
+            library={library}
+            isLoggable={selectedDate <= today}
+          />
+        </NutritionWeek>
         {bodyProfile && profileCard}
         <MealPreferencesForm
           preferredMealCount={user.preferredMealCount}

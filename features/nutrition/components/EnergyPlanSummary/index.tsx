@@ -6,10 +6,7 @@ import {
   MACROS,
 } from "@/features/nutrition/constants/nutrition";
 import type { EnergyPlan } from "@/features/nutrition/types/nutrition";
-import {
-  describeFoodEquivalent,
-  formatCalories,
-} from "@/features/nutrition/utils/energy";
+import { formatCalories } from "@/features/nutrition/utils/energy";
 
 interface EnergyPlanSummaryProps {
   plan: EnergyPlan;
@@ -61,8 +58,7 @@ export const EnergyPlanSummary = ({ plan }: EnergyPlanSummaryProps) => (
           <span className="truncate text-right text-muted">
             <span className="font-bold text-fg tabular-nums">
               {plan.macros[macro]} g
-            </span>{" "}
-            {describeFoodEquivalent(macro, plan.macros[macro])}
+            </span>
           </span>
         </li>
       ))}

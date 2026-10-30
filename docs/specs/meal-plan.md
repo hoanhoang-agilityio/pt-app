@@ -15,7 +15,7 @@ The PT builds a member's daily meal plan from the food library. The number of me
 
 ## Decisions
 
-Round 1 answered 2026-10-30 by Hoan: Q1-Q6 accepted; Q7 changed. Round 2 sent the same day.
+Round 1 answered 2026-10-30 by Hoan: Q1-Q6 accepted; Q7 changed.
 
 | #   | Question                                     | Recommended                                                                                                                                                     | Decision |
 | --- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
@@ -27,20 +27,48 @@ Round 1 answered 2026-10-30 by Hoan: Q1-Q6 accepted; Q7 changed. Round 2 sent th
 | Q6  | When targets cannot be met (e.g. fat short)? | Show the gap per macro ("Thiếu 36 g fat") and suggest library foods of the group that fills it (for fat: Dầu & chất béo, Đậu & hạt)                             | Accepted |
 | Q7  | One plan or one per day? Who sees it?        | Hoan: a plan can be applied to the whole week, or several plans can be used within one week (different days get different plans); the trainee sees it read-only | Changed  |
 
-Round 2 (sent 2026-10-30, waiting for Hoan):
+Round 2 answered 2026-10-30 by Hoan:
 
-| #   | Question                                 | Recommended                                                                                                                                                       | Decision |
-| --- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| R1  | How do several plans in a week work?     | The PT creates named plans per member ("Ngày tập", "Ngày nghỉ"), then assigns one plan to each day of a week; "Áp dụng cả tuần" puts one plan on all 7 days       | Pending  |
-| R2  | What happens in the next week?           | A week with no assignment repeats the latest assigned week; the PT changes any week any time, like workout weeks                                                  | Pending  |
-| R3  | Does each plan have its own target?      | Every plan uses the member's day target in v1; a rest-day plan can simply hold less food, and the gap is shown                                                    | Pending  |
-| R4  | Target weight and timeline (72 → 70 kg)? | PT enters target weight and date on the body profile; daily deficit = kg × 7,700 / days, capped at 25 % below TDEE; warning when faster than 1 % of weight a week | Pending  |
-| R5  | When is a day "on target"?               | Within ±5 % kcal and ±10 % per macro shows "Đạt"; otherwise the gap per macro                                                                                     | Pending  |
-| R6  | Can the trainee log a planned meal?      | Not in v1; later a "Đã ăn" button copies a planned meal into the food log                                                                                         | Pending  |
+| #     | Decision (Hoan)                                                                                                                                                                                         |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1    | Plans have no names. The PT creates a plan and adds it to days of the member's existing week schedule                                                                                                   |
+| R2    | A new week starts empty: the PT chooses "apply last week" or builds new; never applied automatically                                                                                                    |
+| R3/R4 | The only goal is reaching the target weight with enough protein (g/kg body weight, by sex). A plan only has to hit the day's kcal and macros; the weekly weigh-in tells the PT whether kcal must change |
+| R5    | A plan is on target when its kcal are within 80 kcal of the day target                                                                                                                                  |
+| R6    | v1: the trainee marks a meal as achieved, or notes which food was short or over                                                                                                                         |
+
+Round 3 answered 2026-10-30 by Hoan:
+
+| #   | Decision                                                                                                                                                                                                                                                                            |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S1  | Protein g/kg is set per member; defaults male 2.0, female 1.6                                                                                                                                                                                                                       |
+| S2  | Besides ±80 kcal: protein no more than 5 g under target; carbs and fat within ±10 g                                                                                                                                                                                                 |
+| S3  | The goal is a daily kcal deficit or surplus vs TDEE (for example -200). After each weekly weigh-in the app recomputes TDEE from the new weight; if the plan no longer gives the intended deficit (for example only -100), it tells the PT how many kcal to change. Same for gaining |
+| S4  | The trainee marks each meal "Đạt" or notes per food what was short or over; the PT sees it on the member page                                                                                                                                                                       |
+| S5  | The PT builds plans in the member's Dinh dưỡng tab, per day                                                                                                                                                                                                                         |
+
+Fact noted with S3: with any weight-based BMR equation the TDEE moves only a few kcal per 0.5 kg (Mifflin-St Jeor: 5 kcal BMR, about 8 kcal TDEE at 1.55), so the notice usually fires after a few kg of change or when the profile changes.
+
+Round 4: existing behaviour to change or remove (Hoan asked to revise anything the new feature makes obsolete). Answered 2026-10-30:
+
+| #   | Today                                                       | Decision                                                                                                                                                                                                                     |
+| --- | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1  | `GOALS.calorieFactor`: cut/maintain/bulk = TDEE × 0.8/1/1.1 | Replace with a PT-set daily kcal adjustment (S3); the goal label follows its sign. Column `goal` stays (additive schema) but is no longer used for maths                                                                     |
+| C2  | `GOALS.proteinPerKg`: 2.2/1.8/2.0 g/kg by goal              | Replace with S1                                                                                                                                                                                                              |
+| C3  | `TARGET_TOLERANCE`: every macro ±10 %                       | One rule everywhere (food log, week summary, meal plan): S2 + R5                                                                                                                                                             |
+| C4  | `describeFoodEquivalent` ("≈ 10 lạng cơm chín")             | Remove when meal plans ship                                                                                                                                                                                                  |
+| C5  | Free-text food log                                          | Replaced: the trainee logs what they ate inside the day's plan, per meal: search the food library (accent-free) + amount, then add/edit/remove; a food missing from the library can still be added by name (macros optional) |
+| C6  | Manual macro targets typed by the PT                        | Kept as an override; plans are judged against the active target                                                                                                                                                              |
+| C7  | BMR by Mifflin-St Jeor                                      | Replace with Henry & Rees (1991) equations for tropical populations (weight, sex, age band). See below                                                                                                                       |
+
+C7 evidence (Hoan: "chọn công thức chính xác nhất cho người Việt Nam"): a National Institute of Nutrition (Hanoi) 2008 indirect-calorimetry study of Vietnamese adolescents (15-17) and older adults (60-70) found FAO/WHO/UNU 1985 overestimates RMR by 8-11 % and measured values close to Henry & Rees (1991) and the Japanese 1999 equation (https://viendinhduong.vn/en/lookup/de-tai-nghien-cuu-khoa-hoc/68035d08359ef722321fcdca). No equation is validated on Vietnamese adults 18-59, so Henry & Rees is the best available evidence. Coefficients must be checked against the original paper (Eur J Clin Nutr 1991;45:177-185) during implementation and pinned by unit tests.
+
+Grill closed 2026-10-30. Next: `docs/specs/meal-plan.plan.md`.
 
 ## Out of scope
 
 - AI suggestions.
+- Plan names (R1).
 - Shopping lists, recipes.
 
 ## Test matrix

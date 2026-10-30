@@ -1,6 +1,6 @@
 # Plan: Food library
 
-Status: waiting for Hoan's approval. No code before the plan is approved.
+Status: approved by Hoan on 2026-10-30 ("approve hết").
 
 ## Source
 

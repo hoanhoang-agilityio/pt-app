@@ -15,19 +15,28 @@ The PT builds a member's daily meal plan from the food library. The number of me
 
 ## Decisions
 
-Round 1 sent 2026-10-30, waiting for Hoan.
+Round 1 answered 2026-10-30 by Hoan: Q1-Q6 accepted; Q7 changed. Round 2 sent the same day.
 
-| #   | Question                                     | Recommended                                                                                                                                           | Decision |
-| --- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| Q1  | Where does the trainee's request come from?  | On the trainee Dinh dưỡng page: "Số bữa mong muốn" (2-6) and an optional note (foods they like or avoid); the PT sees it on the member page           | Pending  |
-| Q2  | How is the meal count set?                   | The plan starts with the trainee's count, else 3; the PT can add or remove meals at any time; when it differs, the page shows "Học viên muốn 4 bữa"   | Pending  |
-| Q3  | Meal names?                                  | Defaults Bữa sáng, Bữa trưa, Bữa tối, then Bữa phụ 1, 2...; the PT can rename and reorder                                                             | Pending  |
-| Q4  | How is the day target split across meals?    | Equal split by default; the PT can set a % per meal (must total 100 %)                                                                                | Pending  |
-| Q5  | How are grams decided?                       | The PT picks foods per meal; "Tính tự động" solves the grams to hit the meal targets (deterministic, rounded to 5 g); the PT can edit any grams after | Pending  |
-| Q6  | When targets cannot be met (e.g. fat short)? | Show the gap per macro ("Thiếu 36 g fat") and suggest library foods of the group that fills it (for fat: Dầu & chất béo, Đậu & hạt)                   | Pending  |
-| Q7  | One plan or one per day? Who sees it?        | One active plan per member, same every day, with an effective-from date like targets (history kept); the trainee sees it read-only                    | Pending  |
+| #   | Question                                     | Recommended                                                                                                                                                     | Decision |
+| --- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Q1  | Where does the trainee's request come from?  | On the trainee Dinh dưỡng page: "Số bữa mong muốn" (2-6) and an optional note (foods they like or avoid); the PT sees it on the member page                     | Accepted |
+| Q2  | How is the meal count set?                   | The plan starts with the trainee's count, else 3; the PT can add or remove meals at any time; when it differs, the page shows "Học viên muốn 4 bữa"             | Accepted |
+| Q3  | Meal names?                                  | Defaults Bữa sáng, Bữa trưa, Bữa tối, then Bữa phụ 1, 2...; the PT can rename and reorder                                                                       | Accepted |
+| Q4  | How is the day target split across meals?    | Equal split by default; the PT can set a % per meal (must total 100 %)                                                                                          | Accepted |
+| Q5  | How are grams decided?                       | The PT picks foods per meal; "Tính tự động" solves the grams to hit the meal targets (deterministic, rounded to 5 g); the PT can edit any grams after           | Accepted |
+| Q6  | When targets cannot be met (e.g. fat short)? | Show the gap per macro ("Thiếu 36 g fat") and suggest library foods of the group that fills it (for fat: Dầu & chất béo, Đậu & hạt)                             | Accepted |
+| Q7  | One plan or one per day? Who sees it?        | Hoan: a plan can be applied to the whole week, or several plans can be used within one week (different days get different plans); the trainee sees it read-only | Changed  |
 
-Later rounds (after round 1): target weight and timeline (72 → 70 kg by a date) changing the calorie target, accepted tolerance (±5 % kcal, ±10 % per macro), logging a planned meal into the food log.
+Round 2 (sent 2026-10-30, waiting for Hoan):
+
+| #   | Question                                 | Recommended                                                                                                                                                       | Decision |
+| --- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| R1  | How do several plans in a week work?     | The PT creates named plans per member ("Ngày tập", "Ngày nghỉ"), then assigns one plan to each day of a week; "Áp dụng cả tuần" puts one plan on all 7 days       | Pending  |
+| R2  | What happens in the next week?           | A week with no assignment repeats the latest assigned week; the PT changes any week any time, like workout weeks                                                  | Pending  |
+| R3  | Does each plan have its own target?      | Every plan uses the member's day target in v1; a rest-day plan can simply hold less food, and the gap is shown                                                    | Pending  |
+| R4  | Target weight and timeline (72 → 70 kg)? | PT enters target weight and date on the body profile; daily deficit = kg × 7,700 / days, capped at 25 % below TDEE; warning when faster than 1 % of weight a week | Pending  |
+| R5  | When is a day "on target"?               | Within ±5 % kcal and ±10 % per macro shows "Đạt"; otherwise the gap per macro                                                                                     | Pending  |
+| R6  | Can the trainee log a planned meal?      | Not in v1; later a "Đã ăn" button copies a planned meal into the food log                                                                                         | Pending  |
 
 ## Out of scope
 

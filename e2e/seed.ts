@@ -12,6 +12,7 @@ import {
   E2E_ADMIN,
   E2E_EMPTY_NAME,
   E2E_LIFTER_NAME,
+  E2E_PLANNER_NAME,
   E2E_USER_NAME,
 } from "./config";
 
@@ -48,6 +49,10 @@ export const E2E_FOODS = {
   CHICKEN_RAW: "Ức gà (sống)",
   RICE: "Cơm trắng (chín)",
   SALMON: "Cá hồi (chín)",
+  // Meal plan specs (KAN-69): the spec's worked example and fat suggestions.
+  BROCCOLI: "Bông cải xanh (luộc)",
+  OLIVE_OIL: "Dầu ô liu",
+  ALMOND: "Hạnh nhân",
 } as const;
 
 const E2E_FOOD_ROWS = [
@@ -89,6 +94,33 @@ const E2E_FOOD_ROWS = [
     protein: 22.1,
     carbs: 0,
     fat: 12.4,
+  },
+  {
+    name: E2E_FOODS.BROCCOLI,
+    group: "vegetable",
+    state: "cooked",
+    kcal: 35,
+    protein: 2.4,
+    carbs: 7.2,
+    fat: 0.4,
+  },
+  {
+    name: E2E_FOODS.OLIVE_OIL,
+    group: "fat_oil",
+    state: null,
+    kcal: 884,
+    protein: 0,
+    carbs: 0,
+    fat: 100,
+  },
+  {
+    name: E2E_FOODS.ALMOND,
+    group: "legume_nut",
+    state: null,
+    kcal: 579,
+    protein: 21.2,
+    carbs: 21.6,
+    fat: 49.9,
   },
 ] as const;
 
@@ -276,6 +308,23 @@ export const seedE2eDatabase = async (url: string) => {
       source: "e2e",
     })),
   );
+
+  const [planner] = await db
+    .insert(schema.users)
+    .values({
+      name: E2E_PLANNER_NAME,
+      nameKey: toNameKey(E2E_PLANNER_NAME),
+    })
+    .returning();
+
+  await db.insert(schema.nutritionTargets).values({
+    userId: planner.id,
+    effectiveFrom: "2020-01-01",
+    protein: 160,
+    carbs: 235,
+    fat: 55,
+    source: "manual",
+  });
 
   client.close();
 };

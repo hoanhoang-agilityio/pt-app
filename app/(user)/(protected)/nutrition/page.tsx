@@ -7,6 +7,7 @@ import { TIME_ZONE } from "@/constants/time";
 import { LogoutButton } from "@/features/auth/components/LogoutButton";
 import { RememberUser } from "@/features/auth/components/RememberUser";
 import { FoodLibraryLink } from "@/features/foods/components/FoodLibraryLink";
+import { MealPreferencesForm } from "@/features/meal-plans/components/MealPreferencesForm";
 import { BodyProfileCard } from "@/features/nutrition/components/BodyProfileCard";
 import { NutritionWeek } from "@/features/nutrition/components/NutritionWeek";
 import { getBodyProfile } from "@/features/nutrition/services/body-profile-queries";
@@ -63,6 +64,10 @@ const NutritionPage = async ({ searchParams }: PageProps<"/nutrition">) => {
           isEditable
         />
         {bodyProfile && profileCard}
+        <MealPreferencesForm
+          preferredMealCount={user.preferredMealCount}
+          foodNote={user.foodNote}
+        />
         <FoodLibraryLink />
       </main>
     </>

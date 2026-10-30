@@ -12,7 +12,7 @@ import {
 } from "@/db/schema";
 import { listFoods } from "@/features/foods/services/food-queries";
 import type { PlanDay, PlanFood } from "@/features/meal-plans/types/meal-plan";
-import { getWeekDates } from "@/utils/week";
+import { addDays, getWeekDates } from "@/utils/week";
 
 // Archived foods are NOT filtered out: a plan keeps showing what it was built
 // with (KAN-65: "Xóa" archives).
@@ -152,4 +152,26 @@ export const countPlanDays = async (userId: number, weekStart: string) => {
     );
 
   return rows.length;
+};
+
+// Dates that have a plan from `weekStart` on, for `weeks` weeks (the copy
+// sheet marks them "sẽ ghi đè").
+export const listPlanDates = async (
+  userId: number,
+  weekStart: string,
+  weeks = 2,
+) => {
+  const from = weekStart;
+  const to = addDays(weekStart, weeks * 7 - 1);
+  const rows = await db
+    .select({ date: mealPlanDays.date })
+    .from(mealPlanDays)
+    .where(
+      and(
+        eq(mealPlanDays.userId, userId),
+        between(mealPlanDays.date, from, to),
+      ),
+    );
+
+  return rows.map((row) => row.date);
 };

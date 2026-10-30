@@ -6,6 +6,13 @@ import { MemberSectionTabs } from "@/components/layout/MemberSectionTabs";
 import { ROUTES } from "@/constants/routes";
 import { PAGE_CONTAINER } from "@/constants/styles";
 import { TIME_ZONE } from "@/constants/time";
+import { MealPlanDay } from "@/features/meal-plans/components/MealPlanDay";
+import {
+  countPlanDays,
+  getMealPlanWeek,
+  listPlanDates,
+  listPlanFoods,
+} from "@/features/meal-plans/services/meal-plan-queries";
 import { BodyProfileCard } from "@/features/nutrition/components/BodyProfileCard";
 import { NutritionTargetCard } from "@/features/nutrition/components/NutritionTargetCard";
 import { NutritionWeek } from "@/features/nutrition/components/NutritionWeek";
@@ -18,7 +25,12 @@ import { requireAdmin } from "@/services/auth-guard";
 import { findUserById } from "@/services/users";
 import { getAdminNutritionPath } from "@/utils/routes";
 import { readSearchParam } from "@/utils/search-params";
-import { getTodayDate, resolveSchedule } from "@/utils/week";
+import {
+  addDays,
+  getTodayDate,
+  getWeekDates,
+  resolveSchedule,
+} from "@/utils/week";
 
 export const metadata: Metadata = { title: "Dinh dưỡng" };
 
@@ -41,11 +53,28 @@ const AdminNutritionPage = async ({
     { week: readSearchParam(query.week), day: readSearchParam(query.day) },
     today,
   );
-  const [days, latestTarget, bodyProfile] = await Promise.all([
+  const [
+    days,
+    latestTarget,
+    bodyProfile,
+    planDays,
+    library,
+    lastWeekCount,
+    planDates,
+  ] = await Promise.all([
     getNutritionWeek(user.id, schedule.weekStart),
     getLatestTarget(user.id),
     getBodyProfile(user.id),
+    getMealPlanWeek(user.id, schedule.weekStart),
+    listPlanFoods(),
+    countPlanDays(user.id, addDays(schedule.weekStart, -7)),
+    listPlanDates(user.id, schedule.weekStart),
   ]);
+  const selectedDay = days.find((day) => day.date === schedule.selectedDate);
+  const copyDates = [
+    ...getWeekDates(schedule.weekStart),
+    ...getWeekDates(addDays(schedule.weekStart, 7)),
+  ].filter((date) => date !== schedule.selectedDate);
 
   return (
     <>
@@ -77,7 +106,25 @@ const AdminNutritionPage = async ({
           selectedDate={schedule.selectedDate}
           today={today}
           isEditable={false}
-        />
+        >
+          <MealPlanDay
+            // A fresh tree per day: sheets and half-typed fields reset.
+            key={`${user.id}-${schedule.selectedDate}`}
+            userId={user.id}
+            date={schedule.selectedDate}
+            weekStart={schedule.weekStart}
+            plan={
+              planDays.find((day) => day.date === schedule.selectedDate) ?? null
+            }
+            target={selectedDay?.target ?? null}
+            library={library}
+            preferredMealCount={user.preferredMealCount}
+            foodNote={user.foodNote}
+            lastWeekPlanCount={lastWeekCount}
+            copyDates={copyDates}
+            datesWithPlan={planDates}
+          />
+        </NutritionWeek>
       </main>
     </>
   );

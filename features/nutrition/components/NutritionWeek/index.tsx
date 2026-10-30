@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { WeekDayTabs } from "@/components/common/WeekDayTabs";
 import { WeekNavigator } from "@/components/common/WeekNavigator";
 import { NutritionDayView } from "@/features/nutrition/components/NutritionDayView";
@@ -11,6 +13,8 @@ interface NutritionWeekProps {
   selectedDate: string;
   today: string;
   isEditable: boolean;
+  // Shown between the day tabs and the day (the PT's meal plan).
+  children?: ReactNode;
 }
 
 const getMarker = (day: NutritionDay) => {
@@ -27,6 +31,7 @@ export const NutritionWeek = ({
   selectedDate,
   today,
   isEditable,
+  children,
 }: NutritionWeekProps) => {
   const selectedDay = days.find((day) => day.date === selectedDate) ?? days[0];
 
@@ -51,6 +56,7 @@ export const NutritionWeek = ({
           }))}
         />
       </div>
+      {children}
       <NutritionDayView
         day={selectedDay}
         today={today}

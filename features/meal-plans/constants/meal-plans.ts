@@ -63,3 +63,16 @@ export const MEAL_PLAN_MESSAGES = {
   NO_TARGET_DAYS: "Chọn ít nhất một ngày",
   PREFERENCES_SAVED: "Đã lưu yêu cầu của bạn",
 } as const;
+
+export const MACRO_GAP_LABELS = {
+  protein: "protein",
+  carbs: "carb",
+  fat: "fat",
+} as const;
+
+export const COMPARED_METRIC_LABELS = {
+  kcal: { name: "Calo", unit: "kcal" },
+  protein: { name: "Protein", unit: "g" },
+  carbs: { name: "Carb", unit: "g" },
+  fat: { name: "Fat", unit: "g" },
+} as const;

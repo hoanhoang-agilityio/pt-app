@@ -23,6 +23,8 @@ export const getBodyProfile = async (
         weightKg: row.weightKg,
         activityLevel: row.activityLevel,
         goal: row.goal,
+        kcalAdjustment: row.kcalAdjustment,
+        proteinPerKg: row.proteinPerKg,
       }
     : null;
 };

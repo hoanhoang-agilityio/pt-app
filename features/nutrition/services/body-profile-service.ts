@@ -10,6 +10,7 @@ import type { BodyProfile } from "@/features/nutrition/types/nutrition";
 import {
   calculateEnergyPlan,
   getBirthYear,
+  getGoalFromAdjustment,
 } from "@/features/nutrition/utils/energy";
 import {
   getRecentWeekStarts,
@@ -17,7 +18,16 @@ import {
 } from "@/features/nutrition/utils/weight";
 import { addDays } from "@/utils/week";
 
-type Measurements = Omit<BodyProfile, "birthYear"> & { age: number };
+type Body = Omit<
+  BodyProfile,
+  "birthYear" | "goal" | "kcalAdjustment" | "proteinPerKg"
+> & { age: number };
+
+// The admin sets the energy model (goal follows the kcal sign); a user's save
+// leaves the stored energy model alone and only carries the legacy goal.
+export type ProfileInput =
+  | (Body & { kcalAdjustment: number; proteinPerKg: number })
+  | (Body & { goal: BodyProfile["goal"] });
 
 // "always": the admin asked for it; "unless-manual": a user edit or weigh-in,
 // which must not replace a target the admin typed by hand.
@@ -67,22 +77,47 @@ const upsertWeightLog = (userId: number, date: string, weightKg: number) =>
       set: { weightKg },
     });
 
+// A user's save keeps the PT's stored energy model (null until the PT sets it).
+const keepStoredEnergy = async (userId: number, goal: BodyProfile["goal"]) => {
+  const existing = await getBodyProfile(userId);
+
+  return {
+    kcalAdjustment: existing?.kcalAdjustment ?? null,
+    proteinPerKg: existing?.proteinPerKg ?? null,
+    goal,
+  };
+};
+
 // Saves the profile (and today's weigh-in) and maybe today's target; returns
 // whether the target was recomputed.
 export const saveBodyProfile = async (
   userId: number,
-  { age, ...measurements }: Measurements,
+  { age, ...input }: ProfileInput,
   targetUpdate: TargetUpdate,
   today: string,
 ) => {
-  const profile = { ...measurements, birthYear: getBirthYear(age, today) };
+  const birthYear = getBirthYear(age, today);
+  const energy =
+    "kcalAdjustment" in input
+      ? {
+          kcalAdjustment: input.kcalAdjustment,
+          proteinPerKg: input.proteinPerKg,
+          goal: getGoalFromAdjustment(input.kcalAdjustment),
+        }
+      : await keepStoredEnergy(userId, input.goal);
+  const profile = { ...input, ...energy, birthYear };
 
   await db
     .insert(bodyProfiles)
     .values({ userId, ...profile })
     .onConflictDoUpdate({
       target: bodyProfiles.userId,
-      set: { ...profile, updatedAt: new Date() },
+      // The stored goal column stays as it was once the energy model is set.
+      set: {
+        ...profile,
+        goal: energy.kcalAdjustment === null ? energy.goal : undefined,
+        updatedAt: new Date(),
+      },
     });
   await upsertWeightLog(userId, today, profile.weightKg);
 

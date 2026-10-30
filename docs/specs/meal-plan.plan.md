@@ -1,6 +1,6 @@
 # Plan: Meal plan builder
 
-Status: draft, waiting for Hoan's approval. No code before the plan is approved.
+Status: approved by Hoan on 2026-10-30, split into three stories: KAN-70 (energy model), KAN-69 (meal plan builder), KAN-71 (trainee meal log).
 
 ## Source
 
@@ -15,11 +15,11 @@ The decisions touch three areas. One PR for all of them would be about 3x the si
 
 | Order | Story                      | What ships                                                                                                               |
 | ----- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| 1     | Energy model (new KAN)     | C1, C2, C3, C7: Henry & Rees BMR, PT-set kcal adjustment, protein g/kg by sex, one on-target rule                        |
+| 1     | Energy model (KAN-70)      | C1, C2, C3, C7: Henry & Rees BMR, PT-set kcal adjustment, protein g/kg by sex, one on-target rule                        |
 | 2     | Meal plan builder (KAN-69) | Q1-Q6, R1, R2, R5, S2, S5: per-day plans in the admin Dinh dưỡng tab, auto grams, copy days / last week, trainee request |
-| 3     | Trainee meal log (new KAN) | R6, S4, C4, C5, S3: trainee sees the plan, logs what was eaten from the library, marks meals; weekly kcal notice         |
+| 3     | Trainee meal log (KAN-71)  | R6, S4, C4, C5, S3: trainee sees the plan, logs what was eaten from the library, marks meals; weekly kcal notice         |
 
-## Story 1: Energy model
+## Story 1: Energy model (KAN-70)
 
 Files
 
@@ -31,7 +31,7 @@ Files
 
 Risks
 
-- Henry & Rees coefficients come from the original paper (Eur J Clin Nutr 1991;45:177-185), which the cloud session cannot open. Before coding, Hoan or a device session checks the table; unit tests pin every band.
+- Henry & Rees (1991) coefficients, BMR in MJ/day (× 239 = kcal), W in kg, confirmed in a secondary source (Malaysian BMR validation paper, ResearchGate 225300932) because the original paper is not reachable from the cloud: men 18-30 `0.056W + 2.800`, 30-60 `0.046W + 3.160`; women 18-30 `0.048W + 2.562`, 30-60 `0.048W + 2.448`. The paper has no bands below 18 or above 60, so those ages keep Mifflin-St Jeor. Unit tests pin every band.
 - Existing members' numbers change once the PT re-saves a profile (about 7 % lower BMR). The PT sees the new target before it applies.
 
 ## Story 2: Meal plan builder (KAN-69)
@@ -58,7 +58,7 @@ UI (admin Dinh dưỡng tab, S5)
 - "Sao chép sang ngày khác" to copy a day to chosen days.
 - Trainee request fields on the trainee Dinh dưỡng page (Q1).
 
-## Story 3: Trainee meal log
+## Story 3: Trainee meal log (KAN-71)
 
 - Trainee Dinh dưỡng page shows today's plan per meal, read-only (Q7).
 - Per meal: "Đạt", or log what was eaten: search the library + amount, or a free name with optional macros; add, edit, remove (C5). New table `meal_logs` (`user_id`, `meal_id`, `food_id` nullable, `custom_name` nullable, `grams`, macros nullable) and `meal_marks` (`meal_id`, `achieved`, `note`).

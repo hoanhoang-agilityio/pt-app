@@ -90,9 +90,9 @@ export const getLatestTarget = async (userId: number) => {
   return row ? toTarget(row) : null;
 };
 
-// The target that applies on `date`: the latest one that started on or before
-// it. The week view and the meal plan solver both use this rule.
-export const getTargetForDate = async (userId: number, date: string) => {
+// Every target that started on or before `date`, oldest first. Resolve a day
+// with findTargetForDate; the week view and the meal plan share this rule.
+export const listTargetsUpTo = async (userId: number, date: string) => {
   const rows = await db
     .select()
     .from(nutritionTargets)
@@ -104,5 +104,10 @@ export const getTargetForDate = async (userId: number, date: string) => {
     )
     .orderBy(asc(nutritionTargets.effectiveFrom));
 
-  return findTargetForDate(rows.map(toTarget), date);
+  return rows.map(toTarget);
 };
+
+// The target that applies on `date`: the latest one that started on or before
+// it.
+export const getTargetForDate = async (userId: number, date: string) =>
+  findTargetForDate(await listTargetsUpTo(userId, date), date);

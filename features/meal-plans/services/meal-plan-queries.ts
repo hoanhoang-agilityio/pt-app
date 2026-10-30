@@ -12,8 +12,13 @@ import {
   getPlanKcalNotices,
   type PlanKcalNotice,
 } from "@/features/meal-plans/utils/plan-notice";
-import { kcalOf, sumMacros } from "@/features/meal-plans/utils/plan-totals";
-import { getTargetForDate } from "@/features/nutrition/services/nutrition-queries";
+import {
+  kcalOf,
+  macrosOf,
+  sumMacros,
+} from "@/features/meal-plans/utils/plan-totals";
+import { listTargetsUpTo } from "@/features/nutrition/services/nutrition-queries";
+import { findTargetForDate } from "@/features/nutrition/utils/nutrition";
 import { addDays, getWeekDates } from "@/utils/week";
 
 // Archived foods are NOT filtered out: a plan keeps showing what it was built
@@ -161,25 +166,27 @@ export const getPlanKcalNoticesFrom = async (
         dayRows.map((day) => day.id),
       ),
     );
-  const targets = await Promise.all(
-    dayRows.map((day) => getTargetForDate(userId, day.date)),
+  // The user's targets once; each date is resolved in memory.
+  const targets = await listTargetsUpTo(
+    userId,
+    dayRows[dayRows.length - 1].date,
   );
 
   return getPlanKcalNotices(
-    dayRows.map((day, index) => ({
-      date: day.date,
-      plannedKcal: kcalOf(
-        sumMacros(
-          rows
-            .filter((row) => row.dayId === day.id)
-            .map((row) => ({
-              carbs: (row.carbs * row.grams) / 100,
-              protein: (row.protein * row.grams) / 100,
-              fat: (row.fat * row.grams) / 100,
-            })),
+    dayRows.map((day) => {
+      const target = findTargetForDate(targets, day.date);
+
+      return {
+        date: day.date,
+        plannedKcal: kcalOf(
+          sumMacros(
+            rows
+              .filter((row) => row.dayId === day.id)
+              .map((row) => macrosOf(row, row.grams)),
+          ),
         ),
-      ),
-      targetKcal: targets[index] ? kcalOf(targets[index]) : null,
-    })),
+        targetKcal: target ? kcalOf(target) : null,
+      };
+    }),
   );
 };

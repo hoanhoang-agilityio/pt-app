@@ -13,11 +13,13 @@ import {
   exercises,
   exerciseSets,
   foodEntries,
+  mealPlanDays,
   nutritionTargets,
   users,
   weightLogs,
   workoutDays,
 } from "@/db/schema";
+import { deleteDays } from "@/features/meal-plans/services/meal-plan-store";
 import {
   MEMBER_MESSAGES,
   MEMBER_NAME_MAX_LENGTH,
@@ -81,6 +83,10 @@ export const deleteMemberAction = withResultErrorHandling(
       .from(workoutDays)
       .where(eq(workoutDays.userId, id));
     const dayIds = days.map((day) => day.id);
+    const planDays = await db
+      .select({ id: mealPlanDays.id })
+      .from(mealPlanDays)
+      .where(eq(mealPlanDays.userId, id));
 
     await db.transaction(async (tx) => {
       // Children first: foreign keys are not enforced (D10).
@@ -92,6 +98,10 @@ export const deleteMemberAction = withResultErrorHandling(
       await tx.delete(nutritionTargets).where(eq(nutritionTargets.userId, id));
       await tx.delete(bodyProfiles).where(eq(bodyProfiles.userId, id));
       await tx.delete(weightLogs).where(eq(weightLogs.userId, id));
+      await deleteDays(
+        planDays.map((day) => day.id),
+        tx,
+      );
 
       if (dayIds.length) {
         await tx.delete(exercises).where(inArray(exercises.dayId, dayIds));

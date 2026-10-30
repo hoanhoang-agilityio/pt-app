@@ -4,8 +4,10 @@ import { expect, type Page, test } from "@playwright/test";
 import { TIME_ZONE } from "@/constants/time";
 import {
   addDays,
+  formatDayMonth,
   formatFullDay,
   getTodayDate,
+  getWeekdayShortLabel,
   getWeekStart,
 } from "@/utils/week";
 
@@ -43,6 +45,26 @@ const getPlannerId = async () => {
   );
 
   return Number(row.id);
+};
+
+// Screenshots for the browser proof; only when E2E_SHOTS_DIR is set.
+const shot = async (page: Page, name: string) => {
+  if (process.env.E2E_SHOTS_DIR) {
+    await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/${name}.png` });
+  }
+};
+
+const getRiceGrams = async (date: string) => {
+  const [row] = await query<{ grams: number }>(
+    `SELECT i.grams FROM meal_plan_items i
+     JOIN meal_plan_meals m ON m.id = i.meal_id
+     JOIN meal_plan_days d ON d.id = m.day_id
+     JOIN foods f ON f.id = i.food_id
+     WHERE d.date = ? AND f.name = ?`,
+    [date, E2E_FOODS.RICE],
+  );
+
+  return Number(row.grams);
 };
 
 const logInAsAdmin = async (page: Page) => {
@@ -334,12 +356,30 @@ test("Copy: Monday is copied to Tuesday and the copy is independent", async ({
   await openDay(page, MONDAY);
   await expect(grams(page, E2E_FOODS.RICE)).toHaveValue("755");
 
-  // Copying again to Tuesday warns that it replaces and restores 755 g.
+  // Copying again to Tuesday warns that it replaces (KAN-78).
   await page.getByRole("button", { name: "Sao chép sang ngày khác" }).click();
   await expect(page.getByText("Đã có plan, sẽ ghi đè")).toHaveCount(1);
   await page.getByRole("dialog").getByLabel(formatFullDay(TUESDAY)).check();
   await page.getByRole("button", { name: "Sao chép (1 ngày)" }).click();
+
+  const confirm = page.getByRole("alertdialog", { name: "Xác nhận ghi đè" });
+
+  await expect(confirm).toContainText(
+    `Ghi đè plan của ${getWeekdayShortLabel(TUESDAY)} ${formatDayMonth(TUESDAY)}?`,
+  );
+  await shot(page, "kan-78-overwrite-confirm");
+
+  // "Hủy" leaves Tuesday as it was: rice still 600 g, no copy happened.
+  await confirm.getByRole("button", { name: "Hủy" }).click();
+  await expect(confirm).toHaveCount(0);
+  await expect(page.getByText("Đã sao chép sang 1 ngày")).toHaveCount(0);
+  expect(await getRiceGrams(TUESDAY)).toBe(600);
+
+  // "Ghi đè" replaces it and restores 755 g.
+  await page.getByRole("button", { name: "Sao chép (1 ngày)" }).click();
+  await confirm.getByRole("button", { name: "Ghi đè" }).click();
   await expect(page.getByText("Đã sao chép sang 1 ngày")).toBeVisible();
+  expect(await getRiceGrams(TUESDAY)).toBe(755);
   await openDay(page, TUESDAY);
   await expect(grams(page, E2E_FOODS.RICE)).toHaveValue("755");
 });

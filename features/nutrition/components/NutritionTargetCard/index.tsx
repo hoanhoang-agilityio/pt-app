@@ -15,10 +15,10 @@ import {
 } from "@/features/nutrition/constants/nutrition";
 import type { NutritionTarget } from "@/features/nutrition/types/nutrition";
 import {
-  calculateCalories,
   describeFoodEquivalent,
   formatCalories,
 } from "@/features/nutrition/utils/energy";
+import { calculateCalories } from "@/features/nutrition/utils/nutrition";
 import { formatDayMonth } from "@/utils/week";
 
 interface NutritionTargetCardProps {

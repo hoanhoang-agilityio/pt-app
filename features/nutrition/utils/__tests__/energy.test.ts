@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { GOALS } from "@/features/nutrition/constants/energy";
 import type { BodyProfile } from "@/features/nutrition/types/nutrition";
 import {
   calculateBmr,
-  calculateCalories,
   calculateEnergyPlan,
   describeFoodEquivalent,
   formatCalories,
@@ -12,8 +12,10 @@ import {
   getBirthYear,
   getGoal,
   getGoalFromAdjustment,
+  getLegacyKcalAdjustment,
   toBodyProfile,
 } from "@/features/nutrition/utils/energy";
+import { calculateCalories } from "@/features/nutrition/utils/nutrition";
 
 const TODAY = "2026-10-05";
 
@@ -146,6 +148,93 @@ describe("energy model (kcal adjustment + protein per kg)", () => {
   });
 });
 
+describe("BMR floor", () => {
+  // 10·45 + 6.25·150 − 5·60 − 161 = 926.5 kcal; × 1.2 = 1111.8 TDEE.
+  const SMALL: BodyProfile = {
+    sex: "female",
+    birthYear: 1966,
+    heightCm: 150,
+    weightKg: 45,
+    activityLevel: "sedentary",
+    goal: "maintain",
+    kcalAdjustment: -1000,
+    proteinPerKg: 1.6,
+  };
+
+  it("raises a target below the BMR to the BMR and flags it", () => {
+    const plan = calculateEnergyPlan(SMALL, TODAY);
+
+    // 1111.8 − 1000 = 111.8 → floored to 926.5 → 930.
+    expect(plan).toMatchObject({
+      age: 60,
+      bmr: 930,
+      tdee: 1110,
+      targetCalories: 930,
+      isFlooredToBmr: true,
+    });
+    // Protein 72 → 70 g; fat 926.5 × 25% / 9 = 25.7 → 25 g;
+    // carbs (926.5 − 280 − 225) / 4 = 105.4 → 105 g.
+    expect(plan.macros).toEqual({ carbs: 105, protein: 70, fat: 25 });
+  });
+
+  it("does not flag a target at or above the BMR", () => {
+    // 1111.8 − 185 = 926.8 ≥ 926.5.
+    expect(
+      calculateEnergyPlan({ ...SMALL, kcalAdjustment: -185 }, TODAY),
+    ).toMatchObject({ isFlooredToBmr: false, targetCalories: 930 });
+    expect(
+      calculateEnergyPlan({ ...SMALL, kcalAdjustment: -186 }, TODAY)
+        .isFlooredToBmr,
+    ).toBe(true);
+  });
+
+  it("never returns negative fat or carbs", () => {
+    const heavyProtein = calculateEnergyPlan(
+      { ...SMALL, proteinPerKg: 3 },
+      TODAY,
+    );
+
+    expect(heavyProtein.macros.fat).toBeGreaterThanOrEqual(0);
+    expect(heavyProtein.macros.carbs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("leaves legacy profiles (null adjustment) unfloored", () => {
+    const plan = calculateEnergyPlan(
+      { ...SMALL, kcalAdjustment: null, goal: "cut" },
+      TODAY,
+    );
+
+    // 1111.8 × 0.8 = 889.4 < BMR, kept as before.
+    expect(plan).toMatchObject({ targetCalories: 890, isFlooredToBmr: false });
+  });
+});
+
+describe("legacy profile prefill", () => {
+  it.each(["cut", "maintain", "bulk"] as const)(
+    "saving a legacy %s profile untouched keeps its macros",
+    (goal) => {
+      const legacy = { ...MALE, goal, weightKg: 73.3, heightCm: 171 };
+      const migrated = {
+        ...legacy,
+        kcalAdjustment: getLegacyKcalAdjustment(legacy, TODAY),
+        proteinPerKg: GOALS[goal].proteinPerKg,
+      };
+
+      expect(calculateEnergyPlan(migrated, TODAY)).toEqual(
+        calculateEnergyPlan(legacy, TODAY),
+      );
+    },
+  );
+
+  it("computes the gap from unrounded values", () => {
+    // BMR 1698.75 × 1.55 = 2633.06; × (0.8 − 1) = −526.6 → −527.
+    expect(getLegacyKcalAdjustment({ ...MALE, goal: "cut" }, TODAY)).toBe(-527);
+    expect(getLegacyKcalAdjustment(MALE, TODAY)).toBe(0);
+    // × 0.1 = +263.3 → 263.
+    expect(getLegacyKcalAdjustment({ ...MALE, goal: "bulk" }, TODAY)).toBe(263);
+  });
+});
+
 describe("formatting", () => {
   it("describes food equivalents and calories", () => {
     expect(describeFoodEquivalent("carbs", 280)).toBe("≈ 10 lạng cơm chín");
@@ -193,10 +282,10 @@ describe("toBodyProfile", () => {
       toBodyProfile({ ...draft, proteinPerKg }, TODAY)?.proteinPerKg;
 
     expect(adjust("+300")).toBe(300);
-    expect(adjust("−1000")).toBe(-1000);
-    expect(adjust("1000")).toBe(1000);
-    expect(adjust("1001")).toBeUndefined();
-    expect(adjust("-1001")).toBeUndefined();
+    expect(adjust("−1500")).toBe(-1500);
+    expect(adjust("1500")).toBe(1500);
+    expect(adjust("1501")).toBeUndefined();
+    expect(adjust("-1501")).toBeUndefined();
     expect(adjust("-200,5")).toBeUndefined();
     expect(protein("1")).toBe(1);
     expect(protein("3")).toBe(3);

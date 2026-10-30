@@ -8,7 +8,10 @@ import {
 } from "react";
 
 import { INITIAL_FORM_STATE } from "@/constants/form";
-import { PROTEIN_PER_KG_DEFAULT } from "@/features/nutrition/constants/energy";
+import {
+  GOALS,
+  PROTEIN_PER_KG_DEFAULT,
+} from "@/features/nutrition/constants/energy";
 import {
   saveBodyProfileAction,
   saveMyBodyProfileAction,
@@ -22,6 +25,7 @@ import {
   calculateEnergyPlan,
   formatDecimal,
   getAge,
+  getLegacyKcalAdjustment,
   toBodyProfile,
 } from "@/features/nutrition/utils/energy";
 import { useFormFeedback } from "@/hooks/use-form-feedback";
@@ -33,20 +37,27 @@ interface UseBodyProfileFormOptions {
   onSaved: () => void;
 }
 
-// The PT sees the energy model filled in: what is stored, else the protein
-// default by sex and the kcal gap the member's old goal gave. A member's own
-// form leaves the PT-only fields as stored (empty = not set).
+// The PT sees the energy model filled in: what is stored, else for a legacy
+// profile the values its old goal gave (so saving untouched keeps the target),
+// else for a new profile the protein default by sex. A member's own form
+// leaves the PT-only fields as stored (empty = not set).
 const toDraft = (
   editor: BodyProfileEditor,
   profile: BodyProfile | null,
   today: string,
 ): BodyProfileDraft => {
   const sex = profile?.sex ?? "male";
-  const legacyPlan = profile ? calculateEnergyPlan(profile, today) : null;
-  const legacyAdjustment = legacyPlan
-    ? legacyPlan.targetCalories - legacyPlan.tdee
-    : 0;
   const isAdmin = editor === "admin";
+  const kcalAdjustment =
+    profile?.kcalAdjustment ??
+    (isAdmin ? (profile ? getLegacyKcalAdjustment(profile, today) : 0) : null);
+  const proteinPerKg =
+    profile?.proteinPerKg ??
+    (isAdmin
+      ? profile
+        ? GOALS[profile.goal].proteinPerKg
+        : PROTEIN_PER_KG_DEFAULT[sex]
+      : null);
 
   return {
     sex,
@@ -55,18 +66,8 @@ const toDraft = (
     weightKg: profile ? formatDecimal(profile.weightKg) : "",
     activityLevel: profile?.activityLevel ?? "moderate",
     goal: profile?.goal ?? "maintain",
-    kcalAdjustment:
-      profile?.kcalAdjustment != null
-        ? String(profile.kcalAdjustment)
-        : isAdmin
-          ? String(legacyAdjustment)
-          : "",
-    proteinPerKg:
-      profile?.proteinPerKg != null
-        ? formatDecimal(profile.proteinPerKg)
-        : isAdmin
-          ? formatDecimal(PROTEIN_PER_KG_DEFAULT[sex])
-          : "",
+    kcalAdjustment: kcalAdjustment === null ? "" : String(kcalAdjustment),
+    proteinPerKg: proteinPerKg === null ? "" : formatDecimal(proteinPerKg),
   };
 };
 
@@ -92,10 +93,11 @@ export const useBodyProfileForm = ({
     setDraft((previous) => {
       const next = { ...previous, [key]: value };
 
-      // An untouched protein default follows the sex.
+      // On a new profile an untouched protein default follows the sex.
       if (
         key === "sex" &&
         editor === "admin" &&
+        !profile &&
         previous.proteinPerKg ===
           formatDecimal(PROTEIN_PER_KG_DEFAULT[previous.sex])
       ) {

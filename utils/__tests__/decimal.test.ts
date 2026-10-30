@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDecimal, parseSignedDecimal } from "@/utils/decimal";
+import {
+  isOneDecimal,
+  parseDecimal,
+  parseSignedDecimal,
+} from "@/utils/decimal";
 
 describe("parseDecimal", () => {
   it("reads plain decimals with a point or a comma", () => {
@@ -42,6 +46,17 @@ describe("parseSignedDecimal", () => {
   it("gives NaN for anything else", () => {
     for (const text of ["", "-", "+-1", "--1", "1-", "-1e2", "abc"]) {
       expect(parseSignedDecimal(text)).toBeNaN();
+    }
+  });
+});
+
+describe("isOneDecimal", () => {
+  it("accepts at most one decimal", () => {
+    for (const value of [2, 1.6, 0.1, 2.9, 1.1]) {
+      expect(isOneDecimal(value)).toBe(true);
+    }
+    for (const value of [1.65, 2.05, 0.01]) {
+      expect(isOneDecimal(value)).toBe(false);
     }
   });
 });

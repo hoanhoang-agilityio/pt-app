@@ -23,3 +23,7 @@ export const parseSignedDecimal = (value: string) => {
   // 0 - x so that "-0" is 0, not -0.
   return isNegative ? 0 - magnitude : magnitude;
 };
+
+// True when the number has at most one decimal (1.6, 2), tolerating float noise.
+export const isOneDecimal = (value: number) =>
+  Math.abs(value * 10 - Math.round(value * 10)) < 1e-9;

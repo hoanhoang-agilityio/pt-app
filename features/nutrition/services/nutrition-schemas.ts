@@ -6,7 +6,11 @@ import {
   PROTEIN_PER_KG_LIMITS,
 } from "@/features/nutrition/constants/energy";
 import { NUTRITION_LIMITS } from "@/features/nutrition/constants/nutrition";
-import { parseDecimal, parseSignedDecimal } from "@/utils/decimal";
+import {
+  isOneDecimal,
+  parseDecimal,
+  parseSignedDecimal,
+} from "@/utils/decimal";
 import { isValidDate } from "@/utils/week";
 
 const gramsField = z
@@ -131,7 +135,7 @@ export const bodyProfileSchema = measurementsSchema.extend({
     "Đạm",
     PROTEIN_PER_KG_LIMITS.min,
     PROTEIN_PER_KG_LIMITS.max,
-  ),
+  ).refine(isOneDecimal, "Đạm chỉ nhận 1 chữ số thập phân (ví dụ 1,6)"),
   // Checkbox: present ("on") when ticked.
   applyToTarget: z
     .string()

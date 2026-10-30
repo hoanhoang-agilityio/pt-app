@@ -67,7 +67,7 @@ describe("saveBodyProfile", () => {
     });
   });
 
-  it("leaves the goal column alone once the energy model is set", async () => {
+  it("writes the goal derived from the adjustment sign on insert and update", async () => {
     await saveBodyProfile(
       1,
       { ...BODY, kcalAdjustment: -200, proteinPerKg: 2 },
@@ -83,7 +83,7 @@ describe("saveBodyProfile", () => {
 
     expect(await readProfile()).toMatchObject({
       kcalAdjustment: 300,
-      goal: "cut",
+      goal: "bulk",
     });
   });
 
@@ -99,7 +99,7 @@ describe("saveBodyProfile", () => {
     expect(await readTarget()).toMatchObject({ protein: 165 });
   });
 
-  it("a member's own save keeps the PT's energy model", async () => {
+  it("a member's own save never touches kcal_adjustment, protein_per_kg or the goal once set", async () => {
     await saveBodyProfile(
       1,
       { ...BODY, kcalAdjustment: -200, proteinPerKg: 2 },
@@ -117,6 +117,7 @@ describe("saveBodyProfile", () => {
       weightKg: 80,
       kcalAdjustment: -200,
       proteinPerKg: 2,
+      goal: "cut",
     });
     // Protein follows the new weight: 80 × 2.
     expect(await readTarget()).toMatchObject({ protein: 160 });

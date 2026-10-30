@@ -60,7 +60,7 @@ export const PROTEIN_PER_KG_DEFAULT: Record<Sex, number> = {
 export const PROTEIN_PER_KG_LIMITS = { min: 1, max: 3 } as const;
 
 // Daily kcal added to (positive) or taken from (negative) the TDEE.
-export const KCAL_ADJUSTMENT_LIMITS = { min: -1000, max: 1000 } as const;
+export const KCAL_ADJUSTMENT_LIMITS = { min: -1500, max: 1500 } as const;
 
 // One rule for "on target", in grams except kcalDiff (kcal): kcal within
 // ±kcalDiff of the target's kcal, protein no more than proteinUnder below

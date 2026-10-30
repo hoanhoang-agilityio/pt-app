@@ -37,14 +37,14 @@ describe("bodyProfileSchema", () => {
   });
 
   it("accepts the bounds and rejects outside them", () => {
-    expect(errorsFor({ kcalAdjustment: "1000" })).toBeNull();
-    expect(errorsFor({ kcalAdjustment: "-1000" })).toBeNull();
+    expect(errorsFor({ kcalAdjustment: "1500" })).toBeNull();
+    expect(errorsFor({ kcalAdjustment: "-1500" })).toBeNull();
     expect(errorsFor({ proteinPerKg: "1" })).toBeNull();
     expect(errorsFor({ proteinPerKg: "3" })).toBeNull();
-    expect(errorsFor({ kcalAdjustment: "1001" })).toHaveProperty(
+    expect(errorsFor({ kcalAdjustment: "1501" })).toHaveProperty(
       "kcalAdjustment",
     );
-    expect(errorsFor({ kcalAdjustment: "-1001" })).toHaveProperty(
+    expect(errorsFor({ kcalAdjustment: "-1501" })).toHaveProperty(
       "kcalAdjustment",
     );
     expect(errorsFor({ proteinPerKg: "0,9" })).toHaveProperty("proteinPerKg");
@@ -61,6 +61,9 @@ describe("bodyProfileSchema", () => {
     );
     expect(errorsFor({ proteinPerKg: "" })).toHaveProperty("proteinPerKg");
     expect(errorsFor({ proteinPerKg: "1e0" })).toHaveProperty("proteinPerKg");
+    expect(errorsFor({ proteinPerKg: "1,65" })).toHaveProperty("proteinPerKg");
+    expect(errorsFor({ proteinPerKg: "2.05" })).toHaveProperty("proteinPerKg");
+    expect(errorsFor({ proteinPerKg: "2,0" })).toBeNull();
   });
 });
 

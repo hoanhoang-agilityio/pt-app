@@ -10,6 +10,7 @@ import {
   ACTIVITY_LEVELS,
   GOAL_ORDER,
   GOALS,
+  PROTEIN_PER_KG_DEFAULT,
   SEX_LABELS,
 } from "@/features/nutrition/constants/energy";
 import type {
@@ -69,7 +70,7 @@ const ENERGY_FIELDS = [
     unit: "kcal",
     placeholder: "-200",
     inputMode: "text",
-    hint: "Âm = giảm, 0 = giữ, dương = tăng (-1000 đến 1000)",
+    hint: "Âm = giảm, 0 = giữ, dương = tăng (-1500 đến 1500)",
   },
   {
     key: "proteinPerKg",
@@ -77,7 +78,7 @@ const ENERGY_FIELDS = [
     unit: "g/kg",
     placeholder: "2",
     inputMode: "decimal",
-    hint: "Nam 2, nữ 1,6 (1 đến 3)",
+    hint: "",
   },
 ] as const;
 
@@ -214,7 +215,11 @@ export const BodyProfileFormView = ({
             {fieldErrors[field.key] ? (
               <p className={FIELD_ERROR}>{fieldErrors[field.key]}</p>
             ) : (
-              <p className="mt-1 text-xs text-muted">{field.hint}</p>
+              <p className="mt-1 text-xs text-muted">
+                {field.key === "proteinPerKg"
+                  ? `Mặc định mới: ${PROTEIN_PER_KG_DEFAULT[draft.sex].toFixed(1).replace(".", ",")} g/kg (1 đến 3)`
+                  : field.hint}
+              </p>
             )}
           </div>
         ))}

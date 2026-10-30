@@ -8,11 +8,9 @@ import {
   MACROS,
 } from "@/features/nutrition/constants/nutrition";
 import type { NutritionDay } from "@/features/nutrition/types/nutrition";
+import { formatCalories } from "@/features/nutrition/utils/energy";
 import {
   calculateCalories,
-  formatCalories,
-} from "@/features/nutrition/utils/energy";
-import {
   compareToTarget,
   summarizeNutritionWeek,
 } from "@/features/nutrition/utils/nutrition";

@@ -75,3 +75,4 @@ UI (admin Dinh dưỡng tab, S5)
 
 - Scope change (Hoan, 2026-10-30): Henry & Rees BMR dropped; BMR stays Mifflin-St Jeor for all ages (C7 rejected).
 
+- Code review fixes (KAN-70): (1) with a kcal adjustment set, the target never falls below the member's BMR; the plan carries `isFlooredToBmr` and the form preview and card warn "Mục tiêu không được thấp hơn BMR, đã dùng X kcal". Legacy (null) profiles are not floored so their numbers stay. (3) `KCAL_ADJUSTMENT_LIMITS` is -1500..+1500 (was -1000..+1000) so the legacy prefill always fits. (4) A legacy profile's protein field is prefilled with its old per-goal value (2.2 / 1.8 / 2.0 g/kg), with the hint "Mặc định mới: 2,0 g/kg"; the sex default (2.0 / 1.6) is only used for new profiles.

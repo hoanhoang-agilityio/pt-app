@@ -17,11 +17,12 @@ import type {
   Goal,
   Macro,
 } from "@/features/nutrition/types/nutrition";
+import { formatLang } from "@/features/nutrition/utils/nutrition";
 import {
-  calculateCalories,
-  formatLang,
-} from "@/features/nutrition/utils/nutrition";
-import { parseDecimal, parseSignedDecimal } from "@/utils/decimal";
+  isOneDecimal,
+  parseDecimal,
+  parseSignedDecimal,
+} from "@/utils/decimal";
 
 const roundTo = (value: number, step: number) =>
   Math.round(value / step) * step;
@@ -38,6 +39,15 @@ export const calculateBmr = (
   age: number,
 ) => 10 * weightKg + 6.25 * heightCm - 5 * age + BMR_SEX_OFFSET[sex];
 
+// The kcal gap the member's old goal gave, from unrounded values so that
+// saving a legacy profile unchanged keeps its target.
+export const getLegacyKcalAdjustment = (profile: BodyProfile, today: string) =>
+  Math.round(
+    calculateBmr(profile, getAge(profile.birthYear, today)) *
+      ACTIVITY_LEVELS[profile.activityLevel].factor *
+      (GOALS[profile.goal].calorieFactor - 1),
+  );
+
 // The goal follows the sign of the PT's kcal adjustment: below zero cuts, zero
 // maintains, above zero bulks. Null (not set yet) keeps the stored goal.
 export const getGoalFromAdjustment = (kcalAdjustment: number): Goal => {
@@ -49,8 +59,6 @@ export const getGoalFromAdjustment = (kcalAdjustment: number): Goal => {
 
 export const getGoal = ({ kcalAdjustment, goal }: BodyProfile): Goal =>
   kcalAdjustment === null ? goal : getGoalFromAdjustment(kcalAdjustment);
-
-export { calculateCalories };
 
 // BMR (Mifflin-St Jeor) × activity = TDEE; the target is TDEE + the PT's kcal
 // adjustment; protein is set per kg of body weight, fat to a share of
@@ -64,17 +72,25 @@ export const calculateEnergyPlan = (
   const bmr = calculateBmr(profile, age);
   const tdee = bmr * ACTIVITY_LEVELS[profile.activityLevel].factor;
   const legacy = GOALS[profile.goal];
-  const targetCalories =
+  // The PT's adjustment never takes the target below the BMR; the legacy goal
+  // factor is left as it was.
+  const wantedCalories =
     profile.kcalAdjustment === null
       ? tdee * legacy.calorieFactor
       : tdee + profile.kcalAdjustment;
+  const isFlooredToBmr =
+    profile.kcalAdjustment !== null && wantedCalories < bmr;
+  const targetCalories = isFlooredToBmr ? bmr : wantedCalories;
   const protein = roundTo(
     profile.weightKg * (profile.proteinPerKg ?? legacy.proteinPerKg),
     MACRO_ROUNDING_GRAMS,
   );
-  const fat = roundTo(
-    (targetCalories * FAT_CALORIE_SHARE) / KCAL_PER_GRAM.fat,
-    MACRO_ROUNDING_GRAMS,
+  const fat = Math.max(
+    0,
+    roundTo(
+      (targetCalories * FAT_CALORIE_SHARE) / KCAL_PER_GRAM.fat,
+      MACRO_ROUNDING_GRAMS,
+    ),
   );
   const remainingCalories =
     targetCalories - protein * KCAL_PER_GRAM.protein - fat * KCAL_PER_GRAM.fat;
@@ -88,6 +104,7 @@ export const calculateEnergyPlan = (
     bmr: roundTo(bmr, CALORIE_ROUNDING),
     tdee: roundTo(tdee, CALORIE_ROUNDING),
     targetCalories: roundTo(targetCalories, CALORIE_ROUNDING),
+    isFlooredToBmr,
     macros: { carbs, protein, fat },
   };
 };
@@ -141,7 +158,9 @@ export const toBodyProfile = (
     (kcalAdjustment === null ||
       (Number.isInteger(kcalAdjustment) &&
         isBetween(kcalAdjustment, KCAL_ADJUSTMENT_LIMITS))) &&
-    (proteinPerKg === null || isBetween(proteinPerKg, PROTEIN_PER_KG_LIMITS));
+    (proteinPerKg === null ||
+      (isOneDecimal(proteinPerKg) &&
+        isBetween(proteinPerKg, PROTEIN_PER_KG_LIMITS)));
 
   if (!isValid) {
     return null;

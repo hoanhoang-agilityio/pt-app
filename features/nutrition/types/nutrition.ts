@@ -75,6 +75,8 @@ export interface EnergyPlan {
   bmr: number;
   tdee: number;
   targetCalories: number;
+  // True when TDEE + adjustment fell below the BMR and the target was raised to it.
+  isFlooredToBmr: boolean;
   macros: MacroAmounts;
 }
 

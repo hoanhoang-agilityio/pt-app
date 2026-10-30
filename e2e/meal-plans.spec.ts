@@ -160,13 +160,19 @@ test("Q1: the trainee asks for 4 meals and a food note; both are kept", async ({
     })
     .toBeNull();
 
+  // The DB row is written before the client finishes the action, and React
+  // then resets the form to its saved values: reload so the next typing is
+  // never wiped by that reset (and the old toast is gone).
+  await page.reload();
+  await expect(page.getByLabel("Số bữa mong muốn")).toHaveValue("");
+  await expect(page.getByLabel("Món thích hoặc không ăn được")).toHaveValue("");
+
   // Back to 4 meals for the PT specs.
   await page.getByLabel("Số bữa mong muốn").selectOption("4");
   await page
     .getByLabel("Món thích hoặc không ăn được")
     .fill("Không ăn hải sản");
   await page.getByRole("button", { name: "Lưu yêu cầu" }).click();
-  await expect(page.getByText("Đã lưu yêu cầu của bạn")).toBeVisible();
   await expect
     .poll(async () => {
       const [row] = await query<{ preferred_meal_count: number | null }>(
@@ -177,6 +183,13 @@ test("Q1: the trainee asks for 4 meals and a food note; both are kept", async ({
       return Number(row.preferred_meal_count);
     })
     .toBe(4);
+
+  // What the later specs rely on survives the form's own reset.
+  await page.reload();
+  await expect(page.getByLabel("Số bữa mong muốn")).toHaveValue("4");
+  await expect(page.getByLabel("Món thích hoặc không ăn được")).toHaveValue(
+    "Không ăn hải sản",
+  );
 });
 
 test("S5: the PT builds Monday, auto solves the worked example and the day is on target", async ({

@@ -72,4 +72,13 @@ Tests
 
 ## Deviations
 
-None yet.
+Written while implementing (KAN-65).
+
+- **Seed values not checked against the FDC API.** The sandbox proxy blocks `api.nal.usda.gov` (HTTP 403 on CONNECT), so the plan's "checked against the FDC API when written" could not be done. The values are USDA SR Legacy figures per 100 g typed from memory of the published tables. `source` holds `USDA SR Legacy, FDC <id>` only for the 16 foods whose FDC id is well known; the rest carry `USDA SR Legacy: <English description>` instead of a guessed id. Before the PR merges, someone with network access should re-check the seed against FDC and fill in the missing ids (`features/foods/constants/seed-foods.ts`).
+- **Seed kcal gap.** 14 low-energy vegetables and fruits (broccoli, tomato, cucumber, spinach, lettuce, cabbage, mushroom, banana, apple, orange, mango, watermelon, papaya) sit more than 10 % from the 4/4/9 estimate because USDA's energy subtracts part of the fibre. They are kept as USDA lists them; the seed bypasses the form check, and `scripts/__tests__/seed-foods.test.ts` pins the exact list.
+- **kcal upper limit 910, not 900.** Lard is 902 kcal per 100 g in USDA data, so a limit of 900 would reject a real food.
+- **Group "Món chế biến" has no seed foods.** Q4 says Vietnamese dishes are added by the PT; the chip appears once a dish exists.
+- **Delete confirm is `window.confirm`, not a sheet.** Same pattern as deleting a member or an exercise, and the e2e specs already handle dialogs that way.
+- **Seed logic lives in `features/foods/services/seed-foods-service.ts`** (takes a database argument so the test can use an in-memory SQLite); `scripts/seed-foods.ts` and `setup-database.ts` call it. The test is still `scripts/__tests__/seed-foods.test.ts`.
+- **`FoodList` takes `basePath`, not a `getHref` function**, because server pages cannot pass functions to a client component.
+- **Extra files:** `db/__tests__/create-test-db.ts` (in-memory DB built from `db/schema.ts` for unit tests), `FoodLibraryLink` and `MacroSplitBar` components, hooks `use-food-filter`, `use-food-amount`; `/foods/:path*` added to the proxy matcher; the trainee tab bar keeps "Dinh dưỡng" active on `/foods`; `e2e/seed.ts` seeds four foods.

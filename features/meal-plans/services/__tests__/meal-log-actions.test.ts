@@ -62,7 +62,7 @@ const { getMealLogData } =
   await import("@/features/meal-plans/services/meal-log-queries");
 const { getPlanKcalNoticesFrom } =
   await import("@/features/meal-plans/services/meal-plan-queries");
-const { getTodayDate, addDays } = await import("@/utils/week");
+const { getTodayDate, addDays, getWeekStart } = await import("@/utils/week");
 const { TIME_ZONE } = await import("@/constants/time");
 
 let db: TestDb;
@@ -747,6 +747,70 @@ describe("when the PT changes the plan", () => {
         note: "",
       }),
     ).toMatchObject({ status: "error" });
+  });
+});
+
+describe("getNutritionWeek with meal logs", () => {
+  it("adds meal logs to the old entries in the day totals, for this trainee only", async () => {
+    const { member, other, chicken, today, foreign } = await seed();
+    const { getNutritionWeek } =
+      await import("@/features/nutrition/services/nutrition-queries");
+    const { foodEntries } = await import("@/db/schema");
+
+    await db.insert(foodEntries).values({
+      userId: member.id,
+      date: TODAY,
+      meal: "lunch",
+      description: "Cũ",
+      carbs: 60,
+      protein: 30,
+      fat: 10,
+    });
+    await db.insert(mealLogs).values([
+      // 200 g chicken: P 62, F 7.2.
+      {
+        userId: member.id,
+        mealId: today.meals[0].id,
+        foodId: chicken.id,
+        grams: 200,
+      },
+      // Free food: only protein typed, kcal ignored for the macros.
+      {
+        userId: member.id,
+        mealId: today.meals[1].id,
+        customName: "Phở",
+        grams: 0,
+        kcal: 450,
+        protein: 25,
+      },
+      // A free food with no numbers: logged, adds nothing.
+      {
+        userId: member.id,
+        mealId: today.meals[1].id,
+        customName: "Nước",
+        grams: 0,
+      },
+      // Someone else's log on the same date.
+      {
+        userId: other.id,
+        mealId: foreign.meals[0].id,
+        customName: "Khác",
+        grams: 0,
+        protein: 99,
+      },
+    ]);
+
+    const days = await getNutritionWeek(member.id, getWeekStart(TODAY));
+    const day = days.find((item) => item.date === TODAY);
+
+    // C 60; P 30 + 62 + 25 = 117; F 10 + 7.2 = 17.2 -> 17.
+    expect(day?.totals).toEqual({ carbs: 60, protein: 117, fat: 17 });
+    expect(day?.loggedCount).toBe(4);
+    expect(day?.entries).toHaveLength(1);
+    // Days without logs stay empty.
+    expect(
+      days.filter((item) => item.loggedCount > 0).map((item) => item.date),
+    ).toEqual([TODAY]);
   });
 });
 

@@ -124,7 +124,7 @@ export const NutritionWeekSummary = ({
                 role="cell"
                 className={clsx(
                   "text-right",
-                  day.entries.length
+                  day.loggedCount
                     ? STATUS_CLASSES[
                         compareToTarget(
                           day.totals[macro],
@@ -135,8 +135,8 @@ export const NutritionWeekSummary = ({
                     : "text-muted",
                 )}
               >
-                {day.entries.length ? day.totals[macro] : "–"}
-                {day.target && day.entries.length ? (
+                {day.loggedCount ? day.totals[macro] : "–"}
+                {day.target && day.loggedCount ? (
                   <span className="text-xs font-normal text-muted">
                     /{day.target[macro]}
                   </span>

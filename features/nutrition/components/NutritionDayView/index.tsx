@@ -30,6 +30,14 @@ export const NutritionDayView = ({
       : "Chưa ghi bữa ăn nào cho ngày này.";
   };
 
+  // Old entries are history on the trainee's page and hidden when there are
+  // none. The PT's page shows the section too when nothing at all was logged,
+  // so the empty message stays true; foods logged in the plan show in its
+  // meal cards.
+  const showLog = isLegacyLog
+    ? day.entries.length > 0
+    : day.entries.length > 0 || day.loggedCount === 0;
+
   return (
     <section className="space-y-4">
       <div>
@@ -52,7 +60,7 @@ export const NutritionDayView = ({
             <p className="text-sm text-muted">
               PT chưa đặt mục tiêu dinh dưỡng cho ngày này.
             </p>
-            {day.entries.length > 0 && (
+            {day.loggedCount > 0 && (
               <MacroProgressList totals={day.totals} target={null} />
             )}
           </>
@@ -68,7 +76,7 @@ export const NutritionDayView = ({
         )}
       </div>
 
-      {(!isLegacyLog || day.entries.length > 0) && (
+      {showLog && (
         <div className="space-y-2">
           <h3 className={SECTION_TITLE}>
             {isLegacyLog ? "Nhật ký cũ" : "Đã ăn"}

@@ -6,6 +6,7 @@ import type {
   NutritionTarget,
 } from "@/features/nutrition/types/nutrition";
 import {
+  buildNutritionDay,
   compareToTarget,
   findTargetForDate,
   isDayOnTarget,
@@ -40,11 +41,48 @@ const createDay = (
   date: string,
   entries: FoodEntry[],
   target = TARGET,
-): NutritionDay => ({
-  date,
-  target,
-  entries,
-  totals: sumEntries(entries),
+): NutritionDay => buildNutritionDay(date, target, entries, []);
+
+describe("buildNutritionDay", () => {
+  const target = TARGET;
+
+  it("adds the meal logs to the old entries and rounds to whole grams", () => {
+    // Entry: C 100 / P 20 / F 10. Logs: 200 g chicken (P 62, F 7.2) and
+    // 300 g rice (P 8.1, C 84.6, F 0.9).
+    const day = buildNutritionDay(
+      "2026-10-05",
+      target,
+      [createEntry(100, 20, 10)],
+      [
+        { carbs: 0, protein: 62, fat: 7.2 },
+        { carbs: 84.6, protein: 8.1, fat: 0.9 },
+      ],
+    );
+
+    // C 184.6 -> 185, P 90.1 -> 90, F 18.1 -> 18.
+    expect(day.totals).toEqual({ carbs: 185, protein: 90, fat: 18 });
+    expect(day.loggedCount).toBe(3);
+  });
+
+  it("counts a day with only meal logs as logged and on target when it fits", () => {
+    const day = buildNutritionDay(
+      "2026-10-05",
+      target,
+      [],
+      [{ carbs: TARGET.carbs, protein: TARGET.protein, fat: TARGET.fat }],
+    );
+
+    expect(day.loggedCount).toBe(1);
+    expect(day.entries).toEqual([]);
+    expect(isDayOnTarget(day)).toBe(true);
+  });
+
+  it("is not logged with nothing", () => {
+    const day = buildNutritionDay("2026-10-05", target, [], []);
+
+    expect(day.loggedCount).toBe(0);
+    expect(isDayOnTarget(day)).toBe(false);
+  });
 });
 
 describe("sumEntries", () => {

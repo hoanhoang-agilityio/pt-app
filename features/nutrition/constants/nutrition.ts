@@ -50,8 +50,6 @@ export const MEAL_SHORT_LABELS: Record<Meal, string> = {
   snack: "Phụ",
 };
 
-export const GRAMS_PER_LANG = 100;
-
 export const NUTRITION_LIMITS = {
   MAX_GRAMS: 2000,
   DESCRIPTION: 300,

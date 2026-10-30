@@ -10,12 +10,15 @@ interface NutritionDayViewProps {
   day: NutritionDay;
   today: string;
   isEditable: boolean;
+  // Old free-text entries: read-only history, hidden when there are none.
+  isLegacyLog?: boolean;
 }
 
 export const NutritionDayView = ({
   day,
   today,
   isEditable,
+  isLegacyLog = false,
 }: NutritionDayViewProps) => {
   const isFuture = day.date > today;
   const getEmptyMessage = () => {
@@ -65,15 +68,19 @@ export const NutritionDayView = ({
         )}
       </div>
 
-      <div className="space-y-2">
-        <h3 className={SECTION_TITLE}>Đã ăn</h3>
-        <FoodLog
-          date={day.date}
-          entries={day.entries}
-          isEditable={isEditable && !isFuture}
-          emptyMessage={getEmptyMessage()}
-        />
-      </div>
+      {(!isLegacyLog || day.entries.length > 0) && (
+        <div className="space-y-2">
+          <h3 className={SECTION_TITLE}>
+            {isLegacyLog ? "Nhật ký cũ" : "Đã ăn"}
+          </h3>
+          <FoodLog
+            date={day.date}
+            entries={day.entries}
+            isEditable={isEditable && !isFuture}
+            emptyMessage={getEmptyMessage()}
+          />
+        </div>
+      )}
     </section>
   );
 };

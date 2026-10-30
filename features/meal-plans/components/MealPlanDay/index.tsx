@@ -11,6 +11,7 @@ import { MealSharesSheet } from "@/features/meal-plans/components/MealSharesShee
 import { MemberMealRequest } from "@/features/meal-plans/components/MemberMealRequest";
 import { MEAL_PLAN_LIMITS } from "@/features/meal-plans/constants/meal-plans";
 import { useMealPlanDay } from "@/features/meal-plans/hooks/use-meal-plan-day";
+import type { MealLog, MealMark } from "@/features/meal-plans/types/meal-log";
 import type { PlanDay, PlanFood } from "@/features/meal-plans/types/meal-plan";
 import { resolveMealCount } from "@/features/meal-plans/utils/default-meals";
 import { splitDayTarget } from "@/features/meal-plans/utils/meal-targets";
@@ -25,6 +26,9 @@ interface MealPlanDayProps {
   // Macro target that applies on this date; null when the PT set none.
   target: MacroAmounts | null;
   library: PlanFood[];
+  // The trainee's logs and marks of this day's meals.
+  logs: MealLog[];
+  marks: MealMark[];
   preferredMealCount: number | null;
   foodNote: string | null;
   lastWeekPlanCount: number;
@@ -42,6 +46,8 @@ export const MealPlanDay = ({
   plan,
   target,
   library,
+  logs,
+  marks,
   preferredMealCount,
   foodNote,
   lastWeekPlanCount,
@@ -99,6 +105,8 @@ export const MealPlanDay = ({
           isOnly={plan.meals.length === 1}
           target={mealTargets?.[index] ?? null}
           library={library}
+          logs={logs.filter((log) => log.mealId === meal.id)}
+          mark={marks.find((item) => item.mealId === meal.id) ?? null}
           onMove={(direction) => day.moveMeal(index, direction)}
           isReordering={day.dayPlan.isPending}
         />

@@ -5,7 +5,6 @@ import type { BodyProfile } from "@/features/nutrition/types/nutrition";
 import {
   calculateBmr,
   calculateEnergyPlan,
-  describeFoodEquivalent,
   formatCalories,
   formatDecimal,
   getAge,
@@ -236,12 +235,7 @@ describe("legacy profile prefill", () => {
 });
 
 describe("formatting", () => {
-  it("describes food equivalents and calories", () => {
-    expect(describeFoodEquivalent("carbs", 280)).toBe("≈ 10 lạng cơm chín");
-    expect(describeFoodEquivalent("protein", 135)).toBe(
-      "≈ 4,4 lạng ức gà chín",
-    );
-    expect(describeFoodEquivalent("fat", 56)).toBe("≈ 4 thìa dầu ăn");
+  it("formats calories and decimals", () => {
     expect(formatCalories(2630)).toBe("2.630 kcal");
     expect(formatDecimal(72.5)).toBe("72,5");
     expect(formatDecimal(1750)).toBe("1750");

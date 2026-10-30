@@ -14,10 +14,7 @@ import {
   TARGET_SOURCE_LABELS,
 } from "@/features/nutrition/constants/nutrition";
 import type { NutritionTarget } from "@/features/nutrition/types/nutrition";
-import {
-  describeFoodEquivalent,
-  formatCalories,
-} from "@/features/nutrition/utils/energy";
+import { formatCalories } from "@/features/nutrition/utils/energy";
 import { calculateCalories } from "@/features/nutrition/utils/nutrition";
 import { formatDayMonth } from "@/utils/week";
 
@@ -90,9 +87,6 @@ export const NutritionTargetCard = ({
               </p>
               <p className="mt-0.5 text-lg leading-tight font-bold text-fg tabular-nums">
                 {target[macro]} g
-              </p>
-              <p className="text-[11px] leading-tight text-muted">
-                {describeFoodEquivalent(macro, target[macro])}
               </p>
             </div>
           ))}

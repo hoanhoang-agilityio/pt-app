@@ -2,10 +2,7 @@ import {
   KCAL_PER_GRAM,
   ON_TARGET,
 } from "@/features/nutrition/constants/energy";
-import {
-  GRAMS_PER_LANG,
-  MACROS,
-} from "@/features/nutrition/constants/nutrition";
+import { MACROS } from "@/features/nutrition/constants/nutrition";
 import type {
   ComparedMetric,
   FoodEntry,
@@ -122,7 +119,3 @@ export const summarizeNutritionWeek = (
     onTargetDays: days.filter(isDayOnTarget).length,
   };
 };
-
-// 250 → "2,5 lạng"
-export const formatLang = (grams: number) =>
-  `${(grams / GRAMS_PER_LANG).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} lạng`;

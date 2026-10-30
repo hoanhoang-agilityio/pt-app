@@ -7,9 +7,12 @@ import { ROUTES } from "@/constants/routes";
 import { PAGE_CONTAINER } from "@/constants/styles";
 import { TIME_ZONE } from "@/constants/time";
 import { MealPlanDay } from "@/features/meal-plans/components/MealPlanDay";
+import { PlanKcalNotices } from "@/features/meal-plans/components/PlanKcalNotices";
+import { getMealLogData } from "@/features/meal-plans/services/meal-log-queries";
 import {
   countPlanDays,
   getMealPlanWeek,
+  getPlanKcalNoticesFrom,
   listPlanDates,
   listPlanFoods,
 } from "@/features/meal-plans/services/meal-plan-queries";
@@ -61,6 +64,7 @@ const AdminNutritionPage = async ({
     library,
     lastWeekCount,
     nextWeekPlanDates,
+    notices,
   ] = await Promise.all([
     getNutritionWeek(user.id, schedule.weekStart),
     getLatestTarget(user.id),
@@ -73,7 +77,13 @@ const AdminNutritionPage = async ({
       addDays(schedule.weekStart, 7),
       addDays(schedule.weekStart, 13),
     ),
+    getPlanKcalNoticesFrom(user.id, schedule.weekStart),
   ]);
+  const selectedPlan =
+    planDays.find((day) => day.date === schedule.selectedDate) ?? null;
+  const { logs, marks } = await getMealLogData(
+    selectedPlan?.meals.map((meal) => meal.id) ?? [],
+  );
   const selectedDay = days.find((day) => day.date === schedule.selectedDate);
   const copyDates = [
     ...getWeekDates(schedule.weekStart),
@@ -103,6 +113,7 @@ const AdminNutritionPage = async ({
           today={today}
         />
         <NutritionTargetCard userId={user.id} target={latestTarget} />
+        <PlanKcalNotices notices={notices} />
         <NutritionWeek
           basePath={getAdminNutritionPath(user.id)}
           days={days}
@@ -117,11 +128,11 @@ const AdminNutritionPage = async ({
             userId={user.id}
             date={schedule.selectedDate}
             weekStart={schedule.weekStart}
-            plan={
-              planDays.find((day) => day.date === schedule.selectedDate) ?? null
-            }
+            plan={selectedPlan}
             target={selectedDay?.target ?? null}
             library={library}
+            logs={logs}
+            marks={marks}
             preferredMealCount={user.preferredMealCount}
             foodNote={user.foodNote}
             lastWeekPlanCount={lastWeekCount}

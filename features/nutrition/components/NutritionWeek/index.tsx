@@ -13,6 +13,8 @@ interface NutritionWeekProps {
   selectedDate: string;
   today: string;
   isEditable: boolean;
+  // The trainee's page: the old free-text log is read-only history (KAN-71).
+  isLegacyLog?: boolean;
   // Shown between the day tabs and the day (the PT's meal plan).
   children?: ReactNode;
 }
@@ -31,6 +33,7 @@ export const NutritionWeek = ({
   selectedDate,
   today,
   isEditable,
+  isLegacyLog = false,
   children,
 }: NutritionWeekProps) => {
   const selectedDay = days.find((day) => day.date === selectedDate) ?? days[0];
@@ -61,6 +64,7 @@ export const NutritionWeek = ({
         day={selectedDay}
         today={today}
         isEditable={isEditable}
+        isLegacyLog={isLegacyLog}
       />
     </div>
   );

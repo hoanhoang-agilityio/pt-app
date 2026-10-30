@@ -58,3 +58,17 @@ export const sumLogNutrition = (parts: (LogNutrition | null)[]): LogNutrition =>
         : sum,
     EMPTY,
   );
+
+const round1 = (value: number) =>
+  (Math.round(value * 10) / 10).toLocaleString("vi-VN", {
+    maximumFractionDigits: 1,
+    useGrouping: false,
+  });
+
+// "330 kcal · P 62 · C 0 · F 7,2"
+export const formatNutrition = (nutrition: LogNutrition) =>
+  `${Math.round(nutrition.kcal)} kcal · P ${round1(nutrition.protein)} · C ${round1(nutrition.carbs)} · F ${round1(nutrition.fat)}`;
+
+// "200 g", or nothing when the amount is unknown.
+export const formatLogGrams = (grams: number) =>
+  grams > 0 ? `${round1(grams)} g` : "";

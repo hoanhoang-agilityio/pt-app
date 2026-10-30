@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  formatLogGrams,
+  formatNutrition,
   resolveLogNutrition,
   sumLogNutrition,
 } from "@/features/meal-plans/utils/meal-log";
@@ -60,5 +62,21 @@ describe("sumLogNutrition", () => {
       carbs: 0,
       fat: 0,
     });
+  });
+});
+
+describe("formatNutrition", () => {
+  it("rounds kcal and shows one decimal with a comma", () => {
+    expect(
+      formatNutrition({ kcal: 329.6, protein: 62, carbs: 0, fat: 7.24 }),
+    ).toBe("330 kcal · P 62 · C 0 · F 7,2");
+  });
+});
+
+describe("formatLogGrams", () => {
+  it("is empty for an unknown amount", () => {
+    expect(formatLogGrams(0)).toBe("");
+    expect(formatLogGrams(200)).toBe("200 g");
+    expect(formatLogGrams(62.5)).toBe("62,5 g");
   });
 });

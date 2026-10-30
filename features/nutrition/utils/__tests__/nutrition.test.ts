@@ -8,7 +8,6 @@ import type {
 import {
   compareToTarget,
   findTargetForDate,
-  formatLang,
   isDayOnTarget,
   sumEntries,
   summarizeNutritionWeek,
@@ -143,12 +142,5 @@ describe("week summary", () => {
       averages: { carbs: 150, protein: 105, fat: 35 },
       onTargetDays: 1,
     });
-  });
-});
-
-describe("formatLang", () => {
-  it("converts grams to lạng", () => {
-    expect(formatLang(250)).toBe("2,5 lạng");
-    expect(formatLang(100)).toBe("1 lạng");
   });
 });

@@ -4,7 +4,6 @@ import {
   BODY_LIMITS,
   CALORIE_ROUNDING,
   FAT_CALORIE_SHARE,
-  FOOD_EQUIVALENTS,
   GOALS,
   KCAL_ADJUSTMENT_LIMITS,
   KCAL_PER_GRAM,
@@ -15,9 +14,7 @@ import type {
   BodyProfile,
   EnergyPlan,
   Goal,
-  Macro,
 } from "@/features/nutrition/types/nutrition";
-import { formatLang } from "@/features/nutrition/utils/nutrition";
 import {
   isOneDecimal,
   parseDecimal,
@@ -107,17 +104,6 @@ export const calculateEnergyPlan = (
     isFlooredToBmr,
     macros: { carbs, protein, fat },
   };
-};
-
-// The macro target pictured as food, weighed in lạng (100 g):
-// 280 g carbs → "≈ 10 lạng cơm chín"; 56 g fat → "≈ 4 thìa dầu ăn".
-export const describeFoodEquivalent = (macro: Macro, grams: number) => {
-  const { food, gramsPerUnit, unit } = FOOD_EQUIVALENTS[macro];
-  const amount = grams / gramsPerUnit;
-
-  return unit === "g"
-    ? `≈ ${formatLang(amount)} ${food}`
-    : `≈ ${Math.round(amount)} ${unit} ${food}`;
 };
 
 export const formatCalories = (calories: number) =>

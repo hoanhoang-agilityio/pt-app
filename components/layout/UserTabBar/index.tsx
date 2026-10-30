@@ -7,9 +7,20 @@ import { usePathname } from "next/navigation";
 
 import { ROUTES } from "@/constants/routes";
 
-const TABS: { href: string; label: string; icon: LucideIcon }[] = [
+const TABS: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  // Other pages that belong to the tab, e.g. the food library under nutrition.
+  alsoActiveOn?: string;
+}[] = [
   { href: ROUTES.WORKOUTS, label: "Lịch tập", icon: Dumbbell },
-  { href: ROUTES.NUTRITION, label: "Dinh dưỡng", icon: Utensils },
+  {
+    href: ROUTES.NUTRITION,
+    label: "Dinh dưỡng",
+    icon: Utensils,
+    alsoActiveOn: ROUTES.FOODS,
+  },
   { href: ROUTES.SUMMARY, label: "Tổng kết", icon: ChartColumn },
 ];
 
@@ -24,8 +35,10 @@ export const UserTabBar = () => {
       className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]"
     >
       <ul className="pointer-events-auto mx-auto grid max-w-md grid-cols-3 gap-1 rounded-[1.75rem] border border-line bg-surface/90 p-1.5 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.35)] backdrop-blur-xl">
-        {TABS.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname.startsWith(href);
+        {TABS.map(({ href, label, icon: Icon, alsoActiveOn }) => {
+          const isActive =
+            pathname.startsWith(href) ||
+            Boolean(alsoActiveOn && pathname.startsWith(alsoActiveOn));
 
           return (
             <li key={href}>

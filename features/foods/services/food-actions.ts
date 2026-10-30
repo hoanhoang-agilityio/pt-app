@@ -19,6 +19,7 @@ import {
 import { requireAdmin } from "@/services/auth-guard";
 import type { ActionResult } from "@/types/error";
 import type { FormState } from "@/types/form";
+import { isUniqueViolation } from "@/utils/errors";
 import {
   createErrorState,
   createSuccessState,
@@ -77,7 +78,15 @@ export const createFoodAction = withFormErrorHandling(
       return nameTakenState();
     }
 
-    await db.insert(foods).values(values);
+    try {
+      await db.insert(foods).values(values);
+    } catch (error) {
+      // Two saves with the same name raced past the check above.
+      if (isUniqueViolation(error)) {
+        return nameTakenState();
+      }
+      throw error;
+    }
     revalidateFoods();
     return createSuccessState(FOOD_MESSAGES.CREATED);
   },
@@ -103,11 +112,20 @@ export const updateFoodAction = withFormErrorHandling(
       return nameTakenState();
     }
 
-    const updated = await db
-      .update(foods)
-      .set({ ...values, updatedAt: new Date() })
-      .where(and(eq(foods.id, id.data), isNull(foods.archivedAt)))
-      .returning({ id: foods.id });
+    let updated: { id: number }[];
+
+    try {
+      updated = await db
+        .update(foods)
+        .set({ ...values, updatedAt: new Date() })
+        .where(and(eq(foods.id, id.data), isNull(foods.archivedAt)))
+        .returning({ id: foods.id });
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        return nameTakenState();
+      }
+      throw error;
+    }
 
     // Archived or removed since the page was opened.
     if (!updated.length) {

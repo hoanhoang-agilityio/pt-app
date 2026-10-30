@@ -5,7 +5,12 @@ import { INITIAL_FORM_STATE } from "@/constants/form";
 import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
 import { foods } from "@/db/schema";
 
-const state = vi.hoisted(() => ({ db: null as unknown, role: "admin" }));
+const state = vi.hoisted(() => ({
+  db: null as unknown,
+  role: "admin",
+  // Pretend the duplicate check found nothing, as when two saves race.
+  skipNameCheck: false,
+}));
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -21,6 +26,22 @@ vi.mock("@/services/admins", () => ({
   findAdminById: vi.fn(async (id: number) => ({ id, username: "pt" })),
 }));
 vi.mock("@/services/users", () => ({ findUserById: vi.fn() }));
+vi.mock("@/features/foods/services/food-queries", async (importOriginal) => {
+  const original =
+    await importOriginal<
+      typeof import("@/features/foods/services/food-queries")
+    >();
+
+  return {
+    ...original,
+    findActiveFoodByNameKey: (
+      ...args: Parameters<typeof original.findActiveFoodByNameKey>
+    ) =>
+      state.skipNameCheck
+        ? Promise.resolve(null)
+        : original.findActiveFoodByNameKey(...args),
+  };
+});
 vi.mock("@/db", () => ({
   db: new Proxy(
     {},
@@ -58,6 +79,7 @@ beforeEach(async () => {
   db = await createTestDb();
   state.db = db;
   state.role = "admin";
+  state.skipNameCheck = false;
 });
 
 const rowCount = async () => (await db.select().from(foods)).length;
@@ -163,6 +185,65 @@ describe("createFoodAction", () => {
     const [first] = await db.select().from(foods);
 
     await archiveFoodAction(first.id);
+
+    const again = await createFoodAction(
+      INITIAL_FORM_STATE,
+      toFormData(CHICKEN),
+    );
+
+    expect(again.status).toBe("success");
+    expect(await rowCount()).toBe(2);
+  });
+});
+
+describe("duplicate names that slip past the check", () => {
+  it("create: the unique index refuses the second row and the action reports the name", async () => {
+    await createFoodAction(INITIAL_FORM_STATE, toFormData(CHICKEN));
+    state.skipNameCheck = true;
+
+    const result = await createFoodAction(
+      INITIAL_FORM_STATE,
+      toFormData({ ...CHICKEN, name: "uc ga (chin)" }),
+    );
+
+    expect(result.status).toBe("error");
+    expect(result.fieldErrors?.name).toContain("trùng tên");
+    expect(await rowCount()).toBe(1);
+  });
+
+  it("update: renaming onto another active food is refused the same way", async () => {
+    await createFoodAction(INITIAL_FORM_STATE, toFormData(CHICKEN));
+    await createFoodAction(
+      INITIAL_FORM_STATE,
+      toFormData({ ...CHICKEN, name: "Ức gà (sống)", state: "raw" }),
+    );
+
+    const [first] = await db
+      .select()
+      .from(foods)
+      .where(eq(foods.nameKey, "uc ga (chin)"));
+
+    state.skipNameCheck = true;
+
+    const result = await updateFoodAction(
+      INITIAL_FORM_STATE,
+      toFormData({ ...CHICKEN, id: String(first.id), name: "Ức gà (sống)" }),
+    );
+
+    expect(result.status).toBe("error");
+    expect(result.fieldErrors?.name).toContain("trùng tên");
+    expect(
+      (await db.select().from(foods).where(eq(foods.id, first.id)))[0].name,
+    ).toBe("Ức gà (chín)");
+  });
+
+  it("the index allows an archived row to share a name with an active one", async () => {
+    await createFoodAction(INITIAL_FORM_STATE, toFormData(CHICKEN));
+
+    const [first] = await db.select().from(foods);
+
+    await archiveFoodAction(first.id);
+    state.skipNameCheck = true;
 
     const again = await createFoodAction(
       INITIAL_FORM_STATE,

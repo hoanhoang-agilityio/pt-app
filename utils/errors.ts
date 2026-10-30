@@ -41,3 +41,9 @@ export const getErrorMessage = ({ code }: ClassifiedError) =>
 // Secondary line under an error message, e.g. "Mã tham chiếu: 3f9a1c2e".
 export const describeErrorReference = (reference: string | undefined) =>
   reference ? `Mã tham chiếu: ${reference}` : undefined;
+
+// True when the database refused a write because of a UNIQUE index or key.
+export const isUniqueViolation = (error: unknown) =>
+  collectMessages(error).some((message) =>
+    /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i.test(message),
+  );

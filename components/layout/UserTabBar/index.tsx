@@ -24,6 +24,10 @@ const TABS: {
   { href: ROUTES.SUMMARY, label: "Tổng kết", icon: ChartColumn },
 ];
 
+// The page itself or anything below it, so "/foods" never matches "/foodstuff".
+const isUnder = (pathname: string, base: string) =>
+  pathname === base || pathname.startsWith(`${base}/`);
+
 // Floating tab bar above the home indicator; the active tab is a filled
 // pill so it reads at a glance, not just a tinted icon.
 export const UserTabBar = () => {
@@ -37,8 +41,8 @@ export const UserTabBar = () => {
       <ul className="pointer-events-auto mx-auto grid max-w-md grid-cols-3 gap-1 rounded-[1.75rem] border border-line bg-surface/90 p-1.5 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.35)] backdrop-blur-xl">
         {TABS.map(({ href, label, icon: Icon, alsoActiveOn }) => {
           const isActive =
-            pathname.startsWith(href) ||
-            Boolean(alsoActiveOn && pathname.startsWith(alsoActiveOn));
+            isUnder(pathname, href) ||
+            Boolean(alsoActiveOn && isUnder(pathname, alsoActiveOn));
 
           return (
             <li key={href}>

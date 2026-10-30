@@ -2,13 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import type { Food } from "@/features/foods/types/food";
 import { filterFoods } from "@/features/foods/utils/food-search";
+import { toNameKey } from "@/utils/name";
 
-const FOODS: Pick<Food, "name" | "group">[] = [
-  { name: "Ức gà (chín)", group: "meat" },
-  { name: "Ức gà (sống)", group: "meat" },
-  { name: "Đậu hũ", group: "legume_nut" },
-  { name: "Cá hồi (chín)", group: "seafood" },
-  { name: "Phở bò", group: "dish" },
+const FOODS: Pick<Food, "name" | "nameKey" | "group">[] = [
+  { name: "Ức gà (chín)", nameKey: toNameKey("Ức gà (chín)"), group: "meat" },
+  { name: "Ức gà (sống)", nameKey: toNameKey("Ức gà (sống)"), group: "meat" },
+  { name: "Đậu hũ", nameKey: toNameKey("Đậu hũ"), group: "legume_nut" },
+  {
+    name: "Cá hồi (chín)",
+    nameKey: toNameKey("Cá hồi (chín)"),
+    group: "seafood",
+  },
+  { name: "Phở bò", nameKey: toNameKey("Phở bò"), group: "dish" },
 ];
 
 const names = (

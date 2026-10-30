@@ -3,7 +3,6 @@
 import clsx from "clsx";
 
 import { CARD, INPUT, LABEL } from "@/constants/styles";
-import { FOOD_LIMITS } from "@/features/foods/constants/foods";
 import { useFoodAmount } from "@/features/foods/hooks/use-food-amount";
 import type { Food } from "@/features/foods/types/food";
 import { formatGrams, formatKcal } from "@/features/foods/utils/food-math";
@@ -22,7 +21,7 @@ const UNIT_BUTTON = "min-h-10 rounded-lg text-sm font-semibold transition";
 
 // Type grams (or servings) and see the calories and macros for that amount.
 export const FoodAmountCalculator = ({ food }: FoodAmountCalculatorProps) => {
-  const { unit, changeUnit, text, setText, isValid, result } =
+  const { unit, changeUnit, text, setText, isValid, maxAmount, result } =
     useFoodAmount(food);
   const hasServing = Boolean(food.servingLabel && food.servingGrams);
   const unitLabel =
@@ -81,7 +80,7 @@ export const FoodAmountCalculator = ({ food }: FoodAmountCalculatorProps) => {
         >
           {isValid
             ? `= ${formatGrams(result.grams)} g`
-            : `Nhập số từ 0 đến ${FOOD_LIMITS.MAX_AMOUNT_GRAMS} g`}
+            : `Nhập số từ 0 đến ${maxAmount}${unit === "servings" ? " khẩu phần" : " g"}`}
         </p>
       </div>
 

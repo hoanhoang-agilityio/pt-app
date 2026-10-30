@@ -9,6 +9,7 @@ import type { Food } from "@/features/foods/types/food";
 const foodColumns = {
   id: foods.id,
   name: foods.name,
+  nameKey: foods.nameKey,
   group: foods.group,
   state: foods.state,
   kcal: foods.kcal,

@@ -8,6 +8,8 @@ export type FoodState = NonNullable<(typeof foods.$inferSelect)["state"]>;
 export interface Food {
   id: number;
   name: string;
+  // Accent-free lower-cased name used by the search.
+  nameKey: string;
   group: FoodGroup;
   state: FoodState | null;
   kcal: number;

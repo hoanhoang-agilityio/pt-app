@@ -15,6 +15,7 @@ import {
   type SetInput,
   setInputSchema,
 } from "@/features/workouts/utils/sets";
+import { parseDecimal } from "@/utils/decimal";
 
 // One editable row of the set logger. Inputs stay strings while typing so a
 // half-typed "42," is not lost; `id` is a stable React key.
@@ -77,15 +78,8 @@ export const isEmptyFirstSave = (
   loggedSetsCount: number,
 ) => parsedSetsCount === 0 && loggedSetsCount === 0;
 
-// Plain decimals only ("42", "42.5", "42,5", ",5", "5,"): `Number` alone would
-// also take "1e2" or "0x14". Vietnamese keyboards type the comma. The range and
-// step checks stay in the schema.
-const DECIMAL_PATTERN = /^(\d+[.,]?\d*|[.,]\d+)$/;
-
-const parseDecimal = (value: string) =>
-  DECIMAL_PATTERN.test(value) ? Number(value.replace(",", ".")) : Number.NaN;
-
-// Reps keep the strict form ("8.5" still reaches the schema's integer message)
+// Weights are read with parseDecimal (utils/decimal.ts); the range and step
+// checks stay in the schema. Reps keep the strict form ("8.5" still reaches the schema's integer message)
 // but take no leading or trailing separator.
 const parseReps = (value: string) =>
   /^\d+([.,]\d+)?$/.test(value) ? Number(value.replace(",", ".")) : Number.NaN;

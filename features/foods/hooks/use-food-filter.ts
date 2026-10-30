@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { FOOD_GROUP_ORDER } from "@/features/foods/constants/foods";
+import { FOOD_GROUP_VALUES } from "@/features/foods/constants/food-groups";
 import type { Food } from "@/features/foods/types/food";
 import {
   filterFoods,
@@ -14,7 +14,7 @@ export const useFoodFilter = (foods: Food[]) => {
   const [group, setGroup] = useState<FoodGroupFilter>("all");
 
   // Only groups that have a food get a chip.
-  const groupsInUse = FOOD_GROUP_ORDER.filter((item) =>
+  const groupsInUse = FOOD_GROUP_VALUES.filter((item) =>
     foods.some((food) => food.group === item),
   );
   // A chip whose last food was just removed must not leave an empty list.

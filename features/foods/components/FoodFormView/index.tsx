@@ -4,8 +4,8 @@ import type { ChangeEvent, FormEvent } from "react";
 
 import { SubmitButton } from "@/components/common/SubmitButton";
 import { BUTTON_PRIMARY, FIELD_ERROR, INPUT, LABEL } from "@/constants/styles";
+import { FOOD_GROUP_VALUES } from "@/features/foods/constants/food-groups";
 import {
-  FOOD_GROUP_ORDER,
   FOOD_GROUPS,
   FOOD_LIMITS,
   FOOD_MESSAGES,
@@ -132,7 +132,7 @@ export const FoodFormView = ({
             aria-invalid={Boolean(fieldErrors.group)}
             className={INPUT}
           >
-            {FOOD_GROUP_ORDER.map((group) => (
+            {FOOD_GROUP_VALUES.map((group) => (
               <option key={group} value={group}>
                 {FOOD_GROUPS[group].label}
               </option>

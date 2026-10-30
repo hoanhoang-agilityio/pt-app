@@ -1,15 +1,12 @@
 import { z } from "zod";
 
-import {
-  FOOD_GROUP_ORDER,
-  FOOD_LIMITS,
-  FOOD_MESSAGES,
-} from "@/features/foods/constants/foods";
-import type { FoodGroup } from "@/features/foods/types/food";
+import { FOOD_GROUP_VALUES } from "@/features/foods/constants/food-groups";
+import { FOOD_LIMITS, FOOD_MESSAGES } from "@/features/foods/constants/foods";
 import {
   describeKcalGap,
   isKcalGapTooLarge,
 } from "@/features/foods/utils/food-math";
+import { parseDecimal } from "@/utils/decimal";
 import { normalizeName } from "@/utils/name";
 
 // Accepts "3,6" as well as "3.6" (Vietnamese decimal comma). Empty, text and
@@ -19,7 +16,17 @@ const numberField = (label: string, max: number) =>
     .string()
     .trim()
     .min(1, `Nhập ${label}`)
-    .transform((value) => Number(value.replace(",", ".")))
+    .transform((value, context) => {
+      // parseDecimal reads no sign; say why a minus is refused.
+      if (value.startsWith("-")) {
+        context.addIssue({
+          code: "custom",
+          message: `${label} không được âm`,
+        });
+        return z.NEVER;
+      }
+      return parseDecimal(value);
+    })
     .pipe(
       z
         .number({ error: `${label} phải là số` })
@@ -32,10 +39,21 @@ const optionalNumberField = (label: string, max: number) =>
     .string()
     .trim()
     .optional()
-    .transform((value) => value ?? "")
-    .pipe(
-      z.union([z.literal("").transform(() => null), numberField(label, max)]),
-    );
+    .transform((value, context) => {
+      if (!value) {
+        return null;
+      }
+
+      const parsed = numberField(label, max).safeParse(value);
+
+      if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+          context.addIssue({ code: "custom", message: issue.message });
+        }
+        return z.NEVER;
+      }
+      return parsed.data;
+    });
 
 const optionalText = (label: string, max: number) =>
   z
@@ -58,7 +76,7 @@ export const foodFormSchema = z
             `Tên tối đa ${FOOD_LIMITS.NAME_MAX} ký tự`,
           ),
       ),
-    group: z.enum(FOOD_GROUP_ORDER as [FoodGroup, ...FoodGroup[]], {
+    group: z.enum(FOOD_GROUP_VALUES, {
       error: "Chọn nhóm món",
     }),
     state: z
@@ -82,62 +100,43 @@ export const foodFormSchema = z
       .optional()
       .transform((value) => value === "on"),
   })
-  .superRefine((food, context) => {
-    const areNumbersInRange =
-      [food.kcal, food.protein, food.carbs, food.fat].every(
-        (value) => value >= 0 && value <= FOOD_LIMITS.MAX_KCAL_PER_100G,
-      ) &&
-      [food.protein, food.carbs, food.fat].every(
-        (value) => value <= FOOD_LIMITS.MAX_GRAMS_PER_100G,
-      );
+  .check((context) => {
+    // Cross-field rules only make sense when every field is valid on its own.
+    if (context.issues.length > 0) {
+      return;
+    }
 
-    if (
-      areNumbersInRange &&
-      food.protein + food.carbs + food.fat > FOOD_LIMITS.MAX_GRAMS_PER_100G
-    ) {
-      context.addIssue({
+    const food = context.value;
+    const addIssue = (path: string, message: string) =>
+      context.issues.push({
         code: "custom",
-        path: ["fat"],
-        message: "Protein + carb + fat không vượt quá 100 g trên 100 g",
+        path: [path],
+        message,
+        input: context.value,
       });
+
+    if (food.protein + food.carbs + food.fat > FOOD_LIMITS.MAX_GRAMS_PER_100G) {
+      addIssue("fat", "Protein + carb + fat không vượt quá 100 g trên 100 g");
     }
 
     const hasLabel = food.servingLabel !== "";
     const hasGrams = food.servingGrams !== null;
 
     if (hasLabel && !hasGrams) {
-      context.addIssue({
-        code: "custom",
-        path: ["servingGrams"],
-        message: "Nhập khối lượng khẩu phần (gram)",
-      });
+      addIssue("servingGrams", "Nhập khối lượng khẩu phần (gram)");
     }
     if (hasGrams && !hasLabel) {
-      context.addIssue({
-        code: "custom",
-        path: ["servingLabel"],
-        message: "Nhập tên khẩu phần, ví dụ 1 tô",
-      });
+      addIssue("servingLabel", "Nhập tên khẩu phần, ví dụ 1 tô");
     }
     if (hasGrams && food.servingGrams === 0) {
-      context.addIssue({
-        code: "custom",
-        path: ["servingGrams"],
-        message: "Khối lượng khẩu phần phải lớn hơn 0",
-      });
+      addIssue("servingGrams", "Khối lượng khẩu phần phải lớn hơn 0");
     }
 
-    // Only compare the kcal when every number is valid on its own.
-    if (
-      areNumbersInRange &&
-      !food.confirmed &&
-      isKcalGapTooLarge(food.kcal, food)
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["kcal"],
-        message: `${describeKcalGap(food.kcal, food)} Kiểm tra lại hoặc tick "${FOOD_MESSAGES.CONFIRM_LABEL}".`,
-      });
+    if (!food.confirmed && isKcalGapTooLarge(food.kcal, food)) {
+      addIssue(
+        "kcal",
+        `${describeKcalGap(food.kcal, food)} Kiểm tra lại hoặc tick "${FOOD_MESSAGES.CONFIRM_LABEL}".`,
+      );
     }
   });
 

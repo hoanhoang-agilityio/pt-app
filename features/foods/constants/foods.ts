@@ -70,20 +70,6 @@ export const FOOD_GROUPS: Record<FoodGroup, FoodGroupInfo> = {
   },
 };
 
-// Order of the group chips and of the group select.
-export const FOOD_GROUP_ORDER: FoodGroup[] = [
-  "meat",
-  "seafood",
-  "egg_dairy",
-  "starch",
-  "vegetable",
-  "fruit",
-  "legume_nut",
-  "fat_oil",
-  "dish",
-  "other",
-];
-
 export const FOOD_STATE_LABELS: Record<FoodState, string> = {
   raw: "Sống",
   cooked: "Chín",

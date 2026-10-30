@@ -118,6 +118,13 @@ test("the calculator takes servings when the food has one", async ({
   await expect(result.getByText("Fat").locator("xpath=..")).toContainText(
     "0,7 g",
   );
+
+  // Bad servings show a servings hint (max 10000 / 160 = 62) and zeros.
+  for (const bad of ["abc", "-1", "1e2", "63"]) {
+    await page.getByLabel("Số khẩu phần").fill(bad);
+    await expect(page.getByText("Nhập số từ 0 đến 62 khẩu phần")).toBeVisible();
+    await expect(result).toContainText("0 kcal");
+  }
 });
 
 test("a food without a serving only offers grams", async ({ page }) => {

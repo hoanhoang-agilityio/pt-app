@@ -10,7 +10,7 @@ interface FoodFilter {
 
 // Accent- and case-insensitive: "uc ga" finds "Ức gà (chín)". Every word of
 // the query must appear in the name, in any order.
-export const filterFoods = <T extends Pick<Food, "name" | "group">>(
+export const filterFoods = <T extends Pick<Food, "nameKey" | "group">>(
   foods: T[],
   { query, group }: FoodFilter,
 ): T[] => {
@@ -20,8 +20,6 @@ export const filterFoods = <T extends Pick<Food, "name" | "group">>(
     if (group !== "all" && food.group !== group) {
       return false;
     }
-    const key = toNameKey(food.name);
-
-    return words.every((word) => key.includes(word));
+    return words.every((word) => food.nameKey.includes(word));
   });
 };

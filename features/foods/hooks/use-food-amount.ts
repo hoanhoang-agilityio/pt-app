@@ -5,6 +5,7 @@ import { useState } from "react";
 import { FOOD_LIMITS } from "@/features/foods/constants/foods";
 import type { Food } from "@/features/foods/types/food";
 import { scaleFood, servingsToGrams } from "@/features/foods/utils/food-math";
+import { parseDecimal } from "@/utils/decimal";
 
 export type AmountUnit = "grams" | "servings";
 
@@ -13,25 +14,20 @@ const DEFAULT_AMOUNT: Record<AmountUnit, string> = {
   servings: "1",
 };
 
-// Accepts "1,5" as well as "1.5".
-const parseAmount = (text: string) =>
-  text.trim() === "" ? Number.NaN : Number(text.replace(",", "."));
-
 export const useFoodAmount = (
   food: Pick<Food, "kcal" | "protein" | "carbs" | "fat" | "servingGrams">,
 ) => {
   const [unit, setUnit] = useState<AmountUnit>("grams");
   const [text, setText] = useState(DEFAULT_AMOUNT.grams);
 
-  const amount = parseAmount(text);
-  const grams =
-    unit === "servings" && food.servingGrams
-      ? servingsToGrams(amount, food.servingGrams)
-      : amount;
-  const isValid =
-    Number.isFinite(grams) &&
-    grams >= 0 &&
-    grams <= FOOD_LIMITS.MAX_AMOUNT_GRAMS;
+  const servingGrams = unit === "servings" ? food.servingGrams : null;
+  // The typed number is what gets validated, in the unit it is typed in.
+  const amount = parseDecimal(text);
+  const maxAmount = servingGrams
+    ? Math.floor(FOOD_LIMITS.MAX_AMOUNT_GRAMS / servingGrams)
+    : FOOD_LIMITS.MAX_AMOUNT_GRAMS;
+  const isValid = Number.isFinite(amount) && amount >= 0 && amount <= maxAmount;
+  const grams = servingGrams ? servingsToGrams(amount, servingGrams) : amount;
 
   const changeUnit = (next: AmountUnit) => {
     setUnit(next);
@@ -44,6 +40,7 @@ export const useFoodAmount = (
     text,
     setText,
     isValid,
+    maxAmount,
     // An invalid amount shows zeros and a hint instead of wrong numbers.
     result: scaleFood(food, isValid ? grams : 0),
   };

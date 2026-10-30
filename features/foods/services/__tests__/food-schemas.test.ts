@@ -111,6 +111,19 @@ describe("F6 bad input", () => {
     expect(getErrors({ protein: "-5" }).protein).toBe("Protein không được âm");
   });
 
+  it("rejects exponent and hex spellings that Number() would accept", () => {
+    expect(getErrors({ kcal: "1e2" }).kcal).toBe("Calo phải là số");
+    expect(getErrors({ protein: "0x14" }).protein).toBe("Protein phải là số");
+    expect(getErrors({ fat: "1e1" }).fat).toBe("Fat phải là số");
+    expect(getErrors({ fiber: "0x1" }).fiber).toBe("Chất xơ phải là số");
+  });
+
+  it("reports only the broken field, not a kcal gap computed from bad macros", () => {
+    expect(getErrors({ protein: "-3" })).toEqual({
+      protein: "Protein không được âm",
+    });
+  });
+
   it("rejects empty and non-numeric numbers", () => {
     expect(getErrors({ carbs: "" }).carbs).toBe("Nhập Carb");
     expect(getErrors({ fat: "abc" }).fat).toBe("Fat phải là số");

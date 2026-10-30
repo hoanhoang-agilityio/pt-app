@@ -8,6 +8,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import { FOOD_GROUP_VALUES } from "@/features/foods/constants/food-groups";
+
 const createdAt = () =>
   integer("created_at", { mode: "timestamp" })
     .notNull()
@@ -210,18 +212,7 @@ export const foods = sqliteTable(
     // the uniqueness check among active foods.
     nameKey: text("name_key").notNull(),
     group: text("group", {
-      enum: [
-        "meat",
-        "seafood",
-        "egg_dairy",
-        "starch",
-        "vegetable",
-        "fruit",
-        "legume_nut",
-        "fat_oil",
-        "dish",
-        "other",
-      ],
+      enum: FOOD_GROUP_VALUES,
     }).notNull(),
     // Null for prepared dishes and foods without a raw/cooked distinction.
     state: text("state", { enum: ["raw", "cooked"] }),
@@ -241,5 +232,10 @@ export const foods = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`),
   },
-  (table) => [index("foods_name_key").on(table.nameKey)],
+  (table) => [
+    // A name is unique among active foods; archived rows may share it.
+    uniqueIndex("foods_active_name_key")
+      .on(table.nameKey)
+      .where(sql`${table.archivedAt} IS NULL`),
+  ],
 );

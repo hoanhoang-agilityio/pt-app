@@ -207,6 +207,14 @@ test("F4: a kcal far from the macros is refused until the PT ticks the check box
   await expect(confirmBox).toHaveCount(0);
   await page.getByLabel("Calo", { exact: true }).fill("65");
 
+  // The tick covers the numbers it was given: editing one clears it.
+  await confirmBox.check();
+  await page.getByLabel("Calo", { exact: true }).fill("66");
+  await expect(confirmBox).not.toBeChecked();
+  await page.getByLabel("Fat", { exact: true }).fill("3.5");
+  await page.getByLabel("Fat", { exact: true }).fill("3.6");
+  await page.getByLabel("Calo", { exact: true }).fill("65");
+
   // Ticked: the same numbers are saved as typed.
   await page.getByLabel("Tôi đã kiểm tra số liệu").check();
   await page.getByRole("button", { name: "Thêm món" }).click();

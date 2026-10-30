@@ -23,10 +23,10 @@ import {
 } from "@/features/foods/utils/food-math";
 import { useFormFeedback } from "@/hooks/use-form-feedback";
 import type { FormState } from "@/types/form";
+import { parseDecimal } from "@/utils/decimal";
 
-// Accepts "3,6" as well as "3.6"; empty or text gives NaN.
-const toNumber = (text: string) =>
-  text.trim() === "" ? Number.NaN : Number(text.replace(",", "."));
+// Empty or non-decimal text gives NaN.
+const toNumber = parseDecimal;
 
 const toText = (value: number | undefined) =>
   value === undefined ? "" : String(value);
@@ -70,6 +70,8 @@ export const useFoodForm = (food: Food | null) => {
     (setText: (value: string) => void) => (text: string) => {
       setText(text);
       setOutdatedState(state);
+      // The "I checked" tick covered the old numbers only.
+      setIsConfirmed(false);
     };
 
   const macros = {

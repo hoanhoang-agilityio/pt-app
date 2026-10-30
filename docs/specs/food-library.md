@@ -21,19 +21,20 @@ With chicken breast cooked (P 31, C 0, F 3.6 per 100 g), white rice cooked (P 2.
 
 ## Decisions
 
-Round 1 sent 2026-10-30, waiting for Hoan.
+Round 1 answered 2026-10-30 by Hoan: "approve hết bỏ lưu ảnh" (all recommendations accepted except photos), plus an admin view to add, edit and delete foods, and groups that include prepared dishes.
 
-| #   | Question                            | Recommended                                                                                                                                                  | Decision |
-| --- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
-| Q1  | Who edits the library, who sees it? | One shared library; admins create, edit, archive; trainees browse read-only                                                                                  | Pending  |
-| Q2  | What does a food store?             | Name, category, state (raw/cooked), per 100 g: kcal, protein, carbs, fat, fiber (optional); optional serving ("1 quả trứng" = 50 g); source; photo           | Pending  |
-| Q3  | How do we keep the numbers right?   | Store kcal as the source gives it; the form compares it with 4/4/9 from the macros and blocks saving if they differ by more than 10 % unless the PT confirms | Pending  |
-| Q4  | Starter data?                       | Seed about 60 common foods from USDA FoodData Central (public domain, FDC id kept as source); Vietnamese dishes added by the PT from labels                  | Pending  |
-| Q5  | Where do photos live?               | Upload to Vercel Blob (jpg/png/webp, at most 2 MB); without a photo, show the category icon. Needs `BLOB_READ_WRITE_TOKEN` on Vercel                         | Pending  |
-| Q6  | What makes it "visual"?             | Grid of cards (photo, name, kcal/100 g, bar of % kcal from P/C/F); detail page with a grams or servings input that shows P/C/F/kcal live                     | Pending  |
-| Q7  | Can a food be deleted?              | Archive only (hidden from lists), so future meal plans that use it keep working                                                                              | Pending  |
+| #   | Question                         | Decision                                                                                                                                                      |
+| --- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q1  | Who edits the library, who sees? | One shared library; admins add, edit, delete; trainees browse read-only                                                                                       |
+| Q2  | What does a food store?          | Name, group, state (raw/cooked, empty for prepared dishes), per 100 g: kcal, protein, carbs, fat, fiber (optional); optional serving ("1 tô" = 500 g); source |
+| Q3  | Keeping the numbers right        | Keep the source kcal; the form compares it with 4/4/9 from the macros and refuses a gap above 10 % unless the PT ticks "Tôi đã kiểm tra số liệu"              |
+| Q4  | Starter data                     | Seed about 60 common foods from USDA FoodData Central (FDC id kept as source); Vietnamese dishes are added by the PT                                          |
+| Q5  | Photos                           | **No photos** (Hoan). Each group has an icon and colour instead                                                                                               |
+| Q6  | Visual                           | Card list: group icon, name, kcal/100 g, bar of % kcal from P/C/F; detail with a grams or servings input showing P/C/F/kcal live                              |
+| Q7  | Delete                           | The admin "Xóa" button archives the food (hidden everywhere, row kept) so later meal plans keep their numbers                                                 |
+| Q8  | Groups                           | Thịt, Cá & hải sản, Trứng & sữa, Tinh bột, Rau, Trái cây, Đậu & hạt, Dầu & chất béo, Món chế biến (phở, bún, cơm tấm...), Khác                                |
 
-Assumed unless Hoan objects: categories Đạm, Tinh bột, Rau, Trái cây, Chất béo, Sữa, Khác; name search ignores Vietnamese accents; names are unique per state ("Ức gà (sống)" and "Ức gà (chín)" are two foods).
+Assumed: name search ignores Vietnamese accents; a name is unique among active foods ("Ức gà (sống)" and "Ức gà (chín)" are two foods); prepared dishes are stored per 100 g like everything else, with a serving such as "1 tô phở" = 500 g so the PT can think in bowls.
 
 ## Out of scope
 
@@ -43,4 +44,18 @@ Assumed unless Hoan objects: categories Đạm, Tinh bột, Rau, Trái cây, Ch�
 
 ## Test matrix
 
-Written after the grill closes.
+| ID  | Case                                                                  | Expected                                            | Where         |
+| --- | --------------------------------------------------------------------- | --------------------------------------------------- | ------------- |
+| F1  | 150 g of chicken breast cooked (165 kcal, P 31, C 0, F 3.6 per 100 g) | 248 kcal, P 46.5, C 0, F 5.4                        | unit          |
+| F2  | 1.5 servings of a 500 g bowl                                          | Same as 750 g                                       | unit          |
+| F3  | kcal 165 vs macros 31/0/3.6 (156.4 kcal)                              | Gap 5.2 %, accepted                                 | unit          |
+| F4  | kcal 65 vs macros 31/0/3.6                                            | Gap above 10 %, refused unless confirmed            | unit + e2e    |
+| F5  | Macro split bar                                                       | % kcal from P, C, F sums to 100 and uses 4/4/9      | unit          |
+| F6  | Bad input: negative, empty name, macros above 100 g per 100 g         | Field error in Vietnamese, nothing saved            | unit (Zod)    |
+| F7  | Duplicate name among active foods                                     | Refused with a message                              | unit + e2e    |
+| F8  | Admin adds, edits, deletes "Phở bò"                                   | Appears, changes, disappears from both lists        | e2e           |
+| F9  | Trainee opens the library                                             | Sees cards and detail, no add/edit/delete controls  | e2e           |
+| F10 | Non-admin calls a food action                                         | Refused by `requireAdmin()`                         | unit          |
+| F11 | Search "uc ga" and filter by group                                    | Finds "Ức gà (chín)"; group filter narrows the list | unit + e2e    |
+| F12 | Seed run twice                                                        | Second run inserts nothing                          | unit          |
+| F13 | 390 px phone                                                          | List, detail and form fit with no horizontal scroll | browser-proof |

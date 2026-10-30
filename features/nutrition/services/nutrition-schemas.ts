@@ -1,7 +1,16 @@
 import { z } from "zod";
 
-import { BODY_LIMITS } from "@/features/nutrition/constants/energy";
+import {
+  BODY_LIMITS,
+  KCAL_ADJUSTMENT_LIMITS,
+  PROTEIN_PER_KG_LIMITS,
+} from "@/features/nutrition/constants/energy";
 import { NUTRITION_LIMITS } from "@/features/nutrition/constants/nutrition";
+import {
+  isOneDecimal,
+  parseDecimal,
+  parseSignedDecimal,
+} from "@/utils/decimal";
 import { isValidDate } from "@/utils/week";
 
 const gramsField = z
@@ -69,7 +78,7 @@ const decimalField = (label: string, min: number, max: number) =>
     .string()
     .trim()
     .min(1, `Nhập ${label}`)
-    .transform((value) => Number(value.replace(",", ".")))
+    .transform(parseDecimal)
     .pipe(
       z
         .number({ error: `${label} phải là số` })
@@ -77,8 +86,7 @@ const decimalField = (label: string, min: number, max: number) =>
         .max(max, `${label} tối đa ${max}`),
     );
 
-export const bodyProfileSchema = z.object({
-  userId: z.coerce.number().int().positive(),
+const measurementsSchema = z.object({
   sex: z.enum(["male", "female"], { error: "Chọn giới tính" }),
   age: decimalField("Tuổi", BODY_LIMITS.AGE.min, BODY_LIMITS.AGE.max).pipe(
     z.number().int("Tuổi là số nguyên"),
@@ -99,7 +107,35 @@ export const bodyProfileSchema = z.object({
       error: "Chọn mức vận động",
     },
   ),
-  goal: z.enum(["cut", "maintain", "bulk"], { error: "Chọn mục tiêu" }),
+});
+
+// Admin: also sets the energy model (kcal on top of the TDEE, protein per kg).
+// The goal is derived from the kcal sign, so it is not sent.
+export const bodyProfileSchema = measurementsSchema.extend({
+  userId: z.coerce.number().int().positive(),
+  kcalAdjustment: z
+    .string()
+    .trim()
+    .min(1, "Nhập số kcal")
+    .transform(parseSignedDecimal)
+    .pipe(
+      z
+        .number({ error: "Số kcal phải là số" })
+        .int("Số kcal là số nguyên")
+        .min(
+          KCAL_ADJUSTMENT_LIMITS.min,
+          `Số kcal từ ${KCAL_ADJUSTMENT_LIMITS.min}`,
+        )
+        .max(
+          KCAL_ADJUSTMENT_LIMITS.max,
+          `Số kcal tối đa ${KCAL_ADJUSTMENT_LIMITS.max}`,
+        ),
+    ),
+  proteinPerKg: decimalField(
+    "Đạm",
+    PROTEIN_PER_KG_LIMITS.min,
+    PROTEIN_PER_KG_LIMITS.max,
+  ).refine(isOneDecimal, "Đạm chỉ nhận 1 chữ số thập phân (ví dụ 1,6)"),
   // Checkbox: present ("on") when ticked.
   applyToTarget: z
     .string()
@@ -107,11 +143,12 @@ export const bodyProfileSchema = z.object({
     .transform((value) => value === "on"),
 });
 
-// What a user may send about themselves: no userId (taken from the session)
-// and no choice about the target (decided by its source).
-export const myBodyProfileSchema = bodyProfileSchema.omit({
-  userId: true,
-  applyToTarget: true,
+// What a user may send about themselves: no userId (taken from the session),
+// no choice about the target (decided by its source) and no energy model (PT
+// only; the stored values stay). The legacy goal is only used while the PT has
+// not set the energy model.
+export const myBodyProfileSchema = measurementsSchema.extend({
+  goal: z.enum(["cut", "maintain", "bulk"], { error: "Chọn mục tiêu" }),
 });
 
 export const weightLogSchema = z.object({

@@ -21,7 +21,7 @@ export const MacroProgressRow = ({
   eaten,
   target,
 }: MacroProgressRowProps) => {
-  const comparison = compareToTarget(eaten, target);
+  const comparison = compareToTarget(eaten, target, macro);
   const width = Math.min(100, comparison.percent);
 
   return (

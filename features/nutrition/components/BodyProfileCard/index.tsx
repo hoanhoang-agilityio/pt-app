@@ -19,6 +19,7 @@ import type {
 import {
   calculateEnergyPlan,
   formatDecimal,
+  getGoal,
 } from "@/features/nutrition/utils/energy";
 
 interface BodyProfileCardProps {
@@ -72,7 +73,7 @@ export const BodyProfileCard = ({
               <span className="block text-xs text-muted">
                 Vận động{" "}
                 {ACTIVITY_LEVELS[profile.activityLevel].label.toLowerCase()} ·
-                Mục tiêu {GOALS[profile.goal].label.toLowerCase()}
+                Mục tiêu {GOALS[getGoal(profile)].label.toLowerCase()}
               </span>
             </p>
           )}

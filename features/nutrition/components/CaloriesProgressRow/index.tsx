@@ -2,11 +2,11 @@ import clsx from "clsx";
 
 import { STATUS_TEXT_CLASSES } from "@/features/nutrition/constants/progress";
 import type { MacroAmounts } from "@/features/nutrition/types/nutrition";
+import { formatCalories } from "@/features/nutrition/utils/energy";
 import {
   calculateCalories,
-  formatCalories,
-} from "@/features/nutrition/utils/energy";
-import { compareToTarget } from "@/features/nutrition/utils/nutrition";
+  compareToTarget,
+} from "@/features/nutrition/utils/nutrition";
 import { formatComparison } from "@/features/nutrition/utils/progress-text";
 
 interface CaloriesProgressRowProps {
@@ -21,7 +21,7 @@ export const CaloriesProgressRow = ({
 }: CaloriesProgressRowProps) => {
   const eaten = calculateCalories(totals);
   const goal = target ? calculateCalories(target) : undefined;
-  const comparison = compareToTarget(eaten, goal);
+  const comparison = compareToTarget(eaten, goal, "kcal");
 
   return (
     <li className="flex items-baseline justify-between gap-2 border-b border-line pb-3">

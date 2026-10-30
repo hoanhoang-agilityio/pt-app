@@ -10,6 +10,7 @@ import {
   ACTIVITY_LEVELS,
   GOAL_ORDER,
   GOALS,
+  PROTEIN_PER_KG_DEFAULT,
   SEX_LABELS,
 } from "@/features/nutrition/constants/energy";
 import type {
@@ -62,6 +63,25 @@ const NUMBER_FIELDS = [
   },
 ] as const;
 
+const ENERGY_FIELDS = [
+  {
+    key: "kcalAdjustment",
+    label: "Thâm hụt / dư kcal mỗi ngày",
+    unit: "kcal",
+    placeholder: "-200",
+    inputMode: "text",
+    hint: "Âm = giảm, 0 = giữ, dương = tăng (-1500 đến 1500)",
+  },
+  {
+    key: "proteinPerKg",
+    label: "Đạm (g/kg)",
+    unit: "g/kg",
+    placeholder: "2",
+    inputMode: "decimal",
+    hint: "",
+  },
+] as const;
+
 export const BodyProfileFormView = ({
   editor,
   userId,
@@ -76,7 +96,9 @@ export const BodyProfileFormView = ({
   <form onSubmit={onSubmit} className="space-y-5" noValidate>
     {editor === "admin" && <input type="hidden" name="userId" value={userId} />}
     <input type="hidden" name="sex" value={draft.sex} />
-    <input type="hidden" name="goal" value={draft.goal} />
+    {editor === "user" && (
+      <input type="hidden" name="goal" value={draft.goal} />
+    )}
 
     <fieldset>
       <legend className={LABEL}>Giới tính</legend>
@@ -168,25 +190,63 @@ export const BodyProfileFormView = ({
       </div>
     </fieldset>
 
-    <fieldset>
-      <legend className={LABEL}>Mục tiêu</legend>
-      <div className="grid grid-cols-3 gap-1 rounded-xl bg-line/60 p-1">
-        {GOAL_ORDER.map((goal) => (
-          <button
-            key={goal}
-            type="button"
-            onClick={() => onChange("goal", goal)}
-            aria-pressed={draft.goal === goal}
-            className={clsx(
-              SEGMENT,
-              draft.goal === goal ? SEGMENT_ACTIVE : "text-muted",
+    {editor === "admin" && (
+      <div className="grid grid-cols-2 gap-2">
+        {ENERGY_FIELDS.map((field) => (
+          <div key={field.key}>
+            <label htmlFor={field.key} className={LABEL}>
+              {field.label}
+            </label>
+            <div className="relative">
+              <input
+                id={field.key}
+                name={field.key}
+                value={draft[field.key]}
+                onChange={(event) => onChange(field.key, event.target.value)}
+                inputMode={field.inputMode}
+                placeholder={field.placeholder}
+                aria-invalid={Boolean(fieldErrors[field.key])}
+                className={`${INPUT} px-3 pr-16`}
+              />
+              <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted">
+                {field.unit}
+              </span>
+            </div>
+            {fieldErrors[field.key] ? (
+              <p className={FIELD_ERROR}>{fieldErrors[field.key]}</p>
+            ) : (
+              <p className="mt-1 text-xs text-muted">
+                {field.key === "proteinPerKg"
+                  ? `Mặc định mới: ${PROTEIN_PER_KG_DEFAULT[draft.sex].toFixed(1).replace(".", ",")} g/kg (1 đến 3)`
+                  : field.hint}
+              </p>
             )}
-          >
-            {GOALS[goal].label}
-          </button>
+          </div>
         ))}
       </div>
-    </fieldset>
+    )}
+
+    {editor === "user" && draft.kcalAdjustment === "" && (
+      <fieldset>
+        <legend className={LABEL}>Mục tiêu</legend>
+        <div className="grid grid-cols-3 gap-1 rounded-xl bg-line/60 p-1">
+          {GOAL_ORDER.map((goal) => (
+            <button
+              key={goal}
+              type="button"
+              onClick={() => onChange("goal", goal)}
+              aria-pressed={draft.goal === goal}
+              className={clsx(
+                SEGMENT,
+                draft.goal === goal ? SEGMENT_ACTIVE : "text-muted",
+              )}
+            >
+              {GOALS[goal].label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+    )}
 
     <div className="rounded-2xl border border-line bg-surface p-4">
       <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted">

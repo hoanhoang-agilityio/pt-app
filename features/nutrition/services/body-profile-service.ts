@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, gt } from "drizzle-orm";
+import { and, desc, eq, gt, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { bodyProfiles, nutritionTargets, weightLogs } from "@/db/schema";
@@ -10,6 +10,7 @@ import type { BodyProfile } from "@/features/nutrition/types/nutrition";
 import {
   calculateEnergyPlan,
   getBirthYear,
+  getGoalFromAdjustment,
 } from "@/features/nutrition/utils/energy";
 import {
   getRecentWeekStarts,
@@ -17,7 +18,16 @@ import {
 } from "@/features/nutrition/utils/weight";
 import { addDays } from "@/utils/week";
 
-type Measurements = Omit<BodyProfile, "birthYear"> & { age: number };
+type Body = Omit<
+  BodyProfile,
+  "birthYear" | "goal" | "kcalAdjustment" | "proteinPerKg"
+> & { age: number };
+
+// The admin sets the energy model (goal follows the kcal sign); a user's save
+// leaves the stored energy model alone and only carries the legacy goal.
+export type ProfileInput =
+  | (Body & { kcalAdjustment: number; proteinPerKg: number })
+  | (Body & { goal: BodyProfile["goal"] });
 
 // "always": the admin asked for it; "unless-manual": a user edit or weigh-in,
 // which must not replace a target the admin typed by hand.
@@ -68,25 +78,66 @@ const upsertWeightLog = (userId: number, date: string, weightKg: number) =>
     });
 
 // Saves the profile (and today's weigh-in) and maybe today's target; returns
-// whether the target was recomputed.
+// whether the target was recomputed. The admin sets the energy model; a
+// member's save never writes kcal_adjustment or protein_per_kg, and only
+// writes the legacy goal while the energy model is unset.
 export const saveBodyProfile = async (
   userId: number,
-  { age, ...measurements }: Measurements,
+  { age, ...input }: ProfileInput,
   targetUpdate: TargetUpdate,
   today: string,
 ) => {
-  const profile = { ...measurements, birthYear: getBirthYear(age, today) };
-
-  await db
+  const birthYear = getBirthYear(age, today);
+  const isAdmin = "kcalAdjustment" in input;
+  const measurements = {
+    sex: input.sex,
+    heightCm: input.heightCm,
+    weightKg: input.weightKg,
+    activityLevel: input.activityLevel,
+    birthYear,
+  };
+  const energy = isAdmin
+    ? {
+        kcalAdjustment: input.kcalAdjustment,
+        proteinPerKg: input.proteinPerKg,
+        goal: getGoalFromAdjustment(input.kcalAdjustment),
+      }
+    : { goal: input.goal };
+  const [row] = await db
     .insert(bodyProfiles)
-    .values({ userId, ...profile })
+    .values({ userId, ...measurements, ...energy })
     .onConflictDoUpdate({
       target: bodyProfiles.userId,
-      set: { ...profile, updatedAt: new Date() },
-    });
-  await upsertWeightLog(userId, today, profile.weightKg);
+      set: {
+        ...measurements,
+        ...(isAdmin
+          ? energy
+          : {
+              // Keep the goal once the PT has set the energy model.
+              goal: sql`case when ${bodyProfiles.kcalAdjustment} is null then ${energy.goal} else ${bodyProfiles.goal} end`,
+            }),
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
 
-  return applyTdeeTarget(userId, profile, targetUpdate, today);
+  await upsertWeightLog(userId, today, row.weightKg);
+
+  return applyTdeeTarget(
+    userId,
+    {
+      sex: row.sex,
+      birthYear: row.birthYear,
+      heightCm: row.heightCm,
+      weightKg: row.weightKg,
+      activityLevel: row.activityLevel,
+      goal: row.goal,
+      kcalAdjustment: row.kcalAdjustment,
+      proteinPerKg: row.proteinPerKg,
+    },
+    targetUpdate,
+    today,
+  );
 };
 
 // Records a weigh-in. When it is the most recent one, the body profile takes

@@ -8,11 +8,9 @@ import {
   MACROS,
 } from "@/features/nutrition/constants/nutrition";
 import type { NutritionDay } from "@/features/nutrition/types/nutrition";
+import { formatCalories } from "@/features/nutrition/utils/energy";
 import {
   calculateCalories,
-  formatCalories,
-} from "@/features/nutrition/utils/energy";
-import {
   compareToTarget,
   summarizeNutritionWeek,
 } from "@/features/nutrition/utils/nutrition";
@@ -128,8 +126,11 @@ export const NutritionWeekSummary = ({
                   "text-right",
                   day.entries.length
                     ? STATUS_CLASSES[
-                        compareToTarget(day.totals[macro], day.target?.[macro])
-                          .status
+                        compareToTarget(
+                          day.totals[macro],
+                          day.target?.[macro],
+                          macro,
+                        ).status
                       ]
                     : "text-muted",
                 )}

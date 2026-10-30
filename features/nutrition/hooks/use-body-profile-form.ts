@@ -9,6 +9,10 @@ import {
 
 import { INITIAL_FORM_STATE } from "@/constants/form";
 import {
+  GOALS,
+  PROTEIN_PER_KG_DEFAULT,
+} from "@/features/nutrition/constants/energy";
+import {
   saveBodyProfileAction,
   saveMyBodyProfileAction,
 } from "@/features/nutrition/services/nutrition-actions";
@@ -21,6 +25,7 @@ import {
   calculateEnergyPlan,
   formatDecimal,
   getAge,
+  getLegacyKcalAdjustment,
   toBodyProfile,
 } from "@/features/nutrition/utils/energy";
 import { useFormFeedback } from "@/hooks/use-form-feedback";
@@ -32,17 +37,39 @@ interface UseBodyProfileFormOptions {
   onSaved: () => void;
 }
 
+// The PT sees the energy model filled in: what is stored, else for a legacy
+// profile the values its old goal gave (so saving untouched keeps the target),
+// else for a new profile the protein default by sex. A member's own form
+// leaves the PT-only fields as stored (empty = not set).
 const toDraft = (
+  editor: BodyProfileEditor,
   profile: BodyProfile | null,
   today: string,
-): BodyProfileDraft => ({
-  sex: profile?.sex ?? "male",
-  age: profile ? String(getAge(profile.birthYear, today)) : "",
-  heightCm: profile ? formatDecimal(profile.heightCm) : "",
-  weightKg: profile ? formatDecimal(profile.weightKg) : "",
-  activityLevel: profile?.activityLevel ?? "moderate",
-  goal: profile?.goal ?? "maintain",
-});
+): BodyProfileDraft => {
+  const sex = profile?.sex ?? "male";
+  const isAdmin = editor === "admin";
+  const kcalAdjustment =
+    profile?.kcalAdjustment ??
+    (isAdmin ? (profile ? getLegacyKcalAdjustment(profile, today) : 0) : null);
+  const proteinPerKg =
+    profile?.proteinPerKg ??
+    (isAdmin
+      ? profile
+        ? GOALS[profile.goal].proteinPerKg
+        : PROTEIN_PER_KG_DEFAULT[sex]
+      : null);
+
+  return {
+    sex,
+    age: profile ? String(getAge(profile.birthYear, today)) : "",
+    heightCm: profile ? formatDecimal(profile.heightCm) : "",
+    weightKg: profile ? formatDecimal(profile.weightKg) : "",
+    activityLevel: profile?.activityLevel ?? "moderate",
+    goal: profile?.goal ?? "maintain",
+    kcalAdjustment: kcalAdjustment === null ? "" : String(kcalAdjustment),
+    proteinPerKg: proteinPerKg === null ? "" : formatDecimal(proteinPerKg),
+  };
+};
 
 export const useBodyProfileForm = ({
   editor,
@@ -54,7 +81,7 @@ export const useBodyProfileForm = ({
     editor === "admin" ? saveBodyProfileAction : saveMyBodyProfileAction,
     INITIAL_FORM_STATE,
   );
-  const [draft, setDraft] = useState(() => toDraft(profile, today));
+  const [draft, setDraft] = useState(() => toDraft(editor, profile, today));
   const parsedProfile = toBodyProfile(draft, today);
 
   useFormFeedback(state, onSaved);
@@ -63,7 +90,23 @@ export const useBodyProfileForm = ({
     key: Key,
     value: BodyProfileDraft[Key],
   ) => {
-    setDraft((previous) => ({ ...previous, [key]: value }));
+    setDraft((previous) => {
+      const next = { ...previous, [key]: value };
+
+      // On a new profile an untouched protein default follows the sex.
+      if (
+        key === "sex" &&
+        editor === "admin" &&
+        !profile &&
+        previous.proteinPerKg ===
+          formatDecimal(PROTEIN_PER_KG_DEFAULT[previous.sex])
+      ) {
+        next.proteinPerKg = formatDecimal(
+          PROTEIN_PER_KG_DEFAULT[value as BodyProfile["sex"]],
+        );
+      }
+      return next;
+    });
   };
 
   // Submitted through a transition so React doesn't reset the fields when

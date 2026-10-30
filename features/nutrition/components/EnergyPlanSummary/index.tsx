@@ -43,6 +43,15 @@ export const EnergyPlanSummary = ({ plan }: EnergyPlanSummaryProps) => (
         </div>
       ))}
     </dl>
+    {plan.isFlooredToBmr && (
+      <p
+        role="status"
+        className="rounded-xl bg-danger/10 px-3 py-2 text-xs font-semibold text-danger"
+      >
+        Mục tiêu không được thấp hơn BMR, đã dùng{" "}
+        {formatCalories(plan.targetCalories)}
+      </p>
+    )}
     <ul className="space-y-1.5 text-sm">
       {MACROS.map((macro) => (
         <li key={macro} className="flex items-baseline justify-between gap-2">

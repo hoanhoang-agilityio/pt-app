@@ -72,19 +72,36 @@ describe("findTargetForDate", () => {
 
 describe("compareToTarget", () => {
   it.each([
-    [100, 200, "under", 100],
-    [190, 200, "on", 10],
-    [215, 200, "on", 15],
-    [260, 200, "over", 60],
-  ])("%s g of a %s g target is %s", (actual, target, status, difference) => {
-    expect(compareToTarget(actual, target)).toMatchObject({
-      status,
-      difference,
-    });
-  });
+    // carbs and fat: ±10 g
+    ["carbs", 100, 200, "under", 100],
+    ["carbs", 190, 200, "on", 10],
+    ["carbs", 189, 200, "under", 11],
+    ["carbs", 210, 200, "on", 10],
+    ["carbs", 211, 200, "over", 11],
+    ["fat", 41, 50, "on", 9],
+    ["fat", 61, 50, "over", 11],
+    // protein: at most 5 g under, any amount over
+    ["protein", 145, 150, "on", 5],
+    ["protein", 144, 150, "under", 6],
+    ["protein", 210, 150, "on", 60],
+    // kcal: ±80
+    ["kcal", 2420, 2500, "on", 80],
+    ["kcal", 2419, 2500, "under", 81],
+    ["kcal", 2580, 2500, "on", 80],
+    ["kcal", 2581, 2500, "over", 81],
+  ] as const)(
+    "%s %s of a %s target is %s",
+    (metric, actual, target, status, difference) => {
+      expect(compareToTarget(actual, target, metric)).toMatchObject({
+        status,
+        difference,
+      });
+    },
+  );
 
   it("reports no target", () => {
-    expect(compareToTarget(100, 0).status).toBe("none");
+    expect(compareToTarget(100, 0, "carbs").status).toBe("none");
+    expect(compareToTarget(100, undefined, "kcal").status).toBe("none");
   });
 });
 
@@ -97,6 +114,27 @@ describe("week summary", () => {
     expect(isDayOnTarget(onTarget)).toBe(true);
     expect(isDayOnTarget(under)).toBe(false);
     expect(isDayOnTarget(empty)).toBe(false);
+  });
+
+  it("applies the kcal, protein and carbs/fat rules together", () => {
+    // Target 200/150/50 = 800 + 600 + 450 = 1850 kcal.
+    const day = (carbs: number, protein: number, fat: number) =>
+      isDayOnTarget(
+        createDay("2026-10-05", [createEntry(carbs, protein, fat)]),
+      );
+
+    // Each macro on its edge: 210/145/40 = 840 + 580 + 360 = 1780, 70 under.
+    expect(day(210, 145, 40)).toBe(true);
+    // Carbs 11 g over.
+    expect(day(211, 150, 50)).toBe(false);
+    // Protein 6 g under.
+    expect(day(200, 144, 50)).toBe(false);
+    // Protein far over is fine for protein, but kcal 2300 − 1850 = +450.
+    expect(day(200, 260, 50)).toBe(false);
+    // Macros each inside, kcal outside: 210/150/60 = 840 + 600 + 540 = 1980.
+    expect(day(210, 150, 60)).toBe(false);
+    // Fat 10 over alone (60) is a fat pass but kcal 1940 is 90 over.
+    expect(day(200, 150, 60)).toBe(false);
   });
 
   it("averages over logged days only", () => {

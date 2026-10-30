@@ -177,7 +177,13 @@ export const bodyProfiles = sqliteTable("body_profiles", {
   activityLevel: text("activity_level", {
     enum: ["sedentary", "light", "moderate", "active", "very_active"],
   }).notNull(),
+  // Legacy: no longer used for maths once kcalAdjustment is set.
   goal: text("goal", { enum: ["cut", "maintain", "bulk"] }).notNull(),
+  // PT-set daily kcal on top of the TDEE (negative = deficit). Null keeps the
+  // legacy goal factor so existing members' targets don't change on deploy.
+  kcalAdjustment: integer("kcal_adjustment"),
+  // PT-set protein g per kg of body weight. Null keeps the legacy goal value.
+  proteinPerKg: real("protein_per_kg"),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

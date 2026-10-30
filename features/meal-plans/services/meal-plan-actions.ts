@@ -11,6 +11,7 @@ import {
   MEAL_PLAN_LIMITS,
   MEAL_PLAN_MESSAGES,
 } from "@/features/meal-plans/constants/meal-plans";
+import { fail, ok, read } from "@/features/meal-plans/services/action-helpers";
 import {
   addItemSchema,
   addMealSchema,
@@ -49,32 +50,15 @@ import { getTargetForDate } from "@/features/nutrition/services/nutrition-querie
 import { withResultErrorHandling } from "@/services/action-errors";
 import { requireAdmin } from "@/services/auth-guard";
 import { findUserById } from "@/services/users";
-import type { ActionErrorResult, ActionResult } from "@/types/error";
+import type { ActionErrorResult } from "@/types/error";
 import { isUniqueViolation } from "@/utils/errors";
 import { getAdminNutritionPath } from "@/utils/routes";
 import { addDays, getWeekDates, getWeekStart } from "@/utils/week";
 
 const DEFAULT_ITEM_GRAMS = 100;
 
-const fail = (message: string): ActionErrorResult => ({
-  status: "error",
-  message,
-});
-
-const ok: ActionResult = { status: "success" };
-
 const refresh = (userId: number) => {
   revalidatePath(getAdminNutritionPath(userId));
-};
-
-// Zod failures are the PT's input problem, not a server error: a plain
-// message, not the generic one with a reference.
-const read = <Schema extends z.ZodType>(schema: Schema, input: unknown) => {
-  const parsed = schema.safeParse(input);
-
-  return parsed.success
-    ? ({ data: parsed.data as z.output<Schema> } as const)
-    : ({ error: fail(MEAL_PLAN_MESSAGES.INVALID_INPUT) } as const);
 };
 
 export type CopyResult =

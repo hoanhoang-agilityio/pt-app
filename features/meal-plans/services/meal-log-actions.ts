@@ -12,8 +12,8 @@ import { getFood } from "@/features/foods/services/food-queries";
 import {
   MEAL_LOG_LIMITS,
   MEAL_LOG_MESSAGES,
-  MEAL_PLAN_MESSAGES,
 } from "@/features/meal-plans/constants/meal-plans";
+import { fail, ok, read } from "@/features/meal-plans/services/action-helpers";
 import { findOwnedLog } from "@/features/meal-plans/services/meal-log-queries";
 import {
   addMealLogSchema,
@@ -24,28 +24,12 @@ import {
 import { findOwnedMeal } from "@/features/meal-plans/services/meal-plan-store";
 import { withResultErrorHandling } from "@/services/action-errors";
 import { requireUser } from "@/services/auth-guard";
-import type { ActionErrorResult, ActionResult } from "@/types/error";
 import { getAdminNutritionPath } from "@/utils/routes";
 import { getTodayDate } from "@/utils/week";
-
-const fail = (message: string): ActionErrorResult => ({
-  status: "error",
-  message,
-});
-
-const ok: ActionResult = { status: "success" };
 
 const refresh = (userId: number) => {
   revalidatePath(ROUTES.NUTRITION);
   revalidatePath(getAdminNutritionPath(userId));
-};
-
-const read = <Schema extends z.ZodType>(schema: Schema, input: unknown) => {
-  const parsed = schema.safeParse(input);
-
-  return parsed.success
-    ? ({ data: parsed.data as z.output<Schema> } as const)
-    : ({ error: fail(MEAL_PLAN_MESSAGES.INVALID_INPUT) } as const);
 };
 
 // The trainee logs what they ate today or earlier, never ahead of time.

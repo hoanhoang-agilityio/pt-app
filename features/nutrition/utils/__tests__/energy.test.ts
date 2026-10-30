@@ -10,6 +10,8 @@ import {
   formatDecimal,
   getAge,
   getBirthYear,
+  getGoal,
+  getGoalFromAdjustment,
   toBodyProfile,
 } from "@/features/nutrition/utils/energy";
 
@@ -22,6 +24,8 @@ const MALE: BodyProfile = {
   weightKg: 75,
   activityLevel: "moderate",
   goal: "maintain",
+  kcalAdjustment: null,
+  proteinPerKg: null,
 };
 
 describe("age", () => {
@@ -83,6 +87,65 @@ describe("calculateEnergyPlan", () => {
   });
 });
 
+describe("energy model (kcal adjustment + protein per kg)", () => {
+  // TDEE 2633.06; protein 75 × 2 = 150 g.
+  it("target is TDEE plus the adjustment", () => {
+    const cut = calculateEnergyPlan(
+      { ...MALE, kcalAdjustment: -200, proteinPerKg: 2 },
+      TODAY,
+    );
+
+    // 2633.06 − 200 = 2433.06 → 2430; fat 25% / 9 = 67.6 → 70 g;
+    // carbs (2433.06 − 600 − 630) / 4 = 300.8 → 300 g.
+    expect(cut).toMatchObject({ tdee: 2630, targetCalories: 2430 });
+    expect(cut.macros).toEqual({ carbs: 300, protein: 150, fat: 70 });
+
+    const bulk = calculateEnergyPlan(
+      { ...MALE, kcalAdjustment: 300, proteinPerKg: 2 },
+      TODAY,
+    );
+
+    // 2933.06 → 2930; fat 81.5 → 80 g; carbs (2933.06 − 600 − 720) / 4 = 403.3.
+    expect(bulk.targetCalories).toBe(2930);
+    expect(bulk.macros).toEqual({ carbs: 405, protein: 150, fat: 80 });
+  });
+
+  it("zero adjustment maintains and ignores the stored goal", () => {
+    const plan = calculateEnergyPlan(
+      { ...MALE, goal: "bulk", kcalAdjustment: 0, proteinPerKg: 1.6 },
+      TODAY,
+    );
+
+    expect(plan.targetCalories).toBe(2630);
+    // 75 × 1.6 = 120 g protein; fat 73 → 75 g; carbs (2633.06 − 480 − 675) / 4.
+    expect(plan.macros).toEqual({ carbs: 370, protein: 120, fat: 75 });
+  });
+
+  it("falls back to the legacy goal values while the fields are null", () => {
+    const plan = calculateEnergyPlan({ ...MALE, goal: "cut" }, TODAY);
+
+    expect(plan.targetCalories).toBe(2110);
+    expect(plan.macros.protein).toBe(165);
+  });
+
+  it("each field falls back on its own", () => {
+    const plan = calculateEnergyPlan({ ...MALE, proteinPerKg: 2 }, TODAY);
+
+    expect(plan.targetCalories).toBe(2630);
+    expect(plan.macros.protein).toBe(150);
+  });
+
+  it("derives the goal from the sign of the adjustment", () => {
+    expect(getGoalFromAdjustment(-1)).toBe("cut");
+    expect(getGoalFromAdjustment(0)).toBe("maintain");
+    expect(getGoalFromAdjustment(1)).toBe("bulk");
+    expect(getGoal({ ...MALE, goal: "bulk", kcalAdjustment: -200 })).toBe(
+      "cut",
+    );
+    expect(getGoal({ ...MALE, goal: "bulk" })).toBe("bulk");
+  });
+});
+
 describe("formatting", () => {
   it("describes food equivalents and calories", () => {
     expect(describeFoodEquivalent("carbs", 280)).toBe("≈ 10 lạng cơm chín");
@@ -104,13 +167,41 @@ describe("toBodyProfile", () => {
     weightKg: "72,5",
     activityLevel: "moderate" as const,
     goal: "cut" as const,
+    kcalAdjustment: "-200",
+    proteinPerKg: "1,6",
   };
 
   it("parses decimal commas and derives the birth year", () => {
     expect(toBodyProfile(draft, TODAY)).toMatchObject({
       birthYear: 1996,
       weightKg: 72.5,
+      kcalAdjustment: -200,
+      proteinPerKg: 1.6,
     });
+  });
+
+  it("reads an empty energy model as not set", () => {
+    expect(
+      toBodyProfile({ ...draft, kcalAdjustment: "", proteinPerKg: "" }, TODAY),
+    ).toMatchObject({ kcalAdjustment: null, proteinPerKg: null });
+  });
+
+  it("accepts signs and the bounds, rejects values outside", () => {
+    const adjust = (kcalAdjustment: string) =>
+      toBodyProfile({ ...draft, kcalAdjustment }, TODAY)?.kcalAdjustment;
+    const protein = (proteinPerKg: string) =>
+      toBodyProfile({ ...draft, proteinPerKg }, TODAY)?.proteinPerKg;
+
+    expect(adjust("+300")).toBe(300);
+    expect(adjust("−1000")).toBe(-1000);
+    expect(adjust("1000")).toBe(1000);
+    expect(adjust("1001")).toBeUndefined();
+    expect(adjust("-1001")).toBeUndefined();
+    expect(adjust("-200,5")).toBeUndefined();
+    expect(protein("1")).toBe(1);
+    expect(protein("3")).toBe(3);
+    expect(protein("0,9")).toBeUndefined();
+    expect(protein("3,1")).toBeUndefined();
   });
 
   it("returns null for incomplete or implausible numbers", () => {

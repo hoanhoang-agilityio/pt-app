@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDecimal } from "@/utils/decimal";
+import { parseDecimal, parseSignedDecimal } from "@/utils/decimal";
 
 describe("parseDecimal", () => {
   it("reads plain decimals with a point or a comma", () => {
@@ -25,6 +25,23 @@ describe("parseDecimal", () => {
       "Infinity",
     ]) {
       expect(parseDecimal(text)).toBeNaN();
+    }
+  });
+});
+
+describe("parseSignedDecimal", () => {
+  it("reads an optional leading sign", () => {
+    expect(parseSignedDecimal("-200")).toBe(-200);
+    expect(parseSignedDecimal("−200")).toBe(-200);
+    expect(parseSignedDecimal("+200")).toBe(200);
+    expect(parseSignedDecimal(" 0 ")).toBe(0);
+    expect(parseSignedDecimal("-1,5")).toBe(-1.5);
+    expect(Object.is(parseSignedDecimal("-0"), 0)).toBe(true);
+  });
+
+  it("gives NaN for anything else", () => {
+    for (const text of ["", "-", "+-1", "--1", "1-", "-1e2", "abc"]) {
+      expect(parseSignedDecimal(text)).toBeNaN();
     }
   });
 });

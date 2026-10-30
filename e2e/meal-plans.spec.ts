@@ -13,6 +13,7 @@ import {
 
 import { E2E_ADMIN, E2E_DB_URL, E2E_PLANNER_NAME } from "./config";
 import { E2E_FOODS } from "./seed";
+import { shot } from "./shots";
 
 // Meal plan builder (KAN-69), PT and trainee views. The specs share one
 // seeded DB and run in order: the trainee asks for 4 meals first, then the PT
@@ -47,20 +48,13 @@ const getPlannerId = async () => {
   return Number(row.id);
 };
 
-// Screenshots for the browser proof; only when E2E_SHOTS_DIR is set.
-const shot = async (page: Page, name: string) => {
-  if (process.env.E2E_SHOTS_DIR) {
-    await page.screenshot({ path: `${process.env.E2E_SHOTS_DIR}/${name}.png` });
-  }
-};
-
 const getRiceGrams = async (date: string) => {
   const [row] = await query<{ grams: number }>(
     `SELECT i.grams FROM meal_plan_items i
      JOIN meal_plan_meals m ON m.id = i.meal_id
      JOIN meal_plan_days d ON d.id = m.day_id
      JOIN foods f ON f.id = i.food_id
-     WHERE d.date = ? AND f.name = ?`,
+     WHERE d.user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}') AND d.date = ? AND f.name = ?`,
     [date, E2E_FOODS.RICE],
   );
 
@@ -228,7 +222,9 @@ test("S5: the PT builds Monday, auto solves the worked example and the day is on
       async () =>
         (
           await query<{ name: string }>(
-            "SELECT name FROM meal_plan_meals ORDER BY id LIMIT 1",
+            `SELECT m.name FROM meal_plan_meals m
+             JOIN meal_plan_days d ON d.id = m.day_id
+             WHERE d.user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}') ORDER BY m.id LIMIT 1`,
           )
         )[0].name,
     )
@@ -325,6 +321,9 @@ test("S5: the PT builds Monday, auto solves the worked example and the day is on
   const rows = await query<{ name: string; grams: number }>(
     `SELECT foods.name AS name, meal_plan_items.grams AS grams
      FROM meal_plan_items JOIN foods ON foods.id = meal_plan_items.food_id
+     JOIN meal_plan_meals m ON m.id = meal_plan_items.meal_id
+     JOIN meal_plan_days d ON d.id = m.day_id
+     WHERE d.user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}')
      ORDER BY meal_plan_items.id`,
   );
 
@@ -409,7 +408,10 @@ test("R2: next week starts empty and 'Áp dụng tuần trước' copies the pla
     page.getByText("Sao chép 2 ngày có plan của tuần trước"),
   ).toBeVisible();
   expect(
-    await query("SELECT id FROM meal_plan_days WHERE date >= ?", [NEXT_MONDAY]),
+    await query(
+      `SELECT id FROM meal_plan_days WHERE date >= ? AND user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}')`,
+      [NEXT_MONDAY],
+    ),
   ).toHaveLength(0);
 
   await page.getByRole("button", { name: "Áp dụng tuần trước" }).click();
@@ -420,7 +422,7 @@ test("R2: next week starts empty and 'Áp dụng tuần trước' copies the pla
   await expect(grams(page, E2E_FOODS.OLIVE_OIL)).toHaveValue("35");
 
   const dates = await query<{ date: string }>(
-    "SELECT date FROM meal_plan_days WHERE date >= ? ORDER BY date",
+    `SELECT date FROM meal_plan_days WHERE date >= ? AND user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}') ORDER BY date`,
     [NEXT_MONDAY],
   );
 
@@ -477,7 +479,7 @@ test("Q4: the PT splits a day by percent and the total must be 100", async ({
   ).toHaveCount(2);
   const stored = await query<{ share_percent: number }>(
     `SELECT share_percent FROM meal_plan_meals
-     WHERE day_id = (SELECT id FROM meal_plan_days WHERE date = ?) ORDER BY position`,
+     WHERE day_id = (SELECT id FROM meal_plan_days WHERE date = ? AND user_id = (SELECT id FROM users WHERE name = '${E2E_PLANNER_NAME}')) ORDER BY position`,
     [WEDNESDAY],
   );
 

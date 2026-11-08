@@ -18,18 +18,18 @@
 
 ## Tables
 
-| Gets `public_id` | Why |
-| --- | --- |
-| users, admins | admin member URLs, avatar URLs, Ably channels/clientIds, push url, hidden-user list, chat sender ids |
-| foods | `/foods/[id]`, `/admin/foods/[id]`, food picker, meal plan and meal log inputs |
-| meal_plan_days, meal_plan_meals, meal_plan_items | meal plan editor actions and DTOs |
-| meal_logs | meal log actions |
-| exercises | exercise form, set logging, completion actions |
-| food_entries | food entry form and actions |
-| chat_conversations | admin chat API routes, Ably channel, push tag, profile actions, typing |
-| chat_messages | message edits routes, reply/react/edit/unsend inputs, read cursor, gallery/search cursors, Ably payloads |
-| chat_photos | `/api/chat/photos/[id]`, send-photo input, gallery |
-| chat_custom_stickers | `/api/chat/stickers/custom/[id]`, sticker send input |
+| Gets `public_id`                                 | Why                                                                                                      |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| users, admins                                    | admin member URLs, avatar URLs, Ably channels/clientIds, push url, hidden-user list, chat sender ids     |
+| foods                                            | `/foods/[id]`, `/admin/foods/[id]`, food picker, meal plan and meal log inputs                           |
+| meal_plan_days, meal_plan_meals, meal_plan_items | meal plan editor actions and DTOs                                                                        |
+| meal_logs                                        | meal log actions                                                                                         |
+| exercises                                        | exercise form, set logging, completion actions                                                           |
+| food_entries                                     | food entry form and actions                                                                              |
+| chat_conversations                               | admin chat API routes, Ably channel, push tag, profile actions, typing                                   |
+| chat_messages                                    | message edits routes, reply/react/edit/unsend inputs, read cursor, gallery/search cursors, Ably payloads |
+| chat_photos                                      | `/api/chat/photos/[id]`, send-photo input, gallery                                                       |
+| chat_custom_stickers                             | `/api/chat/stickers/custom/[id]`, sticker send input                                                     |
 
 Not exposed, no column: workout_days, exercise_sets, exercise_completions, nutrition_targets, body_profiles, weight_logs, meal_marks, meal_mark_items, chat_reactions, chat_message_edits, chat_nicknames, chat_color_overrides, chat_hidden_conversations, admin_hidden_users, chat reads, push_subscriptions, login_attempts, rate_limits. If a phase finds one of these exposed after all, it gets the column in that phase and this table is updated.
 
@@ -48,17 +48,17 @@ Revert the phase's PR. The added column and its values stay in the DB and are ig
 
 ## Test matrix
 
-| Case | Where |
-| --- | --- |
-| `publicIdSchema` accepts a v4 UUID, rejects `"3"`, `3`, `""`, malformed strings | `utils/__tests__/public-id.test.ts` |
-| Backfill fills only NULL rows, is idempotent, leaves existing UUIDs untouched | `services/__tests__/backfill-public-ids.test.ts` (in-memory libSQL) |
-| Inserts get a UUID by default | same file |
-| Route helpers build paths from public ids | `utils/__tests__/routes.test.ts` |
-| Admin member page with numeric id or unknown UUID → 404 | service test for `findUserByPublicId` |
-| Action with a numeric `userId` fails validation | member/workout/nutrition/meal-plan schema tests |
-| Ably channel names and capabilities use public ids; `assertId` rejects integers | `features/chat/utils/__tests__/ably-capabilities.test.ts` |
-| Chat cursors resolve from message public id; unknown cursor → empty page, not error | chat query tests |
-| Push payload url/tag contain public ids only | `push-rules` tests |
-| No integer id in any DTO sent to the client | per-phase grep check in the PR (`id:` fields in DTO types are `string`) |
+| Case                                                                                | Where                                                                   |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `publicIdSchema` accepts a v4 UUID, rejects `"3"`, `3`, `""`, malformed strings     | `utils/__tests__/public-id.test.ts`                                     |
+| Backfill fills only NULL rows, is idempotent, leaves existing UUIDs untouched       | `services/__tests__/backfill-public-ids.test.ts` (in-memory libSQL)     |
+| Inserts get a UUID by default                                                       | same file                                                               |
+| Route helpers build paths from public ids                                           | `utils/__tests__/routes.test.ts`                                        |
+| Admin member page with numeric id or unknown UUID → 404                             | service test for `findUserByPublicId`                                   |
+| Action with a numeric `userId` fails validation                                     | member/workout/nutrition/meal-plan schema tests                         |
+| Ably channel names and capabilities use public ids; `assertId` rejects integers     | `features/chat/utils/__tests__/ably-capabilities.test.ts`               |
+| Chat cursors resolve from message public id; unknown cursor → empty page, not error | chat query tests                                                        |
+| Push payload url/tag contain public ids only                                        | `push-rules` tests                                                      |
+| No integer id in any DTO sent to the client                                         | per-phase grep check in the PR (`id:` fields in DTO types are `string`) |
 
 e2e specs and `e2e/seed.ts` hard-code numeric ids; they are updated in each phase but not run (e2e skipped by Hoan, 2026-11-08).

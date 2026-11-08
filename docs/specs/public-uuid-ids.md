@@ -8,7 +8,7 @@
 
 1. **Additive `public_id` column, integer PK stays.** Every exposed table gets `public_id text` with a unique index. The integer `id` stays the primary key and every foreign key keeps pointing at it. (Hoan's decision card, 2026-11-08.)
 2. **UUID v4 from `crypto.randomUUID()`**, set by Drizzle `$defaultFn` on insert. Column is nullable in the schema because SQLite cannot add a NOT NULL column without a default to a table with rows; the app treats it as required (type narrowed in queries, backfill guarantees it).
-3. **Backfill in the build.** `scripts/setup-database.ts` gets `backfillPublicIds()` after `pushSchema()`, same pattern as `migrateHiddenConversations()`. It fills `public_id` where it is NULL, in batches, and is idempotent. It runs on Vercel (production and preview) and in `pnpm db:setup` locally.
+3. **Backfill in the build.** `scripts/setup-database.ts` gets `backfillPublicIds()` after `pushSchema()`, same pattern as `migrateHiddenConversations()`. It fills `public_id` where it is NULL, in batches, and is idempotent. It runs on Vercel (production and preview) and in `pnpm db:setup` locally. Because the build runs while the previous deployment is still serving (minutes, until promotion), rows inserted by code without `$defaultFn` in that gap get a NULL `public_id`. So the columns ship first on their own (phase 0) and must reach production in a release before any boundary switch is released; every later build reruns the backfill and catches gap rows, and from phase 0 on all inserts write a UUID.
 4. **Boundary rule.** Integer ids live only inside services/queries. Everything that crosses to a client or out of the server uses `publicId`: route params, links, redirects and `revalidatePath`, hidden form inputs, server action and API inputs, JSON/DTO fields and client props, Ably channel names, clientIds and event payloads, push `url`/`tag`, avatar, photo and sticker URLs, pagination cursors.
 5. **Validation.** One shared `publicIdSchema = z.uuid()` in `utils/` replaces `z.coerce.number()` id schemas at the boundary. A numeric or malformed id fails validation (actions) or returns 404 (pages, API routes). No fallback lookup by integer id.
 6. **Lookup helpers.** Each feature service gets `find<Entity>ByPublicId()` and resolves to the internal id once at the boundary; existing internal queries keep taking integers.
@@ -35,16 +35,17 @@ Not exposed, no column: workout_days, exercise_sets, exercise_completions, nutri
 
 ## Phases (one PR each, into `stag`)
 
-1. **Foundation + users/admins.** `publicIdSchema`, schema columns for users and admins, backfill step, `utils/routes.ts` helpers take public ids, admin `users/[id]/*` pages, member actions and every hidden `userId`/`targetUserId` input, avatar route and URLs, presence and photo-list `userId` query params, push url, hidden-user list.
-2. **Foods + meal plan + meal logs.** foods, meal_plan_days/meals/items, meal_logs columns; food pages and actions; meal plan and meal log schemas, DTOs and editors.
-3. **Workouts + nutrition entries.** exercises, food_entries columns; workout, set and completion actions; food entry form.
-4. **Chat.** chat_conversations, chat_messages, chat_photos, chat_custom_stickers columns; admin chat API routes, message edit routes, chat actions and schemas, cursors, Ably channel names, clientIds, capabilities (`assertId`) and payloads, push tag, photo and sticker URLs. Clients connected during the deploy get new tokens on reconnect.
+0. **Columns only.** `public_id` + `$defaultFn` + unique index on every table in the table above, backfill step in the build, `publicIdSchema`. No boundary change. Must be released to production (`stag` -> `main`) before phase 1 is released.
+1. **Users/admins.** `utils/routes.ts` helpers take public ids, admin `users/[id]/*` pages, member actions and every hidden `userId`/`targetUserId` input, avatar route and URLs, presence and photo-list `userId` query params, push url, hidden-user list.
+2. **Foods + meal plan + meal logs.** Food pages and actions; meal plan and meal log schemas, DTOs and editors.
+3. **Workouts + nutrition entries.** Workout, set and completion actions; food entry form.
+4. **Chat.** Admin chat API routes, message edit routes, chat actions and schemas, cursors, Ably channel names, clientIds, capabilities (`assertId`) and payloads, push tag, photo and sticker URLs. Clients connected during the deploy get new tokens on reconnect.
 
-Each phase is deployable alone: earlier phases never depend on later ones.
+Each phase is deployable alone once phase 0 is in production: earlier phases never depend on later ones.
 
 ## Rollback
 
-Revert the phase's PR. The added column and its values stay in the DB and are ignored by the old code (additive). Re-applying the PR later reuses the same UUIDs, so links shared in between stay valid.
+Revert the phase's PR (phases 1-4). Phase 0 never needs a revert: it only adds columns and default values that old code ignores. The added column and its values stay in the DB and are ignored by the old code (additive). Re-applying the PR later reuses the same UUIDs, so links shared in between stay valid.
 
 ## Test matrix
 

@@ -10,14 +10,11 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Avatar } from "@/components/common/Avatar";
+import { LoadOlderControl } from "@/components/common/LoadOlderControl";
 import { ScrollJumpButton } from "@/components/common/ScrollJumpButton";
 import { Spinner } from "@/components/common/Spinner";
 import { ROUTES } from "@/constants/routes";
-import {
-  BUTTON_SECONDARY,
-  ICON_BUTTON,
-  PAGE_CONTAINER,
-} from "@/constants/styles";
+import { ICON_BUTTON, PAGE_CONTAINER } from "@/constants/styles";
 import { useClearNotifications } from "@/features/chat/hooks/use-clear-notifications";
 import { dmNotificationTags } from "@/features/chat/utils/clear-notifications";
 import {
@@ -32,6 +29,7 @@ import { useDmThread } from "@/features/social/hooks/use-dm-thread";
 import type { DmReplyPostView, DmThreadPage } from "@/features/social/types/dm";
 import { lastSeenOwnId } from "@/features/social/utils/dm-thread-rules";
 import { profilePath } from "@/features/social/utils/post-rules";
+import { useLoadOlderOnScroll } from "@/hooks/use-load-older-on-scroll";
 import { useScrollAway } from "@/hooks/use-scroll-away";
 import { useLocalizeMessage } from "@/i18n/use-localize-message";
 
@@ -70,7 +68,6 @@ export const DmThread = ({
   const [text, setText] = useState("");
   const [photo, setPhoto] = useState<PendingPhoto | null>(null);
   const [isUploading, setUploading] = useState(false);
-  const [isLoadingOlder, setLoadingOlder] = useState(false);
   const [quote, setQuote] = useState(replyPost);
   const endRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
@@ -85,9 +82,14 @@ export const DmThread = ({
 
   useClearNotifications(dmNotificationTags(conversationId), lastCount);
 
+  // Keyed on the newest message, not the count: older messages prepended by
+  // the load-older hook change the count but must not jump to the bottom.
+  // clientId is stable across the pending -> sent swap of the same message.
+  const lastKey = thread.items.at(-1)?.clientId ?? null;
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
-  }, [lastCount]);
+  }, [lastKey]);
 
   const handleFile = async (file: File | undefined) => {
     if (!file) {
@@ -160,15 +162,15 @@ export const DmThread = ({
     }
   };
 
-  // Older messages come from a plain fetch, so track it here.
-  const loadOlder = async () => {
-    setLoadingOlder(true);
-    try {
-      await thread.loadOlder();
-    } finally {
-      setLoadingOlder(false);
-    }
-  };
+  // Older messages load when the top sentinel nears the top; the hook also
+  // keeps the reader's place after the prepend.
+  const tCommon = useTranslations("common");
+  const older = useLoadOlderOnScroll({
+    rootRef: mainRef,
+    hasMore: thread.hasMore,
+    loadOlder: thread.loadOlder,
+    firstKey: thread.items.find((item) => !item.pending)?.id ?? null,
+  });
 
   return (
     <div className="flex h-dvh flex-col bg-bg">
@@ -201,18 +203,21 @@ export const DmThread = ({
       <div className="relative min-h-0 flex-1">
         <main ref={mainRef} className="h-full overflow-y-auto">
           <div className={clsx(PAGE_CONTAINER, "space-y-3 py-4")}>
-            {thread.hasMore && (
-              <button
-                type="button"
-                onClick={() => void loadOlder()}
-                disabled={isLoadingOlder}
-                aria-busy={isLoadingOlder}
-                className={clsx(BUTTON_SECONDARY, "w-full")}
-              >
-                {isLoadingOlder && <Spinner size="md" />}
-                {t("loadOlder")}
-              </button>
-            )}
+            <LoadOlderControl
+              sentinelRef={older.sentinelRef}
+              hasMore={thread.hasMore}
+              isLoading={older.isLoading}
+              hasError={older.error !== null}
+              hasItems={thread.items.length > 0}
+              onLoad={older.retry}
+              labels={{
+                loading: tCommon("loading"),
+                loadOlder: t("loadOlder"),
+                retry: t("loadOlderRetry"),
+                start: t("conversationStart"),
+              }}
+              className="-my-1"
+            />
             {thread.items.length === 0 ? (
               <p className="py-10 text-center text-muted">{t("noMessages")}</p>
             ) : (

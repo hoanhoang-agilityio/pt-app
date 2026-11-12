@@ -247,6 +247,8 @@
     "traineeFallback": "Học viên",
     "loadingOlder": "Đang tải…",
     "loadOlder": "Xem tin cũ hơn",
+    "loadOlderRetry": "Không tải được. Thử lại",
+    "conversationStart": "Bắt đầu cuộc trò chuyện",
     "editing": "Đang chỉnh sửa",
     "cancelEdit": "Huỷ chỉnh sửa",
     "replying": "Đang trả lời {name}",

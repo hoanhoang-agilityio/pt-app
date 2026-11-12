@@ -137,6 +137,8 @@
   "dmThread": {
     "back": "Back",
     "loadOlder": "Load older messages",
+    "loadOlderRetry": "Couldn't load. Try again",
+    "conversationStart": "Start of the conversation",
     "noMessages": "No messages yet. Say hello!",
     "replying": "Replying to a post",
     "cancelReply": "Cancel reply to post",

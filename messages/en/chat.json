@@ -247,6 +247,8 @@
     "traineeFallback": "Trainee",
     "loadingOlder": "Loading…",
     "loadOlder": "Load older messages",
+    "loadOlderRetry": "Couldn't load. Try again",
+    "conversationStart": "Start of the conversation",
     "editing": "Editing",
     "cancelEdit": "Cancel edit",
     "replying": "Replying to {name}",

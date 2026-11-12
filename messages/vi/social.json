@@ -137,6 +137,8 @@
   "dmThread": {
     "back": "Quay lại",
     "loadOlder": "Xem tin cũ hơn",
+    "loadOlderRetry": "Không tải được. Thử lại",
+    "conversationStart": "Bắt đầu cuộc trò chuyện",
     "noMessages": "Chưa có tin nhắn. Hãy chào bạn mình nhé.",
     "replying": "Đang trả lời bài viết",
     "cancelReply": "Bỏ trả lời bài viết",

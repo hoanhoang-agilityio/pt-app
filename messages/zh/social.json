@@ -137,6 +137,8 @@
   "dmThread": {
     "back": "返回",
     "loadOlder": "查看更早的消息",
+    "loadOlderRetry": "加载失败，请重试",
+    "conversationStart": "对话的开始",
     "noMessages": "暂无消息，和好友打个招呼吧。",
     "replying": "正在回复动态",
     "cancelReply": "取消回复动态",

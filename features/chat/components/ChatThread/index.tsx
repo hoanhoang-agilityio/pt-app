@@ -16,8 +16,8 @@ import {
 import { toast } from "sonner";
 
 import { useConfirm } from "@/components/common/ConfirmDialog/use-confirm";
+import { LoadOlderControl } from "@/components/common/LoadOlderControl";
 import { ScrollJumpButton } from "@/components/common/ScrollJumpButton";
-import { Spinner } from "@/components/common/Spinner";
 import { Composer } from "@/features/chat/components/Composer";
 import { LockedBanner } from "@/features/chat/components/LockedBanner";
 import { MessageBubble } from "@/features/chat/components/MessageBubble";
@@ -57,6 +57,7 @@ import type { PreparedPhoto } from "@/features/chat/utils/encode-photo";
 import type { PresenceView } from "@/features/chat/utils/presence-status";
 import { useIsEmbedded } from "@/features/chat-bubbles/hooks/use-is-embedded";
 import type { DmReplyPostView } from "@/features/social/types/dm";
+import { useLoadOlderOnScroll } from "@/hooks/use-load-older-on-scroll";
 import { useScrollAway } from "@/hooks/use-scroll-away";
 import { scrollBehaviorFor } from "@/utils/scroll-rules";
 
@@ -251,13 +252,11 @@ export const ChatThread = ({
   const wasNearBottom = useRef(true);
   // undefined = not measured yet (first paint is handled separately).
   const lastItemKey = useRef<string | null | undefined>(undefined);
-  const olderAnchor = useRef<{ height: number; firstId: number | null } | null>(
-    null,
-  );
   const [showNewChip, setShowNewChip] = useState(false);
   const [newCount, setNewCount] = useState(0);
   const { isAway } = useScrollAway({ edge: "bottom", container: scroller });
   const tJump = useTranslations("common.scrollJump");
+  const tCommon = useTranslations("common");
   const confirm = useConfirm();
   // The open sheet and the message it is about; kept after closing so the
   // content does not vanish during the exit animation.
@@ -371,18 +370,17 @@ export const ChatThread = ({
     }
   }, [lastKey, last, scrollToBottom, viewer.role]);
 
-  // Older messages were prepended: keep what the reader was looking at.
+  // Older messages load when the top sentinel nears the top; the hook also
+  // keeps the reader's place after the prepend. The first stored id changes
+  // only for older messages, not for new ones at the bottom.
   const firstId = firstStoredId(messages);
-
-  useLayoutEffect(() => {
-    const anchor = olderAnchor.current;
-    const node = scroller.current;
-
-    if (anchor && node && firstId !== anchor.firstId) {
-      node.scrollTop += node.scrollHeight - anchor.height;
-      olderAnchor.current = null;
-    }
-  }, [firstId]);
+  const older = useLoadOlderOnScroll({
+    rootRef: scroller,
+    hasMore,
+    isLoading: chat.isLoadingOlder,
+    loadOlder: chat.loadOlder,
+    firstKey: firstId,
+  });
 
   // Keyboard open/close and viewport resize: stay on the latest message.
   const viewportHeight = viewport?.height;
@@ -626,15 +624,6 @@ export const ChatThread = ({
     }
   };
 
-  const handleLoadOlder = () => {
-    const node = scroller.current;
-
-    if (node) {
-      olderAnchor.current = { height: node.scrollHeight, firstId };
-    }
-    void chat.loadOlder();
-  };
-
   const emptyMessage =
     emptyText ?? (chatEnabled ? t("empty") : t("emptyLocked"));
   const latestPeerName = latestAdminName(messages);
@@ -697,19 +686,21 @@ export const ChatThread = ({
                 <PushOptInCard role="user" />
               </div>
             )}
-            {hasMore && (
-              <div className="flex justify-center pt-4">
-                <button
-                  type="button"
-                  onClick={handleLoadOlder}
-                  disabled={chat.isLoadingOlder}
-                  className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium text-muted transition active:bg-line disabled:opacity-50"
-                >
-                  {chat.isLoadingOlder && <Spinner size="sm" />}
-                  {chat.isLoadingOlder ? t("loadingOlder") : t("loadOlder")}
-                </button>
-              </div>
-            )}
+            <LoadOlderControl
+              sentinelRef={older.sentinelRef}
+              hasMore={hasMore}
+              isLoading={older.isLoading}
+              hasError={older.error !== null}
+              hasItems={items.length > 0}
+              onLoad={older.retry}
+              labels={{
+                loading: tCommon("loading"),
+                loadOlder: t("loadOlder"),
+                retry: t("loadOlderRetry"),
+                start: t("conversationStart"),
+              }}
+              className="pt-2"
+            />
             {items.length === 0 && (
               <p className="px-6 py-16 text-center text-sm text-muted">
                 {emptyMessage}

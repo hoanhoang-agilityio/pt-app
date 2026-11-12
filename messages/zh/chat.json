@@ -247,6 +247,8 @@
     "traineeFallback": "学员",
     "loadingOlder": "加载中…",
     "loadOlder": "查看更早的消息",
+    "loadOlderRetry": "加载失败，请重试",
+    "conversationStart": "对话的开始",
     "editing": "正在编辑",
     "cancelEdit": "取消编辑",
     "replying": "正在回复 {name}",

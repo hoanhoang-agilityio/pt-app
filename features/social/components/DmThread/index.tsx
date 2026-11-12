@@ -82,9 +82,14 @@ export const DmThread = ({
 
   useClearNotifications(dmNotificationTags(conversationId), lastCount);
 
+  // Keyed on the newest message, not the count: older messages prepended by
+  // the load-older hook change the count but must not jump to the bottom.
+  // clientId is stable across the pending -> sent swap of the same message.
+  const lastKey = thread.items.at(-1)?.clientId ?? null;
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
-  }, [lastCount]);
+  }, [lastKey]);
 
   const handleFile = async (file: File | undefined) => {
     if (!file) {

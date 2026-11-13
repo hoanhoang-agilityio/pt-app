@@ -36,10 +36,19 @@ import type { DmReplyPostView } from "@/features/social/types/dm";
 import { useLocalizeMessage } from "@/i18n/use-localize-message";
 
 const MARK_READ_DEBOUNCE_MS = 600;
+// An `after` cursor past every message. While the newest messages are not
+// loaded (a jump left a gap), polling still needs the read cursor, lock state
+// and changes, but must not append anything after the gap. Asking for messages
+// after this id returns none (and the 204 fast path when nothing changed), so
+// the stored cursor stays where the loaded window ends.
+const PAST_NEWEST_CURSOR = Number.MAX_SAFE_INTEGER;
 
 export interface ThreadSnapshot {
   messages: SerializedChatMessage[];
   hasMore: boolean;
+  // A jump (`?m=`) loaded a window in the middle: newer messages exist beyond
+  // the last one. Absent or false on a normal open.
+  hasNewer?: boolean;
   chatEnabled: boolean;
   peerReadUpTo: number;
   // The other side's last heartbeat (ISO) for the status line, KAN-128.
@@ -117,6 +126,8 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
     mergeMessages([], initial.messages),
   );
   const [hasMore, setHasMore] = useState(initial.hasMore);
+  const [hasNewer, setHasNewerState] = useState(initial.hasNewer ?? false);
+  const [isLoadingNewer, setIsLoadingNewer] = useState(false);
   const [chatEnabled, setChatEnabled] = useState(initial.chatEnabled);
   const [peerReadUpTo, setPeerReadUpTo] = useState(initial.peerReadUpTo);
   const [peerLastSeenAt, setPeerLastSeenAt] = useState(initial.peerLastSeenAt);
@@ -130,6 +141,11 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
   const messagesRef = useRef(messages);
   const peerReadRef = useRef(peerReadUpTo);
   const enabledRef = useRef(chatEnabled);
+  const hasNewerRef = useRef(initial.hasNewer ?? false);
+  const loadingNewer = useRef(false);
+  // Bumped by every reset to the newest page; a load that started before it
+  // is stale and must not touch the list.
+  const epoch = useRef(0);
   const syncing = useRef(false);
   const resync = useRef(false);
   const lastMarked = useRef(0);
@@ -147,12 +163,20 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
     enabledRef.current = chatEnabled;
   });
 
+  const setHasNewer = useCallback((value: boolean) => {
+    hasNewerRef.current = value;
+    setHasNewerState(value);
+  }, []);
+
   const apply = useCallback((data: ThreadResponse, isForward: boolean) => {
     if (data.peerLastSeenAt !== undefined) {
       setPeerLastSeenAt(data.peerLastSeenAt);
     }
+    // Never append after a gap: only changes to what is loaded.
+    const incoming = hasNewerRef.current ? [] : data.messages;
+
     setMessages((current) =>
-      mergeChanges(mergeMessages(current, data.messages), data.changes ?? []),
+      mergeChanges(mergeMessages(current, incoming), data.changes ?? []),
     );
     if (typeof data.lastChangeAt === "number") {
       changeCursor.current = Math.max(changeCursor.current, data.lastChangeAt);
@@ -180,7 +204,9 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
 
       while (again) {
         again = false;
-        const after = lastStoredId(messagesRef.current);
+        const after = hasNewerRef.current
+          ? PAST_NEWEST_CURSOR
+          : lastStoredId(messagesRef.current);
         const params = new URLSearchParams({
           readUpTo: String(peerReadRef.current),
           enabled: enabledRef.current ? "1" : "0",
@@ -212,7 +238,10 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
         }
         apply(data, after > 0);
         messagesRef.current = mergeChanges(
-          mergeMessages(messagesRef.current, data.messages),
+          mergeMessages(
+            messagesRef.current,
+            hasNewerRef.current ? [] : data.messages,
+          ),
           data.changes ?? [],
         );
         // More than one page of news (new messages or changes): keep going
@@ -258,6 +287,77 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
       setIsLoadingOlder(false);
     }
   }, [isLoadingOlder]);
+
+  // Scrolling down in a jumped window: the next page after the newest loaded
+  // message. Throws on failure so the scroll hook can offer a retry.
+  const loadNewer = useCallback(async () => {
+    const after = lastStoredId(messagesRef.current);
+
+    if (!hasNewerRef.current || loadingNewer.current || after === 0) {
+      return;
+    }
+    const startedAt = epoch.current;
+
+    loadingNewer.current = true;
+    setIsLoadingNewer(true);
+    try {
+      const response = await fetch(
+        `${adapterRef.current.messagesUrl}?after=${after}`,
+        { cache: "no-store" },
+      );
+      const data: unknown = response.ok ? await response.json() : null;
+
+      if (!isThreadResponse(data)) {
+        throw new Error("load newer");
+      }
+      if (startedAt !== epoch.current) {
+        return;
+      }
+      const next = mergeMessages(messagesRef.current, data.messages);
+
+      messagesRef.current = next;
+      setMessages(next);
+      setHasNewer(data.hasMore);
+    } finally {
+      loadingNewer.current = false;
+      setIsLoadingNewer(false);
+    }
+  }, [setHasNewer]);
+
+  // Leaves the jumped window: replaces the list with the newest page, like a
+  // normal open. True when the thread is on the newest page afterwards.
+  const resetToLatest = useCallback(async () => {
+    if (!hasNewerRef.current) {
+      return true;
+    }
+    epoch.current += 1;
+    const startedAt = epoch.current;
+
+    try {
+      const response = await fetch(adapterRef.current.messagesUrl, {
+        cache: "no-store",
+      });
+      const data: unknown = response.ok ? await response.json() : null;
+
+      if (!isThreadResponse(data)) {
+        return false;
+      }
+      if (startedAt !== epoch.current) {
+        return !hasNewerRef.current;
+      }
+      const next = mergeMessages([], data.messages);
+
+      messagesRef.current = next;
+      setMessages(next);
+      setHasMore(data.hasMore);
+      setHasNewer(false);
+      // Read cursor, lock state and changes catch up through the normal poll.
+      void sync();
+      return true;
+    } catch {
+      return false;
+    }
+  }, [setHasNewer, sync]);
 
   const deliver = useCallback(
     async (
@@ -579,6 +679,8 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
   return {
     messages,
     hasMore,
+    hasNewer,
+    isLoadingNewer,
     chatEnabled,
     peerReadUpTo,
     peerLastSeenAt,
@@ -588,6 +690,8 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
     sendError,
     sync,
     loadOlder,
+    loadNewer,
+    resetToLatest,
     send,
     sendSticker,
     sendPhoto,

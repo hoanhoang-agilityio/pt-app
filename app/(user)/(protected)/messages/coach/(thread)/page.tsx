@@ -79,10 +79,12 @@ const CoachChatPage = async ({
       conversationId={conversation?.id ?? null}
       replyPost={replyPost}
       jumpToId={around ? jumpId : null}
+      jumpMissed={jumpId !== null && !around}
       initial={{
         ...payload,
         messages: (around?.messages ?? payload.messages).map(serializeMessage),
         hasMore: around?.hasMore ?? payload.hasMore,
+        hasNewer: around?.hasNewer ?? false,
         // Without `changedSince` the payload has no changes to carry.
         changes: [],
       }}

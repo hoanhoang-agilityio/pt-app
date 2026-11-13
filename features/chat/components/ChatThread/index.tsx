@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 
 import { useConfirm } from "@/components/common/ConfirmDialog/use-confirm";
+import { LoadNewerControl } from "@/components/common/LoadNewerControl";
 import { LoadOlderControl } from "@/components/common/LoadOlderControl";
 import { ScrollJumpButton } from "@/components/common/ScrollJumpButton";
 import { Composer } from "@/features/chat/components/Composer";
@@ -57,6 +58,7 @@ import type { PreparedPhoto } from "@/features/chat/utils/encode-photo";
 import type { PresenceView } from "@/features/chat/utils/presence-status";
 import { useIsEmbedded } from "@/features/chat-bubbles/hooks/use-is-embedded";
 import type { DmReplyPostView } from "@/features/social/types/dm";
+import { useLoadNewerOnScroll } from "@/hooks/use-load-newer-on-scroll";
 import { useLoadOlderOnScroll } from "@/hooks/use-load-older-on-scroll";
 import { useScrollAway } from "@/hooks/use-scroll-away";
 import { scrollBehaviorFor } from "@/utils/scroll-rules";
@@ -69,6 +71,9 @@ export interface ChatThreadProps {
   infoHref: string;
   // Open scrolled to this message and highlight it (gallery, search).
   jumpToId?: number | null;
+  // `?m=` was given but the message is gone (deleted or not in this chat):
+  // the chat opens at the newest and says so.
+  jumpMissed?: boolean;
   // The page header; rendered inside the shell so the keyboard resize keeps
   // it in place. A function receives the username of the newest PT who wrote
   // in the loaded messages (null if none or deleted) and the peer presence
@@ -216,6 +221,7 @@ export const ChatThread = ({
   header,
   infoHref,
   jumpToId = null,
+  jumpMissed = false,
   viewer = USER_VIEWER,
   fallbackPeerName = "PT",
   verifiedAdminIds = NO_VERIFIED,
@@ -236,7 +242,7 @@ export const ChatThread = ({
   const [isVisible, setIsVisible] = useState(true);
   const adapter = useChatAdapter(viewer, userId, conversationId);
   const chat = useChatMessages({ adapter, initial, isViewing: isVisible });
-  const { messages, hasMore, chatEnabled, peerReadUpTo, sync } = chat;
+  const { messages, hasMore, hasNewer, chatEnabled, peerReadUpTo, sync } = chat;
 
   useClearNotifications(
     conversationId === null ? null : chatNotificationTags(conversationId),
@@ -250,6 +256,13 @@ export const ChatThread = ({
   const viewport = useVisualViewport();
   const scroller = useRef<HTMLDivElement>(null);
   const wasNearBottom = useRef(true);
+  // Latest `hasNewer` for scroll handlers: while the newest messages are not
+  // loaded, nothing may snap the view to the bottom of the loaded window.
+  const hasNewerRef = useRef(hasNewer);
+  // Set while a reset to the newest page is under way; the layout effect
+  // below scrolls to the bottom once it has rendered.
+  const scrollAfterReset = useRef(false);
+  const hadNewer = useRef(hasNewer);
   // undefined = not measured yet (first paint is handled separately).
   const lastItemKey = useRef<string | null | undefined>(undefined);
   const [showNewChip, setShowNewChip] = useState(false);
@@ -353,13 +366,19 @@ export const ChatThread = ({
   }, [isPeerTyping, scrollToBottom]);
 
   useLayoutEffect(() => {
+    // Messages that load while the reader pages down a jumped window (or the
+    // page that closes the gap) are not "new": no follow, no chip.
+    const isCatchingUp = hasNewer || hadNewer.current;
+
+    hadNewer.current = hasNewer;
+    hasNewerRef.current = hasNewer;
     if (lastKey === lastItemKey.current) {
       return;
     }
     const isFirstRun = lastItemKey.current === undefined;
 
     lastItemKey.current = lastKey;
-    if (isFirstRun || !last) {
+    if (isFirstRun || !last || isCatchingUp) {
       return;
     }
     if (wasNearBottom.current || last.senderRole === viewer.role) {
@@ -368,7 +387,18 @@ export const ChatThread = ({
       setShowNewChip(true);
       setNewCount((n) => n + 1);
     }
-  }, [lastKey, last, scrollToBottom, viewer.role]);
+  }, [lastKey, last, hasNewer, scrollToBottom, viewer.role]);
+
+  // The newest page replaced the jumped window: show the bottom of it.
+  useLayoutEffect(() => {
+    if (!hasNewer && scrollAfterReset.current) {
+      scrollAfterReset.current = false;
+      wasNearBottom.current = true;
+      setShowNewChip(false);
+      setNewCount(0);
+      scrollToBottom(false);
+    }
+  }, [hasNewer, messages, scrollToBottom]);
 
   // Older messages load when the top sentinel nears the top; the hook also
   // keeps the reader's place after the prepend. The first stored id changes
@@ -380,6 +410,15 @@ export const ChatThread = ({
     isLoading: chat.isLoadingOlder,
     loadOlder: chat.loadOlder,
     firstKey: firstId,
+  });
+
+  // A jumped window pages down on scroll while newer messages exist.
+  const newer = useLoadNewerOnScroll({
+    rootRef: scroller,
+    hasNewer,
+    isLoading: chat.isLoadingNewer,
+    loadNewer: chat.loadNewer,
+    lastKey,
   });
 
   // Keyboard open/close and viewport resize: stay on the latest message.
@@ -573,15 +612,60 @@ export const ChatThread = ({
     // Only the target matters; jumpToMessage reads refs and state setters.
   }, [jumpToId]);
 
+  // The linked message is gone: say why the chat opened at the newest.
+  useEffect(() => {
+    if (jumpMissed) {
+      toast.error(t("jumpNotFound"));
+    }
+    // Once per page load; `t` is stable per locale.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jumpMissed]);
+
+  // Leaves a jumped window for the newest page before sending or scrolling
+  // down; with the newest page already loaded it is just the scroll.
+  const goToLatest = async ({ smooth = true } = {}) => {
+    if (!hasNewerRef.current) {
+      scrollToBottom(smooth);
+      return true;
+    }
+    scrollAfterReset.current = true;
+    const isReset = await chat.resetToLatest();
+
+    if (!isReset) {
+      scrollAfterReset.current = false;
+      toast.error(t("latestFailed"));
+    }
+    return isReset;
+  };
+
+  // Runs `action` at once on the newest page; from a jumped window it first
+  // loads the newest page so the sent bubble lands at the real end.
+  const afterLatest = (action: () => void) => {
+    if (!hasNewerRef.current) {
+      action();
+      return;
+    }
+    void goToLatest({ smooth: false }).then((isReady) => {
+      if (isReady) {
+        action();
+      }
+    });
+  };
+
   const handleSend = (body: string, photo?: PreparedPhoto) => {
     // A post reply needs a text; a photo sent without one leaves it in place.
     const post = activeQuote && body.trim() !== "" ? activeQuote : null;
 
-    if (photo) {
-      chat.sendPhoto(photo, body, replyMessage, post);
-    } else {
-      chat.send(body, replyMessage, post);
-    }
+    const reply = replyMessage;
+
+    // Sending from a jumped window: the bubble belongs at the newest page.
+    afterLatest(() => {
+      if (photo) {
+        chat.sendPhoto(photo, body, reply, post);
+      } else {
+        chat.send(body, reply, post);
+      }
+    });
     setReplyId(null);
     if (post) {
       clearQuote();
@@ -596,7 +680,9 @@ export const ChatThread = ({
   const handleStickerPick = (
     sticker: Parameters<typeof chat.sendSticker>[0],
   ) => {
-    chat.sendSticker(sticker, replyMessage);
+    const reply = replyMessage;
+
+    afterLatest(() => chat.sendSticker(sticker, reply));
     setReplyId(null);
   };
 
@@ -613,11 +699,9 @@ export const ChatThread = ({
     if (!node) {
       return;
     }
-    wasNearBottom.current = isNearBottom(
-      node.scrollHeight,
-      node.scrollTop,
-      node.clientHeight,
-    );
+    wasNearBottom.current =
+      !hasNewerRef.current &&
+      isNearBottom(node.scrollHeight, node.scrollTop, node.clientHeight);
     if (wasNearBottom.current) {
       setShowNewChip(false);
       setNewCount(0);
@@ -766,21 +850,34 @@ export const ChatThread = ({
                 );
               })}
             </div>
-            {isPeerTyping && chatEnabled && (
+            {isPeerTyping && chatEnabled && !hasNewer && (
               <TypingIndicator name={typingName} />
             )}
+            <LoadNewerControl
+              sentinelRef={newer.sentinelRef}
+              hasNewer={hasNewer}
+              isLoading={newer.isLoading}
+              hasError={newer.error !== null}
+              onLoad={newer.retry}
+              labels={{
+                loading: tCommon("loading"),
+                loadNewer: t("loadNewer"),
+                retry: t("loadNewerRetry"),
+              }}
+              className="pt-2"
+            />
           </div>
         </div>
         <ScrollJumpButton
           direction="down"
-          visible={showNewChip || isAway}
+          visible={showNewChip || isAway || hasNewer}
           label={
             newCount > 0
               ? tJump("newCount", { count: newCount })
               : tJump("toLatest")
           }
           count={newCount}
-          onClick={() => scrollToBottom(true)}
+          onClick={() => void goToLatest()}
           className="absolute bottom-2 left-1/2 -translate-x-1/2"
         />
       </div>

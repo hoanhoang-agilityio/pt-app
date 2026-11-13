@@ -337,27 +337,46 @@ describe("loadGalleryForAdmin", () => {
 });
 
 describe("listMessagesAround", () => {
-  it("returns the page ending at the target and every newer message", async () => {
+  const addMany = async (count: number) => {
     const ids: number[] = [];
 
-    for (let index = 0; index < 45; index += 1) {
+    for (let index = 0; index < count; index += 1) {
       ids.push((await addMessage(aliceConversation, "user")).messageId);
     }
-    const target = ids[5];
+    return ids;
+  };
+
+  it("returns the page ending at the target and one page of newer messages for a target far back", async () => {
+    const ids = await addMany(600);
+    const target = ids[300];
     const around = await queries.listMessagesAround(aliceConversation, target);
 
-    expect(around).not.toBeNull();
-    // Oldest first, ends at the newest message, contains the target.
     expect(around?.messages.map((message) => message.id)).toEqual(
-      ids.slice(0, ids.length),
+      ids.slice(300 - 29, 300 + 1 + 30),
     );
+    expect(around?.messages.at(29)?.id).toBe(target);
+    expect(around?.hasMore).toBe(true);
+    expect(around?.hasNewer).toBe(true);
+  });
+
+  it("includes the newest message and has no newer window for a target near the end", async () => {
+    const ids = await addMany(45);
+    const around = await queries.listMessagesAround(aliceConversation, ids[40]);
+
+    expect(around?.messages.map((message) => message.id)).toEqual(
+      ids.slice(40 - 29),
+    );
+    expect(around?.hasMore).toBe(true);
+    expect(around?.hasNewer).toBe(false);
+  });
+
+  it("reports no newer messages when exactly one page follows the target", async () => {
+    const ids = await addMany(40);
+    const around = await queries.listMessagesAround(aliceConversation, ids[9]);
+
+    expect(around?.messages.map((message) => message.id)).toEqual(ids);
     expect(around?.hasMore).toBe(false);
-
-    const far = await queries.listMessagesAround(aliceConversation, ids[40]);
-
-    expect(far?.messages.at(0)?.id).toBe(ids[40 - 29]);
-    expect(far?.messages.at(-1)?.id).toBe(ids[44]);
-    expect(far?.hasMore).toBe(true);
+    expect(around?.hasNewer).toBe(false);
   });
 
   it("is null for a message of another conversation or one that does not exist", async () => {

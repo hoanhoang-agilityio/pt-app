@@ -77,6 +77,8 @@ export interface GroupLastMessage {
   kind: "message" | "system";
   senderKey: string | null;
   preview: string;
+  // A message without text that shows a picture or a sticker.
+  media: "photo" | "sticker" | null;
   systemEvent: SystemEvent | null;
   createdAt: Date;
 }

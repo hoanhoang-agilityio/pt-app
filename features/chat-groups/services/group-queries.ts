@@ -727,6 +727,14 @@ const toLastMessage = (row: {
     row.kind === "message" && row.deletedAt === null && row.hiddenAt === null
       ? toPreview(row.body)
       : "",
+  media:
+    row.kind === "message" && row.deletedAt === null && row.hiddenAt === null
+      ? row.photoId !== null
+        ? "photo"
+        : row.stickerRef !== null
+          ? "sticker"
+          : null
+      : null,
   systemEvent: row.kind === "system" ? parseSystemEvent(row.systemEvent) : null,
   createdAt: row.createdAt,
 });

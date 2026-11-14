@@ -474,6 +474,24 @@ describe("the inbox list", () => {
     const [group] = await queries.listGroupsForSession(asBinh());
 
     expect(group.lastMessage?.preview).toBe("");
+    expect(group.lastMessage?.media).toBeNull();
+  });
+
+  it("tells a photo or sticker last message apart from a removed text", async () => {
+    await seedMessage(db, groupId, `user:${anId}`, "", {
+      stickerRef: "pack:a",
+      stickerUrl: "/stickers/x/a.png",
+    });
+    const [sticker] = await queries.listGroupsForSession(asBinh());
+
+    expect(sticker.lastMessage).toMatchObject({
+      preview: "",
+      media: "sticker",
+    });
+    await seedMessage(db, groupId, `user:${anId}`, "", { photoId: 5 });
+    const [photo] = await queries.listGroupsForSession(asBinh());
+
+    expect(photo.lastMessage).toMatchObject({ preview: "", media: "photo" });
   });
 });
 

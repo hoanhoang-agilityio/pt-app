@@ -8,9 +8,9 @@ import {
   HIDDEN_CHAT_MESSAGES,
   PRESENCE_MESSAGES,
 } from "@/features/chat/constants/messages";
-import { GROUP_MESSAGES } from "@/features/chat-groups/constants/messages";
 import { CUSTOM_STICKER_ERRORS } from "@/features/chat/utils/custom-sticker-rules";
 import { PHOTO_ERRORS } from "@/features/chat/utils/photo-rules";
+import { GROUP_MESSAGES } from "@/features/chat-groups/constants/messages";
 import { FOOD_MESSAGES } from "@/features/foods/constants/foods";
 import { foodFormSchema } from "@/features/foods/services/food-schemas";
 import {

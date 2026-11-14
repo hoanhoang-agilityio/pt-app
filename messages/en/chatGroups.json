@@ -36,7 +36,9 @@
     "unhide": "Unhide message",
     "actionFailed": "That did not work. Try again.",
     "sendFailed": "The message was not sent.",
-    "reactionsHint": "Tap a message to react"
+    "reactionsHint": "Tap a message to react",
+    "chatOffBanner": "Chat is turned off for your account. You can still read messages.",
+    "restrictedBanner": "Your account is restricted, so you cannot send messages right now."
   },
   "systemLine": {
     "member_added": "{actor} added {members}",
@@ -136,6 +138,8 @@
     "notificationsSection": "Notifications",
     "cancel": "Cancel",
     "failed": "That did not work. Try again.",
-    "membersLoadFailed": "Could not load the members."
+    "membersLoadFailed": "Could not load the members.",
+    "leaveTraineeDescription": "You will no longer see this group. A manager can add you back.",
+    "managersOnlyNote": "Only managers can send messages in this group."
   }
 }

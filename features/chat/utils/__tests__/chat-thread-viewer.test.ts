@@ -348,9 +348,9 @@ describe("member viewer (group chat)", () => {
       expect(canReportGroupMessage({ ...theirs, id: null }, me, false)).toBe(
         false,
       );
-      expect(
-        canReportGroupMessage(theirs, { role: "user" }, false),
-      ).toBe(false);
+      expect(canReportGroupMessage(theirs, { role: "user" }, false)).toBe(
+        false,
+      );
     });
   });
 });

@@ -36,7 +36,9 @@
     "unhide": "取消隐藏",
     "actionFailed": "操作失败，请重试。",
     "sendFailed": "消息发送失败。",
-    "reactionsHint": "点按消息可添加表情"
+    "reactionsHint": "点按消息可添加表情",
+    "chatOffBanner": "你的账号已关闭聊天，仍可查看消息。",
+    "restrictedBanner": "你的账号目前受限，暂时无法发送消息。"
   },
   "systemLine": {
     "member_added": "{actor} 添加了 {members}",
@@ -136,6 +138,8 @@
     "notificationsSection": "通知",
     "cancel": "取消",
     "failed": "操作失败，请重试。",
-    "membersLoadFailed": "无法加载成员列表。"
+    "membersLoadFailed": "无法加载成员列表。",
+    "leaveTraineeDescription": "你将无法再查看此群组。管理员可以重新添加你。",
+    "managersOnlyNote": "此群组仅管理员可以发送消息。"
   }
 }

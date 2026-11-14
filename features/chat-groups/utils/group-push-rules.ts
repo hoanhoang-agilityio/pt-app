@@ -9,6 +9,10 @@ export const groupPushUrl = (recipient: "user" | "admin", groupId: number) =>
     ? `${ROUTES.MESSAGES}/groups/${groupId}`
     : `${ROUTES.ADMIN_MESSAGES}/groups/${groupId}`;
 
+// One notification per group: the push tag, also what an open group thread
+// clears (see clear-notifications.ts).
+export const groupPushTag = (groupId: number) => `chat-group-${groupId}`;
+
 // Title = the group, body = "<sender>: <preview>" in the recipient's
 // language. One notification per group: a newer one replaces the older. The
 // text only goes into the payload; it is never logged.
@@ -37,6 +41,6 @@ export const buildGroupPushPayload = ({
     title: groupName,
     body: senderName.trim() === "" ? preview : `${senderName}: ${preview}`,
     url: groupPushUrl(recipient, groupId),
-    tag: `chat-group-${groupId}`,
+    tag: groupPushTag(groupId),
   };
 };

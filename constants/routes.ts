@@ -6,6 +6,7 @@ export const ROUTES = {
   MESSAGES: "/messages",
   MESSAGES_COACH: "/messages/coach",
   MESSAGES_DM: "/messages/dm",
+  MESSAGES_GROUPS: "/messages/groups",
   FOODS: "/foods",
   FEED: "/feed",
   FRIENDS: "/friends",

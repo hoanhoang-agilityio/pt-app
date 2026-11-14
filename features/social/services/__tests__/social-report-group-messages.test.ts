@@ -190,7 +190,7 @@ describe("who may report a group message", () => {
   });
 
   it("the report schema knows the group_message kind and nothing else new", async () => {
-        expect(
+    expect(
       reportSchema.safeParse({
         targetKind: "group_message",
         targetId: 1,

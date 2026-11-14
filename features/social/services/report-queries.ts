@@ -21,8 +21,8 @@ import type { ReportView } from "@/features/social/types/social";
 import { adminPostPath } from "@/features/social/utils/engagement-rules";
 import { adminProfilePath } from "@/features/social/utils/post-rules";
 import { getFormatTranslator } from "@/i18n/format-translator";
-import { getAdminGroupPath } from "@/utils/routes";
 import { DEFAULT_LOCALE, type Locale } from "@/utils/locale";
+import { getAdminGroupPath } from "@/utils/routes";
 
 const PREVIEW_LENGTH = 140;
 

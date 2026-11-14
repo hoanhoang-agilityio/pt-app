@@ -27,6 +27,7 @@ import {
   useChatMessages,
 } from "@/features/chat/hooks/use-chat-messages";
 import { useChatTransport } from "@/features/chat/hooks/use-chat-transport";
+import { useClearNotifications } from "@/features/chat/hooks/use-clear-notifications";
 import {
   buildThreadItems,
   canReportGroupMessage,
@@ -38,6 +39,7 @@ import {
   senderLabel,
   type ThreadMessage,
 } from "@/features/chat/utils/chat-thread-rules";
+import { groupNotificationTags } from "@/features/chat/utils/clear-notifications";
 import type { PreparedPhoto } from "@/features/chat/utils/encode-photo";
 import { useVisualViewport } from "@/features/chat-bubbles/hooks/use-visual-viewport";
 import { GroupSystemLine } from "@/features/chat-groups/components/GroupSystemLine";
@@ -74,12 +76,41 @@ export interface GroupThreadProps {
   canResolveAlert: boolean;
   // False when only the server knows this person may not write.
   canWriteBase: boolean;
+  // Why canWriteBase is false, for the banner: the trainee's chat switch is
+  // off, or the block feature restricts them. Reading stays open.
+  lockReason?: "chat_off" | "restricted" | null;
   initialManagersOnly: boolean;
   initialDissolved: boolean;
   initial: ThreadSnapshot;
   backHref: string;
   infoHref: string;
 }
+
+// The banner that replaces the composer: the group state first (it applies to
+// everyone), then what only this trainee's account causes.
+const lockedKey = ({
+  dissolved,
+  managersOnly,
+  lockReason,
+}: {
+  dissolved: boolean;
+  managersOnly: boolean;
+  lockReason: "chat_off" | "restricted" | null;
+}) => {
+  if (dissolved) {
+    return "thread.dissolvedBanner";
+  }
+  if (managersOnly) {
+    return "thread.managersOnlyBanner";
+  }
+  if (lockReason === "chat_off") {
+    return "thread.chatOffBanner";
+  }
+  if (lockReason === "restricted") {
+    return "thread.restrictedBanner";
+  }
+  return "thread.managersOnlyBanner";
+};
 
 const HEART = "❤️";
 const HIGHLIGHT_MS = 1500;
@@ -143,6 +174,7 @@ export const GroupThread = ({
   canManage,
   canResolveAlert,
   canWriteBase,
+  lockReason = null,
   initialManagersOnly,
   initialDissolved,
   initial,
@@ -175,6 +207,9 @@ export const GroupThread = ({
   });
   const chat = useChatMessages({ adapter, initial, isViewing: isVisible });
   const { messages, hasMore, chatEnabled, sync } = chat;
+
+  // Reading the group closes its notification (one per group).
+  useClearNotifications(groupNotificationTags(groupId), messages.at(-1)?.id);
   const viewport = useVisualViewport();
   const scroller = useRef<HTMLDivElement>(null);
   const wasNearBottom = useRef(true);
@@ -656,11 +691,13 @@ export const GroupThread = ({
           />
         ) : (
           <LockedBanner
-            text={
-              groupState.dissolved
-                ? t("thread.dissolvedBanner")
-                : t("thread.managersOnlyBanner")
-            }
+            text={t(
+              lockedKey({
+                dissolved: groupState.dissolved,
+                managersOnly: groupState.managersOnly && !isManager,
+                lockReason,
+              }),
+            )}
           />
         )}
       </div>

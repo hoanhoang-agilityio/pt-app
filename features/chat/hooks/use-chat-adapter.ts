@@ -20,7 +20,7 @@ import {
   adminReactMessageAction,
   adminUnsendMessageAction,
 } from "@/features/chat/services/chat-admin-actions";
-import type { ThreadViewer } from "@/features/chat/utils/chat-thread-rules";
+import type { CoachViewer } from "@/features/chat/utils/chat-thread-rules";
 import { PHOTO_ERRORS } from "@/features/chat/utils/photo-rules";
 
 const USER_MESSAGES_URL = "/api/chat/messages";
@@ -63,7 +63,7 @@ const uploadPhotoTo = async (blob: Blob, query: string) => {
 // actions cannot be passed down from a server page as plain props with extra
 // arguments, so the adapter is built here from serializable inputs.
 export const useChatAdapter = (
-  viewer: ThreadViewer,
+  viewer: CoachViewer,
   userId: number,
   conversationId: number | null,
 ): ChatAdapter => {

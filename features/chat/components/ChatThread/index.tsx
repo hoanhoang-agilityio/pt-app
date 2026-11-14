@@ -54,7 +54,7 @@ import {
   quoteText,
   senderLabel,
   type ThreadMessage,
-  type ThreadViewer,
+  type CoachViewer,
   USER_VIEWER,
 } from "@/features/chat/utils/chat-thread-rules";
 import { chatNotificationTags } from "@/features/chat/utils/clear-notifications";
@@ -104,7 +104,7 @@ export interface ChatThreadProps {
   fallbackPeerName?: string;
   // Ids of verified admins, for the blue tick next to their names.
   verifiedAdminIds?: number[];
-  viewer?: ThreadViewer;
+  viewer?: CoachViewer;
   emptyText?: string;
   ariaLabel?: string;
   // Photos of the people in this thread (versioned /api/avatar URLs), keyed
@@ -854,6 +854,10 @@ export const ChatThread = ({
                       )}
                     />
                   );
+                }
+                if (item.kind === "system") {
+                  // System lines exist in group chats only.
+                  return null;
                 }
                 return (
                   <p

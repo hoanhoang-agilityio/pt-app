@@ -250,7 +250,7 @@ export const MessageBubble = ({
           {message.post && !isUnsent && (
             <DmPostQuote
               post={message.post}
-              mode={viewer.role}
+              mode={viewer.role === "admin" ? "admin" : "user"}
               className="mb-1.5 w-64 max-w-full"
             />
           )}

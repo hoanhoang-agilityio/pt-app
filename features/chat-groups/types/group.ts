@@ -43,9 +43,19 @@ export interface GroupMessageView {
   systemEvent: SystemEvent | null;
   audience: "super_admin" | null;
   clientId: string | null;
-  replyTo: { id: number; senderName: string | null; snippet: string } | null;
+  replyTo: {
+    id: number;
+    senderKey: string | null;
+    senderName: string | null;
+    snippet: string;
+  } | null;
   sticker: { ref: string; url: string } | null;
   photoId: number | null;
+  // Size of the photo, for the bubble box (the bytes come from the photo route).
+  photo: { id: number; width: number; height: number } | null;
+  // Shown names for the member keys a system line names (alias first, null =
+  // deleted account); empty for normal messages.
+  eventNames: Record<string, string | null>;
   silent: boolean;
   deleted: boolean;
   hidden: boolean;

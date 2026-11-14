@@ -21,6 +21,7 @@ import {
   chatGroupMembers,
   chatGroupMessageEdits,
   chatGroupMessages,
+  chatGroupPhotos,
   chatGroupReactions,
   chatGroups,
 } from "@/db/schema";
@@ -43,7 +44,10 @@ import type {
 } from "@/features/chat-groups/types/group";
 import { sessionKey } from "@/features/chat-groups/utils/group-rules";
 import { seenByKeys } from "@/features/chat-groups/utils/group-unread";
-import { parseSystemEvent } from "@/features/chat-groups/utils/system-event";
+import {
+  parseSystemEvent,
+  systemEventKeys,
+} from "@/features/chat-groups/utils/system-event";
 
 const messages = chatGroupMessages;
 
@@ -157,7 +161,20 @@ const hydrateMessages = async (
       ),
     ),
   ];
-  const [reactionRows, replyRows, cursors] = await Promise.all([
+  const photoIds = visible.flatMap((row) =>
+    row.photoId !== null && row.deletedAt === null && row.hiddenAt === null
+      ? [row.photoId]
+      : [],
+  );
+  const events = new Map(
+    visible.flatMap((row) => {
+      const event =
+        row.kind === "system" ? parseSystemEvent(row.systemEvent) : null;
+
+      return event ? [[row.id, event] as const] : [];
+    }),
+  );
+  const [reactionRows, replyRows, cursors, photoRows] = await Promise.all([
     db
       .select()
       .from(chatGroupReactions)
@@ -185,12 +202,24 @@ const hydrateMessages = async (
     visible.some((row) => row.senderKey === actor.key)
       ? listReaderCursors(groupId)
       : [],
+    photoIds.length
+      ? db
+          .select({
+            id: chatGroupPhotos.id,
+            width: chatGroupPhotos.width,
+            height: chatGroupPhotos.height,
+          })
+          .from(chatGroupPhotos)
+          .where(inArray(chatGroupPhotos.id, photoIds))
+      : [],
   ]);
   const { nameOf, identities } = await loadShownNames(actor.key, [
+    ...[...events.values()].flatMap(systemEventKeys),
     ...visible.flatMap((row) => (row.senderKey ? [row.senderKey] : [])),
     ...replyRows.flatMap((row) => (row.senderKey ? [row.senderKey] : [])),
   ]);
   const replies = new Map(replyRows.map((row) => [row.id, row]));
+  const photoSizes = new Map(photoRows.map((row) => [row.id, row]));
 
   return visible.map((row): GroupMessageView => {
     const deleted = row.deletedAt !== null;
@@ -229,6 +258,7 @@ const hydrateMessages = async (
       replyTo: reply
         ? {
             id: reply.id,
+            senderKey: reply.senderKey,
             senderName: reply.senderKey ? nameOf(reply.senderKey) : null,
             snippet:
               reply.deletedAt === null && reply.hiddenAt === null
@@ -241,6 +271,19 @@ const hydrateMessages = async (
           ? { ref: row.stickerRef, url: row.stickerUrl }
           : null,
       photoId: showContent ? row.photoId : null,
+      photo:
+        showContent && row.photoId !== null && photoSizes.has(row.photoId)
+          ? {
+              id: row.photoId,
+              width: photoSizes.get(row.photoId)!.width,
+              height: photoSizes.get(row.photoId)!.height,
+            }
+          : null,
+      eventNames: Object.fromEntries(
+        (events.has(row.id) ? systemEventKeys(events.get(row.id)!) : []).map(
+          (key) => [key, nameOf(key)],
+        ),
+      ),
       silent: row.silent === true,
       deleted,
       hidden,

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   CHAT_EVENTS,
   conversationChannel,
+  groupChannel,
   userChannel,
 } from "@/features/chat/utils/ably-capabilities";
 import {
@@ -28,6 +29,9 @@ interface UseChatTransportOptions {
   role: "user" | "admin";
   userId: number;
   conversationId: number | null;
+  // A group chat: its own token (`?group=<id>`) and channel, no typing, no
+  // user channel. The coach chat leaves it out.
+  groupId?: number | null;
   chatEnabled: boolean;
   // Asks the owner to fetch what is new. Called on every realtime event, on
   // every poll tick, on (re)connect and when the tab becomes visible.
@@ -41,6 +45,7 @@ export const useChatTransport = ({
   role,
   userId,
   conversationId,
+  groupId = null,
   chatEnabled,
   onSync,
 }: UseChatTransportOptions) => {
@@ -67,14 +72,22 @@ export const useChatTransport = ({
 
   // A locked trainee gets no token (403) and polls only. An admin is never
   // refused one: chat-status events tell them when the chat is unlocked.
+  // A group token is minted after the membership check; a trainee whose chat
+  // is off still reads, so `chatEnabled` plays no part there.
   const canConnect =
-    conversationId !== null && (role === "admin" || chatEnabled);
+    groupId !== null ||
+    (conversationId !== null && (role === "admin" || chatEnabled));
 
   useEffect(() => {
-    if (!canConnect || conversationId === null) {
+    if (!canConnect || (conversationId === null && groupId === null)) {
       return;
     }
-    const tokenUrl = role === "admin" ? ADMIN_TOKEN_URL : USER_TOKEN_URL;
+    const tokenUrl =
+      groupId !== null
+        ? `/api/chat/ably-token?group=${groupId}${role === "admin" ? "&as=admin" : ""}`
+        : role === "admin"
+          ? ADMIN_TOKEN_URL
+          : USER_TOKEN_URL;
     let cancelled = false;
     let close: (() => void) | undefined;
 
@@ -95,8 +108,13 @@ export const useChatTransport = ({
                   callback(null, await response.json());
                   return;
                 }
-                // 204 = no key configured, 403 = locked: stay on polling.
-                if (response.status === 204 || response.status === 403) {
+                // 204 = no key configured, 403 = locked, 404 = not a member (groups):
+                // stay on polling.
+                if (
+                  response.status === 204 ||
+                  response.status === 403 ||
+                  response.status === 404
+                ) {
                   if (!cancelled) {
                     setState("unavailable");
                   }
@@ -153,10 +171,14 @@ export const useChatTransport = ({
         const ignore = () => undefined;
 
         client.channels
-          .get(conversationChannel(conversationId))
+          .get(
+            groupId !== null
+              ? groupChannel(groupId)
+              : conversationChannel(conversationId ?? 0),
+          )
           .subscribe(handleEvent)
           .catch(ignore);
-        if (role === "user") {
+        if (role === "user" && groupId === null) {
           client.channels
             .get(userChannel(userId))
             .subscribe(trigger)
@@ -176,7 +198,7 @@ export const useChatTransport = ({
       close?.();
       clearPeerTyping();
     };
-  }, [canConnect, conversationId, role, userId, clearPeerTyping]);
+  }, [canConnect, conversationId, groupId, role, userId, clearPeerTyping]);
 
   // Throttled, fire and forget. Polling-only mode (no live connection) sends
   // nothing, so there is no request and no error to handle.
@@ -185,6 +207,7 @@ export const useChatTransport = ({
 
     if (
       !connectedRef.current ||
+      groupId !== null ||
       conversationId === null ||
       !shouldSendTyping(lastTypingSentAt.current, now)
     ) {
@@ -198,7 +221,7 @@ export const useChatTransport = ({
       headers: isAdmin ? { "Content-Type": "application/json" } : undefined,
       body: isAdmin ? JSON.stringify({ conversationId }) : undefined,
     }).catch(() => undefined);
-  }, [conversationId, role]);
+  }, [conversationId, groupId, role]);
 
   // Pause while the tab is hidden; fetch once on return.
   useEffect(() => {

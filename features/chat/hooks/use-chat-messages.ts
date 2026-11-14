@@ -4,7 +4,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import type { sendMessageAction } from "@/features/chat/services/chat-actions";
 import { parseChatCommand } from "@/features/chat/utils/chat-commands";
 import { CHANGES_PAGE_SIZE } from "@/features/chat/utils/chat-rules";
 import {
@@ -16,7 +15,7 @@ import {
   lastStoredId,
   mergeChanges,
   mergeMessages,
-  newestPeerMessageId,
+  newestIncomingId,
   type SerializedChatMessage,
   serializeMessage,
   type ServerChatMessage,
@@ -63,11 +62,30 @@ export interface ThreadSnapshot {
 
 type ThreadResponse = ThreadSnapshot;
 
+// `base` may already carry a query (group routes need `?as=admin`).
+const urlWith = (base: string, params?: URLSearchParams | string) => {
+  const query = params === undefined ? "" : String(params);
+
+  return query === ""
+    ? base
+    : `${base}${base.includes("?") ? "&" : "?"}${query}`;
+};
+
 const isThreadResponse = (value: unknown): value is ThreadResponse =>
   typeof value === "object" &&
   value !== null &&
   Array.isArray((value as ThreadResponse).messages) &&
   typeof (value as ThreadResponse).chatEnabled === "boolean";
+
+const parseResponse = (
+  adapter: Pick<ChatAdapter, "parseThread">,
+  raw: unknown,
+): ThreadResponse | null =>
+  adapter.parseThread
+    ? adapter.parseThread(raw)
+    : isThreadResponse(raw)
+      ? raw
+      : null;
 
 // The success shape of the react / edit / unsend actions.
 export type MessageActionResult =
@@ -84,9 +102,17 @@ export type SendContent =
   // is, so "Gửi lại" never uploads it twice. `body` is the optional caption.
   | { photo: PreparedPhoto & { photoId?: number }; body?: string };
 
+// The success shape of a send, for the coach chat and for groups.
+export type SendMessageResult =
+  | { status: "success"; message: ServerChatMessage }
+  | { status: "error"; message: string };
+
 // What differs between the trainee and the admin view of the same thread.
 export interface ChatAdapter {
   messagesUrl: string;
+  // Turns a fetched payload into a snapshot when it is not the coach chat's
+  // own shape (groups); null = unusable. Defaults to the coach chat check.
+  parseThread?: (raw: unknown) => ThreadResponse | null;
   // Previous bodies of an edited message.
   editsUrl: (messageId: number) => string;
   viewer: ThreadViewer;
@@ -97,7 +123,7 @@ export interface ChatAdapter {
     clientId: string,
     replyToMessageId?: number,
     postId?: number,
-  ) => Promise<Awaited<ReturnType<typeof sendMessageAction>>>;
+  ) => Promise<SendMessageResult>;
   reactMessage: (
     messageId: number,
     emoji: string | null,
@@ -217,7 +243,7 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
           params.set("after", String(after));
         }
         const response = await fetch(
-          `${adapterRef.current.messagesUrl}?${params}`,
+          urlWith(adapterRef.current.messagesUrl, params),
           {
             cache: "no-store",
           },
@@ -231,9 +257,9 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
         if (response.status === 204 || !response.ok) {
           break;
         }
-        const data: unknown = await response.json();
+        const data = parseResponse(adapterRef.current, await response.json());
 
-        if (!isThreadResponse(data)) {
+        if (!data) {
           break;
         }
         apply(data, after > 0);
@@ -270,14 +296,16 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
     setIsLoadingOlder(true);
     try {
       const response = await fetch(
-        `${adapterRef.current.messagesUrl}?before=${before}`,
+        urlWith(adapterRef.current.messagesUrl, `before=${before}`),
         {
           cache: "no-store",
         },
       );
-      const data: unknown = response.ok ? await response.json() : null;
+      const data = response.ok
+        ? parseResponse(adapterRef.current, await response.json())
+        : null;
 
-      if (isThreadResponse(data)) {
+      if (data) {
         setMessages((current) => mergeMessages(current, data.messages));
         setHasMore(data.hasMore);
       }
@@ -302,12 +330,14 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
     setIsLoadingNewer(true);
     try {
       const response = await fetch(
-        `${adapterRef.current.messagesUrl}?after=${after}`,
+        urlWith(adapterRef.current.messagesUrl, `after=${after}`),
         { cache: "no-store" },
       );
-      const data: unknown = response.ok ? await response.json() : null;
+      const data = response.ok
+        ? parseResponse(adapterRef.current, await response.json())
+        : null;
 
-      if (!isThreadResponse(data)) {
+      if (!data) {
         throw new Error("load newer");
       }
       if (startedAt !== epoch.current) {
@@ -334,12 +364,14 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
     const startedAt = epoch.current;
 
     try {
-      const response = await fetch(adapterRef.current.messagesUrl, {
+      const response = await fetch(urlWith(adapterRef.current.messagesUrl), {
         cache: "no-store",
       });
-      const data: unknown = response.ok ? await response.json() : null;
+      const data = response.ok
+        ? parseResponse(adapterRef.current, await response.json())
+        : null;
 
-      if (!isThreadResponse(data)) {
+      if (!data) {
         return false;
       }
       if (startedAt !== epoch.current) {
@@ -384,13 +416,16 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
         );
 
         if (result.status === "success" && "message" in result) {
-          const stored: SerializedChatMessage = {
-            ...serializeMessage(result.message),
-            senderAdminName:
-              viewer.role === "admin"
-                ? (result.message.senderAdminName ?? viewer.adminName)
-                : null,
-          };
+          const stored: SerializedChatMessage =
+            viewer.role === "member"
+              ? serializeMessage(result.message)
+              : {
+                  ...serializeMessage(result.message),
+                  senderAdminName:
+                    viewer.role === "admin"
+                      ? (result.message.senderAdminName ?? viewer.adminName)
+                      : null,
+                };
 
           pendingContent.current.delete(clientId);
           setMessages((current) => mergeMessages(current, [stored]));
@@ -432,9 +467,12 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
       const quote = replyTo ? toReplyTo(replyTo) : null;
       const optimistic: ThreadMessage = {
         id: null,
-        senderRole: viewer.role,
+        senderRole: viewer.role === "admin" ? "admin" : "user",
         senderAdminId: viewer.role === "admin" ? viewer.adminId : null,
         senderAdminName: viewer.role === "admin" ? viewer.adminName : null,
+        ...(viewer.role === "member"
+          ? { senderKey: viewer.key, senderName: viewer.name }
+          : {}),
         ...fields,
         clientId,
         createdAt: now,
@@ -649,7 +687,7 @@ export const useChatMessages = ({ adapter, initial, isViewing }: Options) => {
 
   // Report "read" for the newest PT message once it is on screen; debounced
   // and only when the number grows.
-  const newestPeerId = newestPeerMessageId(messages, adapter.viewer.role);
+  const newestPeerId = newestIncomingId(messages, adapter.viewer);
 
   useEffect(() => {
     if (!isViewing || !shouldMarkRead(newestPeerId, lastMarked.current)) {

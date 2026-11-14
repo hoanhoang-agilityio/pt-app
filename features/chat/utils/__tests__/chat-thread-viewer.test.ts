@@ -2,10 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildThreadItems,
+  canEditOrUnsend,
+  canReportMessage,
+  isOwnMessage,
   mergeMessages,
+  newestIncomingId,
   newestPeerMessageId,
+  quoteLabel,
+  senderLabel,
   type SerializedChatMessage,
   type ThreadViewer,
+  toReplyTo,
+  toThreadMessage,
   viewerReactorKey,
   withMyReaction,
 } from "@/features/chat/utils/chat-thread-rules";
@@ -116,5 +124,176 @@ describe("viewer keys and read cursor", () => {
 
     expect(newestPeerMessageId(list, "user")).toBe(5);
     expect(newestPeerMessageId(list, "admin")).toBe(4);
+  });
+});
+
+describe("member viewer (group chat)", () => {
+  const me: ThreadViewer = { role: "member", key: "user:5", name: "An" };
+  const groupMsg = (
+    id: number,
+    senderKey: string | null,
+    overrides: Partial<SerializedChatMessage> = {},
+  ) =>
+    msg(id, {
+      senderRole: senderKey?.startsWith("admin") ? "admin" : "user",
+      senderAdminId: null,
+      senderAdminName: null,
+      senderKey,
+      senderName: senderKey === me.key ? "An" : `N${senderKey}`,
+      ...overrides,
+    });
+
+  it("mine is decided by the sender key, everyone else is on the left", () => {
+    const [own, other, pt] = items(
+      [
+        groupMsg(1, "user:5"),
+        groupMsg(2, "user:6"),
+        groupMsg(3, "admin:1", { senderTag: "pt" }),
+      ],
+      me,
+    );
+
+    expect([own.mine, other.mine, pt.mine]).toEqual([true, false, false]);
+  });
+
+  it("names a run of someone else once, tags it, never names me", () => {
+    const [own, first, second, pt] = items(
+      [
+        groupMsg(1, "user:5"),
+        groupMsg(2, "user:6"),
+        groupMsg(3, "user:6"),
+        groupMsg(4, "admin:1", { senderTag: "manager" }),
+      ],
+      me,
+    );
+
+    expect(own.senderName).toBeNull();
+    expect(first.senderName).toBe("Nuser:6");
+    expect(second.senderName).toBeNull();
+    expect(second.isFirstInRun).toBe(false);
+    expect(pt.senderName).toBe("Nadmin:1");
+    expect(pt.senderTag).toBe("manager");
+  });
+
+  it("two members whose messages follow each other never share a run", () => {
+    const [a, b] = items([groupMsg(1, "user:6"), groupMsg(2, "user:7")], me);
+
+    expect(a.isLastInRun).toBe(true);
+    expect(b.isFirstInRun).toBe(true);
+  });
+
+  it("flags a deleted sender on the first bubble of a run", () => {
+    const [deleted] = items(
+      [groupMsg(1, "user:9", { senderName: null, senderDeleted: true })],
+      me,
+    );
+
+    expect(deleted.senderName).toBeNull();
+    expect(deleted.senderDeleted).toBe(true);
+  });
+
+  it("has no one-to-one status line under my newest message", () => {
+    const [own] = items([groupMsg(1, "user:5")], me);
+
+    expect(own.statusLine).toBeNull();
+  });
+
+  it("renders a system line between bubbles and ends the run before it", () => {
+    const list = buildThreadItems(
+      mergeMessages(
+        [],
+        [
+          groupMsg(1, "user:6"),
+          groupMsg(2, null, { kind: "system", body: "" }),
+          groupMsg(3, "user:6"),
+        ],
+      ),
+      0,
+      NOW,
+      me,
+    );
+    const kinds = list.map((item) => item.kind);
+    const bubbles = list.flatMap((item) =>
+      item.kind === "message" ? [item] : [],
+    );
+
+    expect(kinds).toEqual(["day", "message", "system", "message"]);
+    expect(bubbles[0].isLastInRun).toBe(true);
+    expect(bubbles[1].isFirstInRun).toBe(true);
+    expect(bubbles[1].senderName).toBe("Nuser:6");
+  });
+
+  it("reads up to the newest message from someone else, never system lines", () => {
+    const list = mergeMessages(
+      [],
+      [
+        groupMsg(1, "user:6"),
+        groupMsg(2, "user:5"),
+        groupMsg(3, null, { kind: "system" }),
+      ],
+    );
+
+    expect(newestIncomingId(list, me)).toBe(1);
+  });
+
+  it("keys my reaction by my member key and owns only my messages", () => {
+    const mineMessage = toThreadMessage(groupMsg(1, "user:5"));
+    const theirs = toThreadMessage(groupMsg(2, "user:6"));
+
+    expect(viewerReactorKey(me)).toBe("user:5");
+    expect(withMyReaction([], me, "🔥")).toEqual([
+      { emoji: "🔥", reactorKey: "user:5", reactorName: "An" },
+    ]);
+    expect(isOwnMessage(mineMessage, me)).toBe(true);
+    expect(isOwnMessage(theirs, me)).toBe(false);
+    expect(canEditOrUnsend(theirs, me)).toBe(false);
+    expect(canEditOrUnsend(mineMessage, me)).toBe(true);
+  });
+
+  it("labels the reply bar and the quote with the sender's name", () => {
+    const theirs = toThreadMessage(groupMsg(2, "user:6"));
+    const deleted = toThreadMessage(
+      groupMsg(3, "user:9", { senderName: null, senderDeleted: true }),
+    );
+
+    expect(senderLabel(theirs, me)).toBe("Nuser:6");
+    expect(senderLabel(deleted, me)).toBe("Thành viên đã xoá");
+    expect(
+      quoteLabel(
+        {
+          id: 2,
+          body: "x",
+          senderRole: "user",
+          deleted: false,
+          senderKey: "user:5",
+          senderName: "An",
+        },
+        me,
+      ),
+    ).toBe("Bạn");
+    expect(
+      quoteLabel(
+        {
+          id: 2,
+          body: "x",
+          senderRole: "user",
+          deleted: false,
+          senderKey: "user:6",
+          senderName: "Bình",
+        },
+        me,
+      ),
+    ).toBe("Bình");
+    expect(toReplyTo(theirs)).toMatchObject({
+      id: 2,
+      senderKey: "user:6",
+      senderName: "Nuser:6",
+    });
+  });
+
+  it("never offers the coach chat report to a member", () => {
+    expect(canReportMessage(toThreadMessage(groupMsg(2, "admin:1")), me)).toBe(
+      false,
+    );
   });
 });

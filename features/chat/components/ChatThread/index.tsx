@@ -45,6 +45,7 @@ import {
 import {
   buildThreadItems,
   canReportMessage,
+  type CoachViewer,
   firstStoredId,
   isNearBottom,
   latestAdminId,
@@ -54,7 +55,6 @@ import {
   quoteText,
   senderLabel,
   type ThreadMessage,
-  type CoachViewer,
   USER_VIEWER,
 } from "@/features/chat/utils/chat-thread-rules";
 import { chatNotificationTags } from "@/features/chat/utils/clear-notifications";

@@ -19,6 +19,7 @@ import {
 import { resizeToAvatarDataUrl } from "@/features/avatar/utils/resize-avatar";
 import { MemberPicker } from "@/features/chat-groups/components/MemberPicker";
 import { GROUP_NAME_MAX_LENGTH } from "@/features/chat-groups/constants/limits";
+import { GROUP_MEMBER_CAP } from "@/features/chat-groups/constants/limits";
 import {
   createGroupAction,
   setGroupAvatarAction,
@@ -28,7 +29,6 @@ import {
   selectionToIds,
   toggleSelection,
 } from "@/features/chat-groups/utils/group-display";
-import { GROUP_MEMBER_CAP } from "@/features/chat-groups/constants/limits";
 import { useLocalizeMessage } from "@/i18n/use-localize-message";
 import { getAdminGroupPath } from "@/utils/routes";
 

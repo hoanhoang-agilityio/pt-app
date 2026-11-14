@@ -14,10 +14,6 @@ import {
 } from "@/features/chat/hooks/use-chat-unread";
 import { unreadPollMs } from "@/features/chat/utils/polling-rules";
 import { isOnline, parseLastSeen } from "@/features/chat/utils/presence";
-import {
-  bubbleEntriesFrom,
-  bubbleUnreadFrom,
-} from "@/features/chat-bubbles/utils/bubble-payload";
 import { BubbleItem } from "@/features/chat-bubbles/components/BubbleItem";
 import {
   BubblePanel,
@@ -47,8 +43,11 @@ import {
   safeNavigateHref,
 } from "@/features/chat-bubbles/utils/bubble-links";
 import {
+  bubbleEntriesFrom,
+  bubbleUnreadFrom,
+} from "@/features/chat-bubbles/utils/bubble-payload";
+import {
   detectIncoming,
-  type IncomingEntry,
   type SeenIds,
 } from "@/features/chat-bubbles/utils/incoming-rules";
 import { startVisibleInterval } from "@/utils/visible-interval";

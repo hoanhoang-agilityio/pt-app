@@ -18,7 +18,6 @@ import {
   PAGE_CONTAINER,
   SECTION_TITLE,
 } from "@/constants/styles";
-import { GroupInboxSection } from "@/features/chat-groups/components/GroupInboxSection";
 import { ChatInboxList } from "@/features/chat/components/ChatInboxList";
 import { HiddenUserList } from "@/features/chat/components/HiddenUserList";
 import { useHiddenReveal } from "@/features/chat/hooks/use-hidden-reveal";
@@ -30,10 +29,11 @@ import type {
   InboxItem,
   InboxWithoutConversation,
 } from "@/features/chat/services/chat-queries";
-import type { GroupSummary } from "@/features/chat-groups/types/group";
 import { matchesInboxSearch } from "@/features/chat/utils/inbox-search";
 import { isOnline } from "@/features/chat/utils/presence";
 import { shortLastSeen } from "@/features/chat/utils/presence-status";
+import { GroupInboxSection } from "@/features/chat-groups/components/GroupInboxSection";
+import type { GroupSummary } from "@/features/chat-groups/types/group";
 import { getAdminMessagesPath } from "@/utils/routes";
 
 interface AdminInboxProps {

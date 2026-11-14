@@ -26,7 +26,6 @@ let ptId: number;
 let otherPtId: number;
 let anId: number;
 let binhId: number;
-let chiId: number;
 
 beforeEach(async () => {
   db = await createTestDb();
@@ -36,7 +35,7 @@ beforeEach(async () => {
   otherPtId = await seedAdmin(db, "Other", "pt");
   anId = await seedUser(db, "An", { ptAdminId: ptId });
   binhId = await seedUser(db, "Binh", { ptAdminId: ptId });
-  chiId = await seedUser(db, "Chi", { ptAdminId: otherPtId });
+  await seedUser(db, "Chi", { ptAdminId: otherPtId });
 });
 
 const names = (rows: { name: string }[]) => rows.map((row) => row.name);

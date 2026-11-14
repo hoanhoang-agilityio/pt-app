@@ -2,8 +2,8 @@ import {
   parseAdminUnread,
   parseUserUnread,
 } from "@/features/chat/utils/unread-payload";
-import type { IncomingEntry } from "@/features/chat-bubbles/utils/incoming-rules";
 import type { BubbleRole } from "@/features/chat-bubbles/types";
+import type { IncomingEntry } from "@/features/chat-bubbles/utils/incoming-rules";
 
 // What the bubble host reads from the unread poll. Group chats (the `groups`
 // field of the same payload) are phase 2: they never get a bubble, a badge or

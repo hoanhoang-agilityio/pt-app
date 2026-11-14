@@ -1,3 +1,4 @@
+import { matchesInboxSearch } from "@/features/chat/utils/inbox-search";
 import { GROUP_MEMBER_CAP } from "@/features/chat-groups/constants/limits";
 import type { GroupLastMessage } from "@/features/chat-groups/types/group";
 import {
@@ -6,7 +7,6 @@ import {
   type SystemLine,
   toSystemLine,
 } from "@/features/chat-groups/utils/system-event";
-import { matchesInboxSearch } from "@/features/chat/utils/inbox-search";
 
 // Small pure rules behind the group screens: how a system line is worded, the
 // alert's state, the inbox preview kind and the member picker.

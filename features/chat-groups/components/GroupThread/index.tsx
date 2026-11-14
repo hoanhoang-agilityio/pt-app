@@ -17,11 +17,11 @@ import { toast } from "sonner";
 import { useConfirm } from "@/components/common/ConfirmDialog/use-confirm";
 import { LoadOlderControl } from "@/components/common/LoadOlderControl";
 import { ScrollJumpButton } from "@/components/common/ScrollJumpButton";
+import { ChatHeader } from "@/features/chat/components/ChatHeader";
 import { Composer } from "@/features/chat/components/Composer";
 import { LockedBanner } from "@/features/chat/components/LockedBanner";
 import { MessageBubble } from "@/features/chat/components/MessageBubble";
 import { ReplyBar } from "@/features/chat/components/ReplyBar";
-import { ChatHeader } from "@/features/chat/components/ChatHeader";
 import {
   type ThreadSnapshot,
   useChatMessages,

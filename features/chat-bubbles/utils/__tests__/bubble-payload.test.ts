@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  bubbleEntriesFrom,
-  bubbleUnreadFrom,
-} from "@/features/chat-bubbles/utils/bubble-payload";
-import {
   chatPathForKey,
   isKeyForRole,
 } from "@/features/chat-bubbles/utils/bubble-links";
+import {
+  bubbleEntriesFrom,
+  bubbleUnreadFrom,
+} from "@/features/chat-bubbles/utils/bubble-payload";
 
 const groups = {
   total: 9,

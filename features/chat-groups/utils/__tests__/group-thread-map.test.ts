@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   canSendInGroup,
-  type GroupMessageWire,
   groupAvatarUrl,
+  type GroupMessageWire,
   groupPhotoUrl,
   parseGroupThread,
   toChatMessage,

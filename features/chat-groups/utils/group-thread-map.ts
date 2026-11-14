@@ -1,10 +1,10 @@
 import type { ThreadSnapshot } from "@/features/chat/hooks/use-chat-messages";
-import { PHOTO_ALT } from "@/features/chat/utils/photo-rules";
 import {
   serializeMessage,
   type ServerChatMessage,
   type ThreadViewer,
 } from "@/features/chat/utils/chat-thread-rules";
+import { PHOTO_ALT } from "@/features/chat/utils/photo-rules";
 import { toChatSticker } from "@/features/chat/utils/sticker-rules";
 import type { GroupMessageView } from "@/features/chat-groups/types/group";
 

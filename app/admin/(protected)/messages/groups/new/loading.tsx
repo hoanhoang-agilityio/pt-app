@@ -1,8 +1,9 @@
-import { SkeletonList } from "@/components/common/Skeleton";
+import { getTranslations } from "next-intl/server";
+
 import { PageSkeleton } from "@/components/common/PageSkeleton";
+import { SkeletonList } from "@/components/common/Skeleton";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ROUTES } from "@/constants/routes";
-import { getTranslations } from "next-intl/server";
 
 export default async function Loading() {
   const t = await getTranslations("chatGroups.pages");

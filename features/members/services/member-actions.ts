@@ -32,6 +32,7 @@ import {
   workoutDays,
 } from "@/db/schema";
 import { userOwnerKey } from "@/features/chat/utils/push-rules";
+import { removeUserFromGroups } from "@/features/chat-groups/services/group-cleanup";
 import { userActorKey } from "@/features/contact-aliases/utils/alias-rules";
 import { deleteDays } from "@/features/meal-plans/services/meal-plan-store";
 import { createMemberWithLogin } from "@/features/members/services/create-member-with-login";
@@ -188,6 +189,7 @@ export const deleteMemberAction = withResultErrorHandling(
         await tx.delete(exercises).where(inArray(exercises.dayId, dayIds));
         await tx.delete(workoutDays).where(inArray(workoutDays.id, dayIds));
       }
+      await removeUserFromGroups(tx, id);
       await deleteSocialContentOfUser(tx, id);
       await deleteRestrictionsOfUser(tx, id);
       await tx.delete(users).where(eq(users.id, id));

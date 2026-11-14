@@ -30,6 +30,12 @@ export const conversationChannel = (conversationId: number) =>
 export const dmConversationChannel = (conversationId: number) =>
   `${CHAT_CHANNEL_PREFIX}:dm:conversation:${assertId(conversationId, "conversationId")}`;
 
+// Group chats: `chat:group:<id>`. Tokens are minted per open group after the
+// membership check and carry exactly this one channel, never a wildcard (not
+// even for super admins).
+export const groupChannel = (groupId: number) =>
+  `${CHAT_CHANNEL_PREFIX}:group:${assertId(groupId, "groupId")}`;
+
 export const userChannel = (userId: number) =>
   `${CHAT_CHANNEL_PREFIX}:user:${assertId(userId, "userId")}`;
 
@@ -144,4 +150,39 @@ export const inboxEvent = (
 export const typingEvent = (role: "user" | "admin", senderKey: string) => ({
   role,
   senderKey,
+});
+
+export const GROUP_EVENTS = {
+  MESSAGE: "message",
+  MESSAGE_UPDATE: "message-update",
+  READ: "read",
+  MEMBERS: "members",
+} as const;
+
+// Subscribe only, one channel: see groupChannel.
+export const groupCapability = (groupId: number): AblyCapability => ({
+  [groupChannel(groupId)]: ["subscribe"],
+});
+
+// Group events carry ids only, never text; clients refetch.
+export const groupMessageEvent = (groupId: number, messageId: number) => ({
+  groupId: assertId(groupId, "groupId"),
+  messageId: assertId(messageId, "messageId"),
+});
+
+export const groupMessageUpdateEvent = (groupId: number, messageId: number) =>
+  groupMessageEvent(groupId, messageId);
+
+export const groupReadEvent = (
+  groupId: number,
+  readerKey: string,
+  lastReadMessageId: number,
+) => ({
+  groupId: assertId(groupId, "groupId"),
+  readerKey,
+  lastReadMessageId,
+});
+
+export const groupMembersEvent = (groupId: number) => ({
+  groupId: assertId(groupId, "groupId"),
 });

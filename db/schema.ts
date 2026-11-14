@@ -1009,3 +1009,147 @@ export const userRestrictions = sqliteTable(
     index("user_restrictions_user_created").on(table.userId, table.createdAt),
   ],
 );
+
+// Group chat (spec docs/specs/group-chat.md): a named chat of trainees, PTs
+// and every super admin. Its own tables, like the dm_* ones; all new, no
+// foreign keys (D10), so member and admin deletes clean the children by hand.
+export const chatGroups = sqliteTable(
+  "chat_groups",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    // 1..60 characters after trim (checked by Zod, group-rules.ts).
+    name: text("name").notNull(),
+    // Group photo: a 256x256 data URL validated on write, versioned by
+    // avatarUpdatedAt like the account avatars. Null = initials.
+    avatar: text("avatar"),
+    avatarUpdatedAt: integer("avatar_updated_at", { mode: "timestamp" }),
+    // "admin:<id>" of the creator. May dangle on purpose once that PT account
+    // is deleted: only super admins manage the group then.
+    createdByKey: text("created_by_key").notNull(),
+    // Null = everyone can send.
+    managersOnly: integer("managers_only", { mode: "boolean" }),
+    // Denormalised for the inbox sort and preview (never set by an alert).
+    lastMessageId: integer("last_message_id"),
+    lastMessageAt: integer("last_message_at", { mode: "timestamp_ms" }),
+    // Bumped (strictly increasing) by every edit, unsend, reaction and hide:
+    // the change cursor of the polling client.
+    lastChangeAt: integer("last_change_at", { mode: "timestamp_ms" }),
+    // Soft dissolve (super admin): the data stays, the group leaves every list.
+    dissolvedAt: integer("dissolved_at", { mode: "timestamp_ms" }),
+    dissolvedByAdminId: integer("dissolved_by_admin_id"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("chat_groups_dissolved_last_message").on(
+      table.dissolvedAt,
+      table.lastMessageAt,
+    ),
+  ],
+);
+
+// Explicit members plus lazy state rows of super admins (mute, read cursor).
+// A state row never changes membership and is not counted in the cap.
+export const chatGroupMembers = sqliteTable(
+  "chat_group_members",
+  {
+    groupId: integer("group_id").notNull(),
+    // "user:<id>" | "admin:<id>", the same format as push_subscriptions.owner_key.
+    memberKey: text("member_key").notNull(),
+    addedByKey: text("added_by_key").notNull(),
+    joinedAt: integer("joined_at", { mode: "timestamp_ms" }).notNull(),
+    // removedByKey null + leftAt set = the member left on their own.
+    leftAt: integer("left_at", { mode: "timestamp_ms" }),
+    removedByKey: text("removed_by_key"),
+    mutedAt: integer("muted_at", { mode: "timestamp_ms" }),
+    lastReadMessageId: integer("last_read_message_id").notNull().default(0),
+  },
+  (table) => [
+    primaryKey({ columns: [table.groupId, table.memberKey] }),
+    index("chat_group_members_member").on(table.memberKey, table.leftAt),
+  ],
+);
+
+export const chatGroupMessages = sqliteTable(
+  "chat_group_messages",
+  {
+    // Monotonic: doubles as the poll cursor.
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    groupId: integer("group_id").notNull(),
+    kind: text("kind", { enum: ["message", "system"] }).notNull(),
+    // "user:<id>" | "admin:<id>"; null for system lines.
+    senderKey: text("sender_key"),
+    body: text("body").notNull().default(""),
+    // JSON validated by Zod on write and read (utils/system-event.ts).
+    systemEvent: text("system_event"),
+    // Set only on the PT-change alert: only super admins may read the row.
+    audience: text("audience", { enum: ["super_admin"] }),
+    // Client uuid so a retried send is a no-op; null for system lines (SQLite
+    // allows many NULLs in a unique index).
+    clientId: text("client_id"),
+    replyToMessageId: integer("reply_to_message_id"),
+    stickerRef: text("sticker_ref"),
+    stickerUrl: text("sticker_url"),
+    photoId: integer("photo_id"),
+    silent: integer("silent", { mode: "boolean" }),
+    deletedAt: integer("deleted_at", { mode: "timestamp" }),
+    hiddenByKey: text("hidden_by_key"),
+    hiddenAt: integer("hidden_at", { mode: "timestamp_ms" }),
+    editedAt: integer("edited_at", { mode: "timestamp_ms" }),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("chat_group_messages_group_client").on(
+      table.groupId,
+      table.clientId,
+    ),
+    index("chat_group_messages_group_id").on(table.groupId, table.id),
+  ],
+);
+
+// One reaction per reactor per message.
+export const chatGroupReactions = sqliteTable(
+  "chat_group_reactions",
+  {
+    messageId: integer("message_id").notNull(),
+    reactorKey: text("reactor_key").notNull(),
+    emoji: text("emoji").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.messageId, table.reactorKey] })],
+);
+
+export const chatGroupMessageEdits = sqliteTable(
+  "chat_group_message_edits",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    messageId: integer("message_id").notNull(),
+    previousBody: text("previous_body").notNull(),
+    editedAt: integer("edited_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [index("chat_group_message_edits_message").on(table.messageId)],
+);
+
+// Like chat_photos, one photo table per chat kind: pending (messageId null)
+// from the upload until a message carries it; unsend deletes the bytes.
+export const chatGroupPhotos = sqliteTable(
+  "chat_group_photos",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    groupId: integer("group_id").notNull(),
+    messageId: integer("message_id"),
+    uploaderKey: text("uploader_key").notNull(),
+    mime: text("mime", {
+      enum: ["image/webp", "image/jpeg", "image/png"],
+    }).notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    data: blob("data", { mode: "buffer" }).notNull(),
+    size: integer("size").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("chat_group_photos_message").on(table.messageId),
+    index("chat_group_photos_group").on(table.groupId),
+  ],
+);

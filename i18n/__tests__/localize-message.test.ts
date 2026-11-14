@@ -10,6 +10,7 @@ import {
 } from "@/features/chat/constants/messages";
 import { CUSTOM_STICKER_ERRORS } from "@/features/chat/utils/custom-sticker-rules";
 import { PHOTO_ERRORS } from "@/features/chat/utils/photo-rules";
+import { GROUP_MESSAGES } from "@/features/chat-groups/constants/messages";
 import { FOOD_MESSAGES } from "@/features/foods/constants/foods";
 import { foodFormSchema } from "@/features/foods/services/food-schemas";
 import {
@@ -36,6 +37,7 @@ const CONSTANTS: Record<string, Record<string, string>> = {
   AUTH_MESSAGES,
   AVATAR_MESSAGES,
   CHAT_MESSAGES,
+  GROUP_MESSAGES,
   HIDDEN_CHAT_MESSAGES,
   PRESENCE_MESSAGES,
   CUSTOM_STICKER_ERRORS,
@@ -141,6 +143,7 @@ describe("localizeMessageFor", () => {
     expect(vi.generic.default).toBe(GENERIC_ERROR_MESSAGE);
     expect(vi.workouts).toEqual(WORKOUT_MESSAGES);
     expect(vi.restriction).toEqual(RESTRICTION_MESSAGES);
+    expect(vi.chatGroups).toEqual(GROUP_MESSAGES);
     expect(vi.members.PASSWORD_ONCE).toBe(MEMBER_MESSAGES.PASSWORD_ONCE);
   });
 

@@ -12,12 +12,14 @@ import {
 import { ROUTES } from "@/constants/routes";
 import { db } from "@/db";
 import { admins, users } from "@/db/schema";
+import { recordPtChangeInGroups } from "@/features/chat-groups/services/group-system-lines";
 import { PT_MESSAGES } from "@/features/pts/constants/messages";
 import {
   withFormErrorHandling,
   withResultErrorHandling,
 } from "@/services/action-errors";
 import { requireSuperAdmin } from "@/services/auth-guard";
+import { logServerError } from "@/services/logger";
 import { hashPassword } from "@/services/password";
 import type { FormState } from "@/types/form";
 import {
@@ -134,6 +136,19 @@ export const assignTraineePtAction = withResultErrorHandling(
         return { status: "error" as const, message: PT_MESSAGES.PT_NOT_FOUND };
       }
     }
+    const [trainee] = await db
+      .select({ ptAdminId: users.ptAdminId })
+      .from(users)
+      .where(eq(users.id, input.userId))
+      .limit(1);
+
+    if (!trainee) {
+      return { status: "error" as const, message: PT_MESSAGES.USER_NOT_FOUND };
+    }
+    // Saving the same PT again changes nothing: no write, no group alert.
+    if (trainee.ptAdminId === input.ptAdminId) {
+      return { status: "success" as const };
+    }
     const updated = await db
       .update(users)
       .set({ ptAdminId: input.ptAdminId })
@@ -142,6 +157,19 @@ export const assignTraineePtAction = withResultErrorHandling(
 
     if (updated.length === 0) {
       return { status: "error" as const, message: PT_MESSAGES.USER_NOT_FOUND };
+    }
+    // The trainee may sit in group chats: tell the super admins there. A
+    // failure is logged and never undoes the assignment.
+    try {
+      await recordPtChangeInGroups(
+        input.userId,
+        trainee.ptAdminId,
+        input.ptAdminId,
+      );
+    } catch (error) {
+      logServerError("recordPtChangeInGroups", error, {
+        userId: input.userId,
+      });
     }
     revalidatePath(ROUTES.ADMIN);
     return { status: "success" as const };

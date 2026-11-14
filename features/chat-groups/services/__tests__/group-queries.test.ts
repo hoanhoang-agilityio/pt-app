@@ -5,6 +5,7 @@ import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
 import {
   chatGroupMembers,
   chatGroupMessages,
+  chatGroupPhotos,
   chatGroupReactions,
   chatGroups,
   contactAliases,
@@ -99,6 +100,62 @@ describe("the thread and the alert audience", () => {
     ).toEqual([]);
   });
 
+  it("hydrates what the group thread UI needs: photo size, names of system lines, quote state", async () => {
+    const [photo] = await db
+      .insert(chatGroupPhotos)
+      .values({
+        groupId,
+        uploaderKey: `user:${anId}`,
+        mime: "image/webp",
+        width: 800,
+        height: 600,
+        data: Buffer.from("x"),
+        size: 1,
+        createdAt: new Date(),
+      })
+      .returning({ id: chatGroupPhotos.id });
+    const original = await seedMessage(db, groupId, `user:${binhId}`, "orig");
+    const photoMessage = await seedMessage(db, groupId, `user:${anId}`, "", {
+      photoId: photo.id,
+    });
+    const reply = await seedMessage(db, groupId, `user:${anId}`, "re", {
+      replyToMessageId: original,
+    });
+    const line = await seedMessage(db, groupId, null, "", {
+      systemEvent: JSON.stringify({
+        type: "member_removed",
+        actorKey: `admin:${ptId}`,
+        memberKey: "user:9999",
+      }),
+    });
+    const actor = await actorOf(asAn());
+    const { messages } = await queries.listGroupMessages(groupId, actor);
+    const byId = new Map(messages.map((m) => [m.id, m]));
+
+    expect(byId.get(photoMessage)?.photo).toEqual({
+      id: photo.id,
+      width: 800,
+      height: 600,
+    });
+    expect(byId.get(line)?.eventNames).toEqual({
+      [`admin:${ptId}`]: "Coach",
+      "user:9999": null,
+    });
+    expect(byId.get(reply)?.replyTo).toMatchObject({
+      id: original,
+      senderKey: `user:${binhId}`,
+      snippet: "orig",
+      unavailable: false,
+    });
+    await db
+      .update(chatGroupMessages)
+      .set({ deletedAt: new Date() })
+      .where(eq(chatGroupMessages.id, original));
+    const after = await queries.findGroupMessageView(groupId, reply, actor);
+
+    expect(after?.replyTo).toMatchObject({ snippet: "", unavailable: true });
+  });
+
   it("pages with before and after, oldest first, and reports hasMore", async () => {
     const ids: number[] = [];
 
@@ -183,7 +240,15 @@ describe("the thread and the alert audience", () => {
 
     expect(
       (await queries.findGroupMessageView(groupId, reply, actor))?.replyTo,
-    ).toEqual({ id: target, senderName: "An", snippet: "câu hỏi" });
+    ).toEqual({
+      id: target,
+      senderKey: `user:${anId}`,
+      senderName: "An",
+      snippet: "câu hỏi",
+      unavailable: false,
+      isSticker: false,
+      isPhoto: false,
+    });
     await db
       .update(chatGroupMessages)
       .set({ deletedAt: new Date() })

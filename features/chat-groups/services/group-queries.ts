@@ -189,6 +189,8 @@ const hydrateMessages = async (
             audience: messages.audience,
             deletedAt: messages.deletedAt,
             hiddenAt: messages.hiddenAt,
+            stickerRef: messages.stickerRef,
+            photoId: messages.photoId,
           })
           .from(messages)
           .where(
@@ -264,6 +266,15 @@ const hydrateMessages = async (
               reply.deletedAt === null && reply.hiddenAt === null
                 ? toReplySnippet(reply.body)
                 : "",
+            unavailable: reply.deletedAt !== null || reply.hiddenAt !== null,
+            isSticker:
+              reply.deletedAt === null &&
+              reply.hiddenAt === null &&
+              reply.stickerRef !== null,
+            isPhoto:
+              reply.deletedAt === null &&
+              reply.hiddenAt === null &&
+              reply.photoId !== null,
           }
         : null,
       sticker:

@@ -48,6 +48,10 @@ export interface GroupMessageView {
     senderKey: string | null;
     senderName: string | null;
     snippet: string;
+    // Unsent or hidden original: the quote shows a tombstone.
+    unavailable: boolean;
+    isSticker: boolean;
+    isPhoto: boolean;
   } | null;
   sticker: { ref: string; url: string } | null;
   photoId: number | null;

@@ -9,6 +9,13 @@ import {
   conversationChannel,
   dmConversationChannel,
   dmEvent,
+  GROUP_EVENTS,
+  groupCapability,
+  groupChannel,
+  groupMembersEvent,
+  groupMessageEvent,
+  groupMessageUpdateEvent,
+  groupReadEvent,
   INBOX_CHANNEL,
   inboxEvent,
   messageEvent,
@@ -179,5 +186,44 @@ describe("trainee chat (dm) channels", () => {
       messageId: 2,
       senderId: 3,
     });
+  });
+});
+
+describe("group chat channels", () => {
+  it("names the channel under chat: and one id", () => {
+    expect(groupChannel(12)).toBe("chat:group:12");
+    expect(groupChannel(12).startsWith("chat:")).toBe(true);
+  });
+
+  it("grants subscribe on exactly one channel, never a wildcard", () => {
+    const capability = groupCapability(12);
+
+    expect(capability).toEqual({ "chat:group:12": ["subscribe"] });
+    expect(Object.keys(capability).some((name) => name.includes("*"))).toBe(
+      false,
+    );
+  });
+
+  it.each([0, -3, 2.5, Number.NaN])("rejects the group id %s", (id) => {
+    expect(() => groupChannel(id)).toThrow("Invalid groupId");
+    expect(() => groupCapability(id)).toThrow("Invalid groupId");
+    expect(() => groupMessageEvent(id, 1)).toThrow("Invalid groupId");
+  });
+
+  it("builds ids-only events", () => {
+    expect(Object.values(GROUP_EVENTS).sort()).toEqual([
+      "members",
+      "message",
+      "message-update",
+      "read",
+    ]);
+    expect(groupMessageEvent(2, 9)).toEqual({ groupId: 2, messageId: 9 });
+    expect(groupMessageUpdateEvent(2, 9)).toEqual({ groupId: 2, messageId: 9 });
+    expect(groupReadEvent(2, "admin:1", 5)).toEqual({
+      groupId: 2,
+      readerKey: "admin:1",
+      lastReadMessageId: 5,
+    });
+    expect(groupMembersEvent(2)).toEqual({ groupId: 2 });
   });
 });

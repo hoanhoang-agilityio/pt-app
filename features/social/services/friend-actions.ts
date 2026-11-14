@@ -9,6 +9,7 @@ import {
 } from "@/features/social/constants/social";
 import {
   resolveActor,
+  restrictedWriteError,
   traineeActor,
   type Who,
 } from "@/features/social/services/actor-guard";
@@ -88,6 +89,8 @@ export const searchFriendAction = withResultErrorHandling(
 );
 
 // Runs a friend mutation on the other trainee's id for the signed-in trainee.
+// `isWrite` marks the ones a restricted trainee may not do (sending and
+// accepting a request); leaving, declining, cancelling and blocking stay open.
 const friendAction = (
   name: string,
   run: (
@@ -96,12 +99,18 @@ const friendAction = (
   ) => Promise<
     { ok: true; notificationId?: number } | { ok: false; error: FriendError }
   >,
+  { isWrite = false }: { isWrite?: boolean } = {},
 ) =>
   withResultErrorHandling(name, async (otherId: unknown) => {
     const actor = await traineeActor();
 
     if (!actor) {
       return fail(SOCIAL_MESSAGES.TERMS_REQUIRED);
+    }
+    const restricted = isWrite ? await restrictedWriteError(actor) : null;
+
+    if (restricted) {
+      return fail(restricted);
     }
     const id = userIdSchema.safeParse(otherId);
 
@@ -122,10 +131,12 @@ const friendAction = (
 export const sendFriendRequestAction = friendAction(
   "sendFriendRequest",
   (meId, otherId) => sendFriendRequest(meId, otherId),
+  { isWrite: true },
 );
 export const acceptFriendRequestAction = friendAction(
   "acceptFriendRequest",
   (meId, otherId) => acceptFriendRequest(meId, otherId),
+  { isWrite: true },
 );
 export const declineFriendRequestAction = friendAction(
   "declineFriendRequest",

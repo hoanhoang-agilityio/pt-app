@@ -4,6 +4,7 @@ import { and, eq, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import { socialBlocks, socialFriendships } from "@/db/schema";
+import { listSuspendedUserIds } from "@/features/restrictions/services/restriction-queries";
 import type { Relationship } from "@/features/social/utils/friend-rules";
 import { pairOf } from "@/features/social/utils/friend-rules";
 
@@ -27,8 +28,15 @@ export const findFriendship = async (a: number, b: number) => {
   return row ?? null;
 };
 
-// Either side blocked the other.
+// Either side blocked the other, or either one is suspended by an admin: a
+// suspended trainee is hidden from everyone else like a blocked one, in the
+// feed, friend lists, search, profiles and chats.
 export const isBlockedBetween = async (a: number, b: number) => {
+  const suspended = await listSuspendedUserIds();
+
+  if (suspended.includes(a) || suspended.includes(b)) {
+    return true;
+  }
   const [row] = await db
     .select({ blockerId: socialBlocks.blockerId })
     .from(socialBlocks)
@@ -101,25 +109,35 @@ export const listFriendIds = async (userId: number): Promise<number[]> => {
     .filter((id) => !blocked.has(id));
 };
 
-// Everyone who blocked `userId` or whom `userId` blocked.
+// Everyone who blocked `userId` or whom `userId` blocked, plus every trainee
+// an admin suspended (hidden from all other trainees).
 export const listBlockedBetweenIds = async (
   userId: number,
 ): Promise<Set<number>> => {
-  const rows = await db
-    .select()
-    .from(socialBlocks)
-    .where(
-      or(
-        eq(socialBlocks.blockerId, userId),
-        eq(socialBlocks.blockedId, userId),
+  const [rows, suspended] = await Promise.all([
+    db
+      .select()
+      .from(socialBlocks)
+      .where(
+        or(
+          eq(socialBlocks.blockerId, userId),
+          eq(socialBlocks.blockedId, userId),
+        ),
       ),
-    );
-
-  return new Set(
+    listSuspendedUserIds(),
+  ]);
+  const ids = new Set(
     rows.map((row) =>
       row.blockerId === userId ? row.blockedId : row.blockerId,
     ),
   );
+
+  for (const id of suspended) {
+    if (id !== userId) {
+      ids.add(id);
+    }
+  }
+  return ids;
 };
 
 export const countFriends = async (userId: number) =>

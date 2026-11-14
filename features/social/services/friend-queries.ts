@@ -10,6 +10,7 @@ import {
   overlayName,
   userActorKey,
 } from "@/features/contact-aliases/utils/alias-rules";
+import { listSuspendedUserIds } from "@/features/restrictions/services/restriction-queries";
 import {
   getRelationship,
   isBlockedBetween,
@@ -167,15 +168,18 @@ export const listFriendRequests = async (
     .orderBy(desc(socialFriendships.createdAt));
   const otherOf = (row: (typeof rows)[number]) =>
     row.userLow === meId ? row.userHigh : row.userLow;
-  const people = await loadPeople(rows.map(otherOf), meId);
+  // A suspended trainee's requests are hidden while the suspension lasts.
+  const suspended = new Set(await listSuspendedUserIds());
+  const visible = rows.filter((row) => !suspended.has(otherOf(row)));
+  const people = await loadPeople(visible.map(otherOf), meId);
 
   return {
     received: inOrder(
-      rows.filter((row) => row.requestedBy !== meId).map(otherOf),
+      visible.filter((row) => row.requestedBy !== meId).map(otherOf),
       people,
     ),
     sent: inOrder(
-      rows.filter((row) => row.requestedBy === meId).map(otherOf),
+      visible.filter((row) => row.requestedBy === meId).map(otherOf),
       people,
     ),
   };

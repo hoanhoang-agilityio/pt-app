@@ -11,6 +11,8 @@ import {
   PHOTO_ERRORS,
   PHOTO_MAX_BYTES,
 } from "@/features/chat/utils/photo-rules";
+import { RESTRICTION_MESSAGES } from "@/features/restrictions/constants/messages";
+import { restrictionErrorFor } from "@/features/restrictions/services/restriction-guard";
 import { getApiAdmin, getApiUser } from "@/services/auth-guard";
 import { canAdminAccessUser } from "@/services/hidden-users";
 import { localizeResult } from "@/services/localize-message";
@@ -33,7 +35,10 @@ const isSameOrigin = (request: NextRequest) => {
 };
 
 type Target =
-  { conversationUserId: number; uploaderKey: string } | "locked" | null;
+  | { conversationUserId: number; uploaderKey: string }
+  | "locked"
+  | "restricted"
+  | null;
 
 // Who is uploading, and into whose conversation. A trainee always uploads into
 // their own; a PT names the trainee (`?as=admin&userId=`) and needs access to
@@ -65,6 +70,9 @@ const resolveTarget = async (request: NextRequest): Promise<Target> => {
   if (!user) {
     return null;
   }
+  if (await restrictionErrorFor(user.id)) {
+    return "restricted";
+  }
   return isChatEnabled(user)
     ? {
         conversationUserId: user.id,
@@ -90,6 +98,12 @@ export const POST = async (request: NextRequest) => {
   }
   if (target === "locked") {
     return reply({ error: "chat_locked" }, 403);
+  }
+  if (target === "restricted") {
+    return reply(
+      { error: "restricted", message: RESTRICTION_MESSAGES.RESTRICTED },
+      403,
+    );
   }
   const declared = Number(request.headers.get("content-length"));
 

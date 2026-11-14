@@ -11,6 +11,7 @@ import {
   chatReads,
   contactAliases,
   pushSubscriptions,
+  userRestrictions,
   users,
 } from "@/db/schema";
 
@@ -211,6 +212,37 @@ describe("deleteMemberAction chat cleanup", () => {
     expect(
       (await db.select().from(pushSubscriptions)).map((row) => row.endpoint),
     ).toEqual(["https://push.example/3", "https://push.example/4"]);
+  });
+
+  it("removes the trainee's restrictions, history included, and only theirs", async () => {
+    const gone = await seedTrainee("An");
+    const kept = await seedTrainee("Binh");
+    const row = (userId: number, reason: string, liftedAt: Date | null) => ({
+      userId,
+      level: "suspended" as const,
+      until: null,
+      reason,
+      createdByAdminId: 1,
+      createdAt: new Date(),
+      liftedAt,
+    });
+
+    await db
+      .insert(userRestrictions)
+      .values([
+        row(gone.userId, "old, lifted", new Date()),
+        row(gone.userId, "active", null),
+        row(kept.userId, "other trainee", null),
+      ]);
+
+    await deleteMemberAction(gone.userId);
+
+    expect(
+      (await db.select().from(userRestrictions)).map((r) => [
+        r.userId,
+        r.reason,
+      ]),
+    ).toEqual([[kept.userId, "other trainee"]]);
   });
 
   it("deletes a trainee who never opened a conversation", async () => {

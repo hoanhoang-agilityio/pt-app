@@ -1,5 +1,6 @@
 import "server-only";
 
+import { restrictionErrorFor } from "@/features/restrictions/services/restriction-guard";
 import {
   actorOfAdmin,
   actorOfUser,
@@ -22,3 +23,11 @@ export const adminActor = async (): Promise<SocialActor> =>
 
 export const resolveActor = (who: Who) =>
   who === "admin" ? adminActor() : traineeActor();
+
+// The error for a restricted trainee trying to write (post, comment, react,
+// message, friend request), or null. Admins are never restricted. Deleting
+// one's own content and reading stay allowed, so those actions skip this.
+export const restrictedWriteError = async (
+  actor: SocialActor,
+): Promise<string | null> =>
+  actor.kind === "user" ? restrictionErrorFor(actor.id) : null;

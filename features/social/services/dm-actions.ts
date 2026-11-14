@@ -5,7 +5,10 @@ import { revalidatePath } from "next/cache";
 import { ROUTES } from "@/constants/routes";
 import { DM_MESSAGES } from "@/features/social/constants/dm";
 import { SOCIAL_MESSAGES } from "@/features/social/constants/social";
-import { traineeActor } from "@/features/social/services/actor-guard";
+import {
+  restrictedWriteError,
+  traineeActor,
+} from "@/features/social/services/actor-guard";
 import { resolveDmView } from "@/features/social/services/dm-access";
 import {
   type DmError,
@@ -76,6 +79,11 @@ export const sendDmAction = withResultErrorHandling(
 
     if (!actor) {
       return fail(SOCIAL_MESSAGES.TERMS_REQUIRED);
+    }
+    const restricted = await restrictedWriteError(actor);
+
+    if (restricted) {
+      return fail(restricted);
     }
     const parsed = dmSendSchema.safeParse(input);
 

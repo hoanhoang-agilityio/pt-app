@@ -36,6 +36,7 @@ import { userActorKey } from "@/features/contact-aliases/utils/alias-rules";
 import { deleteDays } from "@/features/meal-plans/services/meal-plan-store";
 import { createMemberWithLogin } from "@/features/members/services/create-member-with-login";
 import { resolveTraineePt } from "@/features/members/services/resolve-trainee-pt";
+import { deleteRestrictionsOfUser } from "@/features/restrictions/services/restriction-mutations";
 import { deleteSocialContentOfUser } from "@/features/social/services/post-cleanup";
 import {
   withFormErrorHandling,
@@ -188,6 +189,7 @@ export const deleteMemberAction = withResultErrorHandling(
         await tx.delete(workoutDays).where(inArray(workoutDays.id, dayIds));
       }
       await deleteSocialContentOfUser(tx, id);
+      await deleteRestrictionsOfUser(tx, id);
       await tx.delete(users).where(eq(users.id, id));
     });
 

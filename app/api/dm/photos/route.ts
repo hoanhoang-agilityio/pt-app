@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { checkPhoto, PHOTO_ERRORS } from "@/features/chat/utils/photo-rules";
+import { RESTRICTION_MESSAGES } from "@/features/restrictions/constants/messages";
+import { restrictionErrorFor } from "@/features/restrictions/services/restriction-guard";
 import { DM_PHOTO_MAX_BYTES } from "@/features/social/constants/dm";
 import { resolveDmView } from "@/features/social/services/dm-access";
 import { createPendingDmPhoto } from "@/features/social/services/dm-photos";
@@ -39,6 +41,12 @@ export const POST = async (request: NextRequest) => {
 
   if (!user) {
     return reply({ error: "unauthorized" }, 401);
+  }
+  if (await restrictionErrorFor(user.id)) {
+    return reply(
+      { error: "restricted", message: RESTRICTION_MESSAGES.RESTRICTED },
+      403,
+    );
   }
   const conversationId = parseDmId(
     request.nextUrl.searchParams.get("conversationId") ?? "",

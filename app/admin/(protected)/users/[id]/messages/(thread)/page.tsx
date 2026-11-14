@@ -111,13 +111,17 @@ const AdminMessagesPage = async ({
       ? null
       : await listMessagesAround(conversation.id, jumpId, viewer);
   const [
-    { messages, hasMore },
+    { messages, hasMore, hasNewer },
     peerReadUpTo,
     profile,
     adminAvatars,
     traineeAvatarUrl,
   ] = await Promise.all([
-    around ?? listMessages(conversation.id, {}, viewer),
+    around ??
+      listMessages(conversation.id, {}, viewer).then((page) => ({
+        ...page,
+        hasNewer: false,
+      })),
     getPeerReadCursor(conversation.id, "admin"),
     loadChatProfile(conversation.id, adminActorKey(admin.id)),
     listAdminAvatarUrls(),
@@ -143,6 +147,7 @@ const AdminMessagesPage = async ({
       conversationId={conversation.id}
       replyPost={replyPost}
       jumpToId={around ? jumpId : null}
+      jumpMissed={jumpId !== null && !around}
       viewer={{
         role: "admin",
         adminId: admin.id,
@@ -158,6 +163,7 @@ const AdminMessagesPage = async ({
         // never missed.
         lastChangeAt: conversation.lastChangeAt?.getTime() ?? 0,
         hasMore,
+        hasNewer,
         chatEnabled,
         peerReadUpTo,
         peerLastSeenAt: serializeLastSeen(user.lastSeenAt),

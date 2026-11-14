@@ -459,15 +459,11 @@ export const listMessages = async (
   };
 };
 
-// The most messages after the target a jump loads in one go; a longer tail
-// means the target is far back and the jump is skipped (the chat opens at the
-// newest as usual). Conversations are small, so this is rare.
-export const JUMP_MAX_NEWER = 500;
-
 // The thread as the chat opens it for a jump to `messageId` (KAN-160): the
-// page that ends at the target plus every newer message, so it still joins up
-// with the newest and the poll cursor stays valid. Null when the message is
-// not in this conversation or too far back.
+// page that ends at the target plus one page of newer messages. `hasNewer`
+// says whether more newer messages exist beyond that window; the client loads
+// them on scroll and polls without appending until it has caught up. Null when
+// the message is not in this conversation.
 export const listMessagesAround = async (
   conversationId: number,
   messageId: number,
@@ -486,31 +482,15 @@ export const listMessagesAround = async (
   if (!target) {
     return null;
   }
-  const [older, newerRows] = await Promise.all([
+  const [older, newer] = await Promise.all([
     listMessages(conversationId, { before: messageId + 1 }, viewer),
-    db
-      .select(messageColumns)
-      .from(chatMessages)
-      .leftJoin(admins, eq(admins.id, chatMessages.senderAdminId))
-      .where(
-        and(
-          eq(chatMessages.conversationId, conversationId),
-          gt(chatMessages.id, messageId),
-        ),
-      )
-      .orderBy(asc(chatMessages.id))
-      .limit(JUMP_MAX_NEWER + 1),
+    listMessages(conversationId, { after: messageId }, viewer),
   ]);
 
-  if (newerRows.length > JUMP_MAX_NEWER) {
-    return null;
-  }
   return {
-    messages: [
-      ...older.messages,
-      ...(await hydrateMessages(newerRows, viewer)),
-    ],
+    messages: [...older.messages, ...newer.messages],
     hasMore: older.hasMore,
+    hasNewer: newer.hasMore,
   };
 };
 

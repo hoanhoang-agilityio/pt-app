@@ -18,6 +18,7 @@ interface TraineeChatThreadProps extends Pick<
   | "conversationId"
   | "avatars"
   | "jumpToId"
+  | "jumpMissed"
   | "verifiedAdminIds"
   | "replyPost"
   | "isEmbed"

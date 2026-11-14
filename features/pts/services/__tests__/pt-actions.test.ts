@@ -1,9 +1,16 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { INITIAL_FORM_STATE } from "@/constants/form";
 import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
-import { admins, users } from "@/db/schema";
+import {
+  admins,
+  chatGroupMembers,
+  chatGroupMessages,
+  chatGroups,
+  users,
+} from "@/db/schema";
+import { logServerError } from "@/services/logger";
 
 const state = vi.hoisted(() => ({ db: null as unknown, isSuper: true }));
 
@@ -138,13 +145,17 @@ describe("setAdminVerifiedAction", () => {
 });
 
 describe("assignTraineePtAction", () => {
-  const addUser = async () =>
-    (
+  let counter = 0;
+  const addUser = async () => {
+    counter += 1;
+
+    return (
       await db
         .insert(users)
-        .values({ name: "Lan", nameKey: "lan" })
+        .values({ name: `Lan${counter}`, nameKey: `lan${counter}` })
         .returning({ id: users.id })
     )[0].id;
+  };
 
   it("assigns and clears the PT of a trainee", async () => {
     const pt = await addPt("coach");
@@ -180,5 +191,99 @@ describe("assignTraineePtAction", () => {
     const pt = await addPt("coach");
 
     expect((await assignTraineePtAction(999, pt)).status).toBe("error");
+  });
+  describe("group chat alerts", () => {
+    const addGroupWith = async (userId: number) => {
+      const [group] = await db
+        .insert(chatGroups)
+        .values({ name: "Lớp", createdByKey: "admin:1", createdAt: new Date() })
+        .returning({ id: chatGroups.id });
+
+      await db.insert(chatGroupMembers).values({
+        groupId: group.id,
+        memberKey: `user:${userId}`,
+        addedByKey: "admin:1",
+        joinedAt: new Date(),
+      });
+      return group.id;
+    };
+    const alerts = async () =>
+      (await db.select().from(chatGroupMessages)).filter(
+        (row) => row.audience === "super_admin",
+      );
+
+    it("writes one super-admin-only alert in the trainee's group when the PT changes", async () => {
+      const oldPt = await addPt("old");
+      const newPt = await addPt("new");
+      const user = await addUser();
+      const groupId = await addGroupWith(user);
+
+      await assignTraineePtAction(user, oldPt);
+      expect(await alerts()).toHaveLength(1);
+      await assignTraineePtAction(user, newPt);
+      const rows = await alerts();
+
+      expect(rows).toHaveLength(2);
+      expect(rows.every((row) => row.groupId === groupId)).toBe(true);
+      expect(JSON.parse(rows[1].systemEvent!)).toMatchObject({
+        type: "pt_changed",
+        userId: user,
+        fromPtId: oldPt,
+        toPtId: newPt,
+        resolution: null,
+      });
+    });
+
+    it("does nothing when the same PT is saved again", async () => {
+      const pt = await addPt("coach");
+      const user = await addUser();
+
+      await addGroupWith(user);
+      await assignTraineePtAction(user, pt);
+      expect(await alerts()).toHaveLength(1);
+
+      expect(await assignTraineePtAction(user, pt)).toEqual({
+        status: "success",
+      });
+      expect(await alerts()).toHaveLength(1);
+      // Clearing a PT that is already clear is a no-op too.
+      const other = await addUser();
+
+      await addGroupWith(other);
+      expect(await assignTraineePtAction(other, null)).toEqual({
+        status: "success",
+      });
+      expect(
+        (await alerts()).filter(
+          (row) => JSON.parse(row.systemEvent!).userId === other,
+        ),
+      ).toHaveLength(0);
+    });
+
+    it("writes no alert for a trainee who is in no group", async () => {
+      const pt = await addPt("coach");
+      const user = await addUser();
+
+      await assignTraineePtAction(user, pt);
+      expect(await alerts()).toHaveLength(0);
+    });
+
+    it("keeps the assignment when the alert cannot be written, and logs it", async () => {
+      const pt = await addPt("coach");
+      const user = await addUser();
+
+      await db.run(sql`drop table chat_group_members`);
+      const result = await assignTraineePtAction(user, pt);
+
+      expect(result).toEqual({ status: "success" });
+      expect(
+        (await db.select().from(users).where(eq(users.id, user)))[0].ptAdminId,
+      ).toBe(pt);
+      expect(logServerError).toHaveBeenCalledWith(
+        "recordPtChangeInGroups",
+        expect.any(Error),
+        { userId: user },
+      );
+    });
   });
 });

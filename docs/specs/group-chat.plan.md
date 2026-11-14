@@ -115,3 +115,17 @@ Tests (Vitest, next to the code)
 ## Deviations
 
 Update this section in the same commit whenever the implementation departs from the plan: what changed and why.
+
+### PR 1 (`feat/group-chat-core`), 2026-11-14
+
+- **Report kind left out.** The report PR (#201) is not merged, so `social_reports.target_kind` has no `'group_message'`, there is no group report action, and `MessageActionsSheet`, `social_reports` and `chat-moderation.ts` are untouched. A later PR adds the kind, the membership-checked report and the super admin page link.
+- **Restriction check** is `restrictionErrorFor(userId)` from `features/restrictions/services/restriction-guard.ts`, wrapped by `loadTraineeRestriction` in `group-access.ts` (the single seam, as planned) and applied in `resolveSendBlock` for trainees only, beside `chatEnabled`.
+- **No edit or unsend time window.** The spec says to reuse the windows of `chat-rules.ts`, but the coach chat has none (own messages, no time limit), so group edit and unsend have none either.
+- **No admin or PT delete action exists in the repo**, so `removeAdminFromGroups` is written and tested but has no caller yet; `removeUserFromGroups` is wired into `deleteMemberAction`.
+- **Errors localized through the `errors` namespace** (new group `chatGroups` in vi, en and zh, covered by `localize-message.test.ts`), not a new `chatGroups.json` namespace; that file comes with the UI PR.
+- **PT-change alerts never move the inbox pointer** (`last_message_*`), so an alert cannot change the preview or the order for anyone who may not read it.
+- **A new member starts with nothing unread** (cursor = the group's last message id); a re-added member keeps the old cursor. History stays fully readable (G8).
+- **Super admin unread** keeps the `admins.created_at` baseline even when a state row exists (a mute alone creates one), so a mute never floods a new super admin with old unread.
+- **Two extra service files** because a `'use server'` file may only export async functions: `group-core.ts` (the operations) and `group-membership.ts` (add, remove, leave), with `group-actions.ts` holding one export per role. Helpers `group-api.ts` (route session, `?as=admin` like the other chat routes) and `group-names.ts` (alias-aware names) were added.
+- **`/api/chat/unread` and `unread-payload.ts`** gain `groups`; two parsers return it and the existing `chat-routes` test expectations include the new field. No existing field changed.
+- **`assignTraineePtAction`** now answers success without writing when the PT is unchanged and returns "user not found" before any write.

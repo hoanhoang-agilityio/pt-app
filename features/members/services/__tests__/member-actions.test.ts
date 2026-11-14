@@ -6,6 +6,10 @@ import {
   adminHiddenUsers,
   chatColorOverrides,
   chatConversations,
+  chatGroupMembers,
+  chatGroupMessages,
+  chatGroupReactions,
+  chatGroups,
   chatMessages,
   chatNicknames,
   chatReads,
@@ -255,5 +259,57 @@ describe("deleteMemberAction chat cleanup", () => {
 
     expect(result.status).toBe("success");
     expect(await db.select().from(users)).toHaveLength(0);
+  });
+});
+
+describe("deleteMemberAction group chat cleanup", () => {
+  it("removes the trainee's group rows and keeps the group's messages", async () => {
+    const gone = await seedTrainee("An");
+    const kept = await seedTrainee("Binh");
+    const [group] = await db
+      .insert(chatGroups)
+      .values({ name: "Lớp", createdByKey: "admin:1", createdAt: new Date() })
+      .returning({ id: chatGroups.id });
+
+    await db.insert(chatGroupMembers).values(
+      [gone, kept].map((member) => ({
+        groupId: group.id,
+        memberKey: `user:${member.userId}`,
+        addedByKey: "admin:1",
+        joinedAt: new Date(),
+      })),
+    );
+    const [message] = await db
+      .insert(chatGroupMessages)
+      .values({
+        groupId: group.id,
+        kind: "message",
+        senderKey: `user:${gone.userId}`,
+        body: "tin của An",
+        clientId: "c1",
+        createdAt: new Date(),
+      })
+      .returning({ id: chatGroupMessages.id });
+
+    await db.insert(chatGroupReactions).values(
+      [gone, kept].map((member) => ({
+        messageId: message.id,
+        reactorKey: `user:${member.userId}`,
+        emoji: "💪",
+        createdAt: new Date(),
+      })),
+    );
+
+    await deleteMemberAction(gone.userId);
+
+    expect(
+      (await db.select().from(chatGroupMembers)).map((row) => row.memberKey),
+    ).toEqual([`user:${kept.userId}`]);
+    expect(
+      (await db.select().from(chatGroupReactions)).map((row) => row.reactorKey),
+    ).toEqual([`user:${kept.userId}`]);
+    expect(
+      (await db.select().from(chatGroupMessages)).map((row) => row.body),
+    ).toEqual(["tin của An"]);
   });
 });

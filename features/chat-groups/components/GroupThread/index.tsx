@@ -29,6 +29,7 @@ import {
 import { useChatTransport } from "@/features/chat/hooks/use-chat-transport";
 import {
   buildThreadItems,
+  canReportGroupMessage,
   firstStoredId,
   isNearBottom,
   markUnsentQuotes,
@@ -105,6 +106,13 @@ const EditHistorySheet = dynamic(
     ),
   { ssr: false },
 );
+const ReportSheet = dynamic(
+  () =>
+    import("@/features/social/components/ReportSheet").then(
+      (module) => module.ReportSheet,
+    ),
+  { ssr: false },
+);
 const BottomSheet = dynamic(
   () =>
     import("@/components/common/BottomSheet").then(
@@ -113,7 +121,7 @@ const BottomSheet = dynamic(
   { ssr: false },
 );
 
-type SheetKind = "actions" | "history" | "seen" | "hidden";
+type SheetKind = "actions" | "history" | "seen" | "hidden" | "report";
 
 const SHEET_ROW =
   "flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-base font-medium text-fg transition active:bg-line";
@@ -693,6 +701,11 @@ export const GroupThread = ({
             );
           }}
           onUnsend={() => void handleUnsend(sheetMessage)}
+          onReport={
+            canReportGroupMessage(sheetMessage, adapter.viewer, canResolveAlert)
+              ? () => openSheet("report", sheetMessage)
+              : undefined
+          }
           extra={
             canManage ? (
               <button
@@ -705,6 +718,16 @@ export const GroupThread = ({
               </button>
             ) : undefined
           }
+        />
+      )}
+      {sheet?.kind === "report" && sheetMessage?.id != null && (
+        <ReportSheet
+          key={sheetMessage.id}
+          isOpen={isSheetOpen}
+          onOpenChange={setIsSheetOpen}
+          mode={role}
+          targetKind="group_message"
+          targetId={sheetMessage.id}
         />
       )}
       {sheet?.kind === "hidden" && sheetMessage && (

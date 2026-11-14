@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildThreadItems,
   canEditOrUnsend,
+  canReportGroupMessage,
   canReportMessage,
   isOwnMessage,
   mergeMessages,
@@ -295,5 +296,61 @@ describe("member viewer (group chat)", () => {
     expect(canReportMessage(toThreadMessage(groupMsg(2, "admin:1")), me)).toBe(
       false,
     );
+  });
+
+  describe("canReportGroupMessage", () => {
+    const theirs = toThreadMessage(groupMsg(2, "user:6"));
+
+    it("offers another member's stored message", () => {
+      expect(canReportGroupMessage(theirs, me, false)).toBe(true);
+      expect(
+        canReportGroupMessage(
+          toThreadMessage(groupMsg(3, "admin:1")),
+          me,
+          false,
+        ),
+      ).toBe(true);
+    });
+
+    it("never offers my own message", () => {
+      expect(
+        canReportGroupMessage(
+          toThreadMessage(groupMsg(1, "user:5")),
+          me,
+          false,
+        ),
+      ).toBe(false);
+    });
+
+    it("never offers it to a super admin", () => {
+      expect(canReportGroupMessage(theirs, me, true)).toBe(false);
+    });
+
+    it.each([
+      ["an unsent message", { deleted: true }],
+      ["a hidden message", { hidden: true }],
+      ["a system line", { kind: "system" as const }],
+      ["a sender without a key", { senderKey: null }],
+    ])("never offers %s", (_label, overrides) => {
+      expect(
+        canReportGroupMessage(
+          toThreadMessage(groupMsg(4, "user:6", overrides)),
+          me,
+          false,
+        ),
+      ).toBe(false);
+    });
+
+    it("never offers an unsent-to-server message or a coach viewer", () => {
+      expect(
+        canReportGroupMessage({ ...theirs, delivery: "sending" }, me, false),
+      ).toBe(false);
+      expect(canReportGroupMessage({ ...theirs, id: null }, me, false)).toBe(
+        false,
+      );
+      expect(
+        canReportGroupMessage(theirs, { role: "user" }, false),
+      ).toBe(false);
+    });
   });
 });

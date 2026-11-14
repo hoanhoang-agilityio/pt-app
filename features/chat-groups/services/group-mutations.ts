@@ -242,6 +242,22 @@ export const unsendGroupMessage = async (
 
 // A super admin or the creator PT hides (or unhides) anyone's message; the
 // text stays stored for moderation, readers see a placeholder.
+// The one write behind hide and unhide (a manager's tap and a report's "hide"
+// resolution): who hid it and when, or both cleared.
+export const setGroupMessageHidden = async (
+  messageId: number,
+  hiddenByKey: string | null,
+) => {
+  await db
+    .update(chatGroupMessages)
+    .set(
+      hiddenByKey === null
+        ? { hiddenByKey: null, hiddenAt: null }
+        : { hiddenByKey, hiddenAt: new Date() },
+    )
+    .where(eq(chatGroupMessages.id, messageId));
+};
+
 export const hideGroupMessage = async (
   context: GroupContext,
   user: GroupUser,
@@ -273,14 +289,7 @@ export const hideGroupMessage = async (
   if (hidden === (stored.hiddenAt !== null)) {
     return current(context, messageId);
   }
-  await db
-    .update(chatGroupMessages)
-    .set(
-      hidden
-        ? { hiddenByKey: context.actor.key, hiddenAt: new Date() }
-        : { hiddenByKey: null, hiddenAt: null },
-    )
-    .where(eq(chatGroupMessages.id, messageId));
+  await setGroupMessageHidden(messageId, hidden ? context.actor.key : null);
   return finish(context, messageId);
 };
 

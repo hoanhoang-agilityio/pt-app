@@ -649,6 +649,25 @@ export const canReportMessage = (
     ? message.senderRole === "admin"
     : message.senderRole === "user" && viewer.isSuperAdmin !== true);
 
+// "Báo cáo" on a group message: any member reports another member's stored,
+// visible message. Never my own, never a system line, a hidden or an unsent
+// one, and a super admin reports nothing (they moderate). The server checks
+// membership again.
+export const canReportGroupMessage = (
+  message: ThreadMessage,
+  viewer: ThreadViewer,
+  isSuperAdmin: boolean,
+) =>
+  viewer.role === "member" &&
+  !isSuperAdmin &&
+  message.id !== null &&
+  message.delivery === "sent" &&
+  message.kind !== "system" &&
+  !message.deleted &&
+  !message.hidden &&
+  message.senderKey != null &&
+  message.senderKey !== viewer.key;
+
 // The emoji I reacted with, if any.
 export const myReactionOf = (
   message: Pick<ThreadMessage, "reactions">,

@@ -24,6 +24,7 @@
     "post": "bài viết",
     "comment": "bình luận",
     "user": "người dùng",
-    "message": "tin nhắn"
+    "message": "tin nhắn",
+    "group_message": "tin nhắn nhóm"
   }
 }

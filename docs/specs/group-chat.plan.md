@@ -129,3 +129,17 @@ Update this section in the same commit whenever the implementation departs from 
 - **Two extra service files** because a `'use server'` file may only export async functions: `group-core.ts` (the operations) and `group-membership.ts` (add, remove, leave), with `group-actions.ts` holding one export per role. Helpers `group-api.ts` (route session, `?as=admin` like the other chat routes) and `group-names.ts` (alias-aware names) were added.
 - **`/api/chat/unread` and `unread-payload.ts`** gain `groups`; two parsers return it and the existing `chat-routes` test expectations include the new field. No existing field changed.
 - **`assignTraineePtAction`** now answers success without writing when the PT is unchanged and returns "user not found" before any write.
+
+### PR 2 (`feat/group-chat-admin-ui`), 2026-11-14
+
+- **GroupThread wrapper, not a widened ChatThread.** Characterization tests (`chat-thread-viewer.test.ts`) came first, then `ThreadViewer` gained a `member` role (senderKey based) and `buildThreadItems` got system lines. `CoachViewer` (the old two roles) keeps the coach-only components (ChatThread, ChatInfo, customize panel, StickerPanel) unchanged.
+- **`thread.deletedMember`** added to `format.json` for senders removed from the system.
+- **Reactor names are not shown for groups.** Group reactions arrive aggregated, so reaction chips open the actions sheet rather than ReactorsSheet.
+- **Hide / unhide** reuses `MessageActionsSheet` through a new optional `extra` slot; the #201 `onReport` prop is untouched.
+- **Additive server view fields** in `GroupMessageView` (`photo`, `eventNames`, `replyTo.senderKey/unavailable/isSticker/isPhoto`) and `GroupLastMessage.media`, needed to render the shared bubble. No rule changed.
+- **New `group-candidates.ts` service** for the create picker (PT: own non-hidden trainees; super admin: all trainees plus PTs).
+- **`bubble-payload.ts`** extracted from the bubble host so that ignoring groups is explicit and tested.
+- **Admin badge** (home initial count and polled count) now includes group unread via `adminBadgeCount`.
+- **`useChatTransport`** takes an optional `groupId` (token `?group=<id>`, no user channel, no typing).
+- **No new server actions**; every screen calls the PR 1 admin variants.
+- Seen-by sheet and the PT-change alert line (Keep / Remove, resolved state) are wired but only unit-tested, not browser-proven.

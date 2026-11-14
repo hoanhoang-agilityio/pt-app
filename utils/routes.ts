@@ -21,6 +21,12 @@ export const getAdminSummaryPath = (userId: number) =>
 export const getAdminMessagesPath = (userId: number) =>
   `${getAdminUserPath(userId)}/${ADMIN_MESSAGES_SEGMENT}`;
 
+export const getAdminGroupPath = (groupId: number) =>
+  `${ROUTES.ADMIN_MESSAGES}/groups/${groupId}`;
+
+export const getAdminGroupInfoPath = (groupId: number) =>
+  `${getAdminGroupPath(groupId)}/info`;
+
 export const getFoodPath = (foodId: number) => `${ROUTES.FOODS}/${foodId}`;
 
 export const getAdminFoodPath = (foodId: number) =>

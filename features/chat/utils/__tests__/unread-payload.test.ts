@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  adminBadgeCount,
   parseAdminUnread,
   parseGroupUnread,
   parseUserUnread,
@@ -76,5 +77,20 @@ describe("existing fields are unchanged", () => {
     expect(
       parseAdminUnread({ count: 3, perTrainee: [row], groups }).groups,
     ).toEqual(groups);
+  });
+});
+
+describe("adminBadgeCount", () => {
+  it("adds the group total to the trainee chats", () => {
+    expect(adminBadgeCount({ count: 4, groups }, 0)).toBe(9);
+  });
+
+  it("is the trainee total when the payload has no groups", () => {
+    expect(adminBadgeCount({ count: 4 }, 0)).toBe(4);
+  });
+
+  it("shows the server-rendered number before the first poll", () => {
+    expect(adminBadgeCount(null, 6)).toBe(6);
+    expect(adminBadgeCount({ groups }, 6)).toBe(6);
   });
 });

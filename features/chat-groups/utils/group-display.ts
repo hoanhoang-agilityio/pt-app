@@ -122,10 +122,3 @@ export const selectionToIds = (selected: ReadonlySet<string>) => {
   }
   return { userIds, ptIds };
 };
-
-// Two letters on a group without a photo.
-export const groupInitials = (name: string) =>
-  Array.from(name.replace(/\s+/g, ""))
-    .slice(0, 2)
-    .join("")
-    .toLocaleUpperCase("vi");

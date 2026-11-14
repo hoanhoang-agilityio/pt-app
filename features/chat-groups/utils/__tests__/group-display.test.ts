@@ -4,7 +4,6 @@ import type { GroupLastMessage } from "@/features/chat-groups/types/group";
 import {
   alertStateOf,
   filterCandidates,
-  groupInitials,
   previewKindOf,
   selectionToIds,
   showsAlertButtons,
@@ -210,12 +209,5 @@ describe("member picker", () => {
         new Set(["user:4", "admin:9", "user:x", "other:1", "user:0"]),
       ),
     ).toEqual({ userIds: [4], ptIds: [9] });
-  });
-});
-
-describe("groupInitials", () => {
-  it("takes the first two letters without spaces, upper-cased", () => {
-    expect(groupInitials("lớp sáng")).toBe("LỚ");
-    expect(groupInitials(" a ")).toBe("A");
   });
 });

@@ -28,6 +28,8 @@ import {
   countUnreadForAdmin,
   listUnreadByTraineeForAdmin,
 } from "@/features/chat/services/chat-queries";
+import { sessionOfAdmin } from "@/features/chat-groups/services/group-access";
+import { countGroupUnread } from "@/features/chat-groups/services/group-queries";
 import { MemberProgressList } from "@/features/dashboard/components/MemberProgressList";
 import { PtFilterSelect } from "@/features/dashboard/components/PtFilterSelect";
 import { RecentActivityList } from "@/features/dashboard/components/RecentActivityList";
@@ -93,7 +95,11 @@ const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
     isSuper ? listPtOptions() : Promise.resolve([]),
     getMemberProgress(schedule.weekStart, admin.id, ptFilter),
     getRecentActivity({ limit: RECENT_ACTIVITY_LIMIT, adminId: admin.id }),
-    countUnreadForAdmin(admin.id),
+    // Trainee chats plus group chats: the badge counts both.
+    Promise.all([
+      countUnreadForAdmin(admin.id),
+      countGroupUnread(sessionOfAdmin(admin)),
+    ]).then(([chats, groups]) => chats + groups.total),
     listUnreadByTraineeForAdmin(admin.id),
     getAvatarUrl("admin", admin.id),
     loadAdminAccountColor(admin.id),

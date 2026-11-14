@@ -20,13 +20,13 @@ import {
   adminReactMessageAction,
   adminUnsendMessageAction,
 } from "@/features/chat/services/chat-admin-actions";
-import type { ThreadViewer } from "@/features/chat/utils/chat-thread-rules";
+import type { CoachViewer } from "@/features/chat/utils/chat-thread-rules";
 import { PHOTO_ERRORS } from "@/features/chat/utils/photo-rules";
 
 const USER_MESSAGES_URL = "/api/chat/messages";
 
 // The action input for a text, a sticker or a photo send.
-const contentInput = (content: SendContent) => {
+export const contentInput = (content: SendContent) => {
   if ("sticker" in content) {
     return { sticker: content.sticker.input };
   }
@@ -36,12 +36,12 @@ const contentInput = (content: SendContent) => {
   return content;
 };
 
-// Raw bytes to /api/chat/photos; the server reads type and size from them.
-const uploadPhotoTo = async (blob: Blob, query: string) => {
+// Raw bytes to a photo route; the server reads type and size from them.
+export const uploadPhotoToUrl = async (blob: Blob, url: string) => {
   let response: Response;
 
   try {
-    response = await fetch(`/api/chat/photos${query}`, {
+    response = await fetch(url, {
       method: "POST",
       body: blob,
     });
@@ -59,11 +59,14 @@ const uploadPhotoTo = async (blob: Blob, query: string) => {
   return data.photo.id;
 };
 
+const uploadPhotoTo = (blob: Blob, query: string) =>
+  uploadPhotoToUrl(blob, `/api/chat/photos${query}`);
+
 // Wires the thread to the trainee or the admin endpoints and actions. Server
 // actions cannot be passed down from a server page as plain props with extra
 // arguments, so the adapter is built here from serializable inputs.
 export const useChatAdapter = (
-  viewer: ThreadViewer,
+  viewer: CoachViewer,
   userId: number,
   conversationId: number | null,
 ): ChatAdapter => {

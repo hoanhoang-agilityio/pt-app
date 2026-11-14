@@ -23,7 +23,7 @@ import {
   type ChatProfileView,
   settingsTargets,
 } from "@/features/chat/utils/chat-settings";
-import type { ThreadViewer } from "@/features/chat/utils/chat-thread-rules";
+import type { CoachViewer } from "@/features/chat/utils/chat-thread-rules";
 import { AliasField } from "@/features/contact-aliases/components/AliasField";
 import {
   adminSetContactAliasAction,
@@ -39,7 +39,7 @@ interface ActionResult {
 }
 
 export interface ChatCustomizePanelProps {
-  viewer: ThreadViewer;
+  viewer: CoachViewer;
   // The trainee of this conversation (either side's page knows it).
   traineeUserId: number;
   conversationId: number | null;

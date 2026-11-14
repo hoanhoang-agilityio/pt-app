@@ -29,6 +29,8 @@ interface MessageActionsSheetProps {
   onCopy: () => void;
   onEdit: () => void;
   onUnsend: () => void;
+  // Rows a screen adds after the standard ones (group chat: hide / unhide).
+  extra?: ReactNode;
 }
 
 const ROW =
@@ -70,6 +72,7 @@ export const MessageActionsSheet = ({
   onEdit,
   onUnsend,
   onReport,
+  extra,
 }: MessageActionsSheetProps) => {
   const locale = useLocale();
   const t = useTranslations("chat.messageActions");
@@ -154,6 +157,7 @@ export const MessageActionsSheet = ({
             isDanger
           />
         )}
+        {extra}
       </div>
     </BottomSheet>
   );

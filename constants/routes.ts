@@ -23,6 +23,7 @@ export const ROUTES = {
   ADMIN_MANIFEST: "/admin-manifest.webmanifest",
   ADMIN_USERS: "/admin/users",
   ADMIN_MESSAGES: "/admin/messages",
+  ADMIN_GROUP_NEW: "/admin/messages/groups/new",
   ADMIN_PTS: "/admin/pts",
   ADMIN_SOCIAL: "/admin/social",
   ADMIN_SOCIAL_CHATS: "/admin/social/chats",

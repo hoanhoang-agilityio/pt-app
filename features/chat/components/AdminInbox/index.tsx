@@ -32,6 +32,8 @@ import type {
 import { matchesInboxSearch } from "@/features/chat/utils/inbox-search";
 import { isOnline } from "@/features/chat/utils/presence";
 import { shortLastSeen } from "@/features/chat/utils/presence-status";
+import { GroupInboxSection } from "@/features/chat-groups/components/GroupInboxSection";
+import type { GroupSummary } from "@/features/chat-groups/types/group";
 import { getAdminMessagesPath } from "@/utils/routes";
 
 interface AdminInboxProps {
@@ -44,6 +46,9 @@ interface AdminInboxProps {
   isUnreadOnly: boolean;
   // The filter tabs, rendered between the search box and the list.
   filters: ReactNode;
+  // Group chats the admin may open; a "Nhóm" section sits above the trainee
+  // chats (filtered by the same search and unread tabs).
+  groups?: GroupSummary[];
 }
 
 const EmptyState = ({ text }: { text: string }) => (
@@ -63,6 +68,7 @@ export const AdminInbox = ({
   hasPasscode,
   isUnreadOnly,
   filters,
+  groups = [],
 }: AdminInboxProps) => {
   const locale = useLocale();
   const t = useTranslations("chat.adminInbox");
@@ -85,13 +91,25 @@ export const AdminInbox = ({
     () => fresh.filter((member) => matchesInboxSearch(query, member.userName)),
     [fresh, query],
   );
+  const shownGroups = useMemo(
+    () =>
+      groups.filter(
+        (group) =>
+          matchesInboxSearch(query, group.name) &&
+          (!isUnreadOnly || group.unread > 0),
+      ),
+    [groups, query, isUnreadOnly],
+  );
   const hiddenItems = revealed?.conversations ?? [];
   // Hidden trainees nobody has written to yet have no inbox row.
   const hiddenWithoutChat = (revealed?.users ?? []).filter(
     (user) => !hiddenItems.some((item) => item.userId === user.userId),
   );
   const isRevealing = hiddenItems.length + hiddenWithoutChat.length > 0;
-  const isEmpty = shownItems.length === 0 && shownFresh.length === 0;
+  const isEmpty =
+    shownItems.length === 0 &&
+    shownFresh.length === 0 &&
+    shownGroups.length === 0;
   const isSearching = query.trim() !== "";
 
   const exitSelect = () => {
@@ -219,6 +237,12 @@ export const AdminInbox = ({
         </section>
       ) : (
         <>
+          <GroupInboxSection
+            groups={shownGroups}
+            viewerKey={`admin:${adminId}`}
+            nowMs={nowMs}
+            showEmptyHint={groups.length === 0 && !isUnreadOnly && !isSearching}
+          />
           {isEmpty && (
             <EmptyState
               text={

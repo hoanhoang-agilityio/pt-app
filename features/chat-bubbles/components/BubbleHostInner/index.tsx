@@ -14,10 +14,6 @@ import {
 } from "@/features/chat/hooks/use-chat-unread";
 import { unreadPollMs } from "@/features/chat/utils/polling-rules";
 import { isOnline, parseLastSeen } from "@/features/chat/utils/presence";
-import {
-  parseAdminUnread,
-  parseUserUnread,
-} from "@/features/chat/utils/unread-payload";
 import { BubbleItem } from "@/features/chat-bubbles/components/BubbleItem";
 import {
   BubblePanel,
@@ -47,8 +43,11 @@ import {
   safeNavigateHref,
 } from "@/features/chat-bubbles/utils/bubble-links";
 import {
+  bubbleEntriesFrom,
+  bubbleUnreadFrom,
+} from "@/features/chat-bubbles/utils/bubble-payload";
+import {
   detectIncoming,
-  type IncomingEntry,
   type SeenIds,
 } from "@/features/chat-bubbles/utils/incoming-rules";
 import { startVisibleInterval } from "@/utils/visible-interval";
@@ -119,15 +118,7 @@ export const BubbleHostInner = ({ role }: { role: BubbleRole }) => {
     if (payload === null) {
       return {} as Record<string, number>;
     }
-    if (role === "user") {
-      return { coach: parseUserUnread(payload).coachCount };
-    }
-    return Object.fromEntries(
-      parseAdminUnread(payload).perTrainee.map((row) => [
-        `user:${row.userId}`,
-        row.unread,
-      ]),
-    );
+    return bubbleUnreadFrom(role, payload);
   }, [payload, role]);
 
   // ---- Incoming messages ----
@@ -151,19 +142,7 @@ export const BubbleHostInner = ({ role }: { role: BubbleRole }) => {
     if (payload === null) {
       return;
     }
-    const entries: IncomingEntry[] =
-      role === "user"
-        ? [
-            {
-              key: "coach",
-              latestLoudIncomingId:
-                parseUserUnread(payload).latestLoudIncomingId,
-            },
-          ]
-        : parseAdminUnread(payload).perTrainee.map((row) => ({
-            key: `user:${row.userId}`,
-            latestLoudIncomingId: row.latestLoudIncomingId,
-          }));
+    const entries = bubbleEntriesFrom(role, payload);
     // The chat on screen is also "on screen" for a path not stored as a bubble.
     const onScreen = [...live.current.onScreen];
 

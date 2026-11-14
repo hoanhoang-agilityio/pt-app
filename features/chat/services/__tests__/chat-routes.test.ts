@@ -234,6 +234,8 @@ describe("GET /api/chat/unread", () => {
       chatEnabled: true,
       hasHistory: true,
       latestLoudIncomingId: lastId,
+      // Group chats report next to the unchanged coach fields.
+      groups: { total: 0, perGroup: [] },
     });
   });
 });
@@ -322,7 +324,11 @@ describe("GET /api/chat/unread?as=admin", () => {
     await q.saveReadCursor(conversationId, "admin:1", lastId, lastId);
     const body = await (await adminUnread()).json();
 
-    expect(body).toEqual({ count: 0, perTrainee: [] });
+    expect(body).toEqual({
+      count: 0,
+      perTrainee: [],
+      groups: { total: 0, perGroup: [] },
+    });
   });
 
   it("leaves /imlang silent messages out of latestLoudIncomingId", async () => {
@@ -352,6 +358,8 @@ describe("GET /api/chat/unread?as=admin", () => {
       chatEnabled: true,
       hasHistory: true,
       latestLoudIncomingId: lastId,
+      // Group chats report next to the unchanged coach fields.
+      groups: { total: 0, perGroup: [] },
     });
   });
 });

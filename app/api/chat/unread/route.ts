@@ -7,6 +7,11 @@ import {
   findLatestLoudIncomingForUser,
   listUnreadByTraineeForAdmin,
 } from "@/features/chat/services/chat-queries";
+import {
+  sessionOfAdmin,
+  sessionOfUser,
+} from "@/features/chat-groups/services/group-access";
+import { countGroupUnread } from "@/features/chat-groups/services/group-queries";
 import { countDmUnread } from "@/features/social/services/dm-queries";
 import { getApiAdmin, getApiUser } from "@/services/auth-guard";
 
@@ -29,12 +34,16 @@ export const GET = async (request: NextRequest) => {
     if (!admin) {
       return unauthorized();
     }
-    const perTrainee = await listUnreadByTraineeForAdmin(admin.id);
+    const [perTrainee, groups] = await Promise.all([
+      listUnreadByTraineeForAdmin(admin.id),
+      countGroupUnread(sessionOfAdmin(admin)),
+    ]);
 
     return NextResponse.json(
       {
         count: perTrainee.reduce((total, row) => total + row.unread, 0),
         perTrainee,
+        groups,
       },
       { headers: NO_STORE },
     );
@@ -44,12 +53,13 @@ export const GET = async (request: NextRequest) => {
   if (!user) {
     return unauthorized();
   }
-  const [coachCount, conversation, dmCount, latestLoudIncomingId] =
+  const [coachCount, conversation, dmCount, latestLoudIncomingId, groups] =
     await Promise.all([
       countUnreadForUser(user.id),
       findConversationByUserId(user.id),
       countDmUnread(user.id),
       findLatestLoudIncomingForUser(user.id),
+      countGroupUnread(sessionOfUser(user)),
     ]);
   // The Messages tab badge covers the coach chat and the friend chats.
   const count = coachCount + dmCount;
@@ -62,6 +72,9 @@ export const GET = async (request: NextRequest) => {
       chatEnabled: isChatEnabled(user),
       hasHistory: conversation?.lastMessageId != null,
       latestLoudIncomingId,
+      // Group chats: reported next to the existing fields, which do not
+      // change (the badge wiring comes with the trainee UI).
+      groups,
     },
     { headers: NO_STORE },
   );

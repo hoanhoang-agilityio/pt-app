@@ -12,6 +12,9 @@ import {
   traineeCapability,
   traineeClientId,
 } from "@/features/chat/utils/ably-capabilities";
+import { loadGroupActor } from "@/features/chat-groups/services/group-access";
+import { getApiGroupSession } from "@/features/chat-groups/services/group-api";
+import { createGroupTokenRequest } from "@/features/chat-groups/services/group-realtime";
 import { listDmConversationIds } from "@/features/social/services/dm-queries";
 import {
   isSuperAdmin,
@@ -25,6 +28,34 @@ const NO_STORE = { "Cache-Control": "no-store" };
 const json = (body: unknown, status: number) =>
   NextResponse.json(body, { status, headers: NO_STORE });
 
+// `?group=<id>`: a token for one open group after the membership check:
+// subscribe on `chat:group:<id>` only, never a wildcard (not even for super
+// admins). A missing or dissolved group, a non-member and a left member all
+// get the same 404. A trainee whose chat is off still reads, so still gets it.
+const groupToken = async (request: NextRequest) => {
+  const caller = await getApiGroupSession(request);
+
+  if (!caller) {
+    return json({ error: "unauthorized" }, 401);
+  }
+  const context = await loadGroupActor(
+    request.nextUrl.searchParams.get("group"),
+    caller.session,
+  );
+
+  if (!context || context.group.dissolvedAt !== null) {
+    return json({ error: "not_found" }, 404);
+  }
+  const tokenRequest = await createGroupTokenRequest(
+    context.group.id,
+    context.actor,
+  );
+
+  return tokenRequest
+    ? NextResponse.json(tokenRequest, { headers: NO_STORE })
+    : new NextResponse(null, { status: 204, headers: NO_STORE });
+};
+
 // Hands the browser a signed Ably token request (subscribe-only). The API key
 // itself never leaves the server. 204 = no key configured, the client keeps
 // polling. A browser may hold both an admin and a trainee cookie; the admin
@@ -34,6 +65,9 @@ export const GET = async (request: NextRequest) => {
   try {
     if (!isRealtimeConfigured()) {
       return new NextResponse(null, { status: 204, headers: NO_STORE });
+    }
+    if (request.nextUrl.searchParams.get("group") !== null) {
+      return await groupToken(request);
     }
     if (request.nextUrl.searchParams.get("as") === "admin") {
       const admin = await getApiAdmin();

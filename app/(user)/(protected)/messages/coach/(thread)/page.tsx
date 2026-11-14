@@ -14,7 +14,11 @@ import {
 } from "@/features/chat/services/chat-queries";
 import { loadCoachReplyPostFor } from "@/features/chat/services/chat-reply-post";
 import { loadTraineeThread } from "@/features/chat/services/chat-thread";
-import { parseJumpId } from "@/features/chat/utils/chat-links";
+import {
+  chatPaths,
+  parseJumpId,
+  parseSearchQuery,
+} from "@/features/chat/utils/chat-links";
 import { serializeMessage } from "@/features/chat/utils/chat-thread-rules";
 import { isEmbedParam } from "@/features/chat-bubbles/utils/bubble-links";
 import { actorOfUser } from "@/features/social/services/post-context";
@@ -51,6 +55,8 @@ const CoachChatPage = async ({
   // `?m=<id>`: open at that message (from the gallery or a search result).
   const query = await searchParams;
   const jumpId = parseJumpId(query.m);
+  // `?q=` comes from a search result; it shows the result bar in the chat.
+  const searchQuery = jumpId === null ? null : parseSearchQuery(query.q);
   // `?replyPost=<id>`: a PT's post quoted above the composer; only when the
   // chat is open for writing and the viewer may quote that post.
   const replyPostId = parseDmId(readSearchParam(query.replyPost) ?? "");
@@ -69,6 +75,10 @@ const CoachChatPage = async ({
 
   return (
     <TraineeChatThread
+      // A new `?m=` (the result bar's up/down) comes with a new message
+      // window, but the thread keeps its messages in client state seeded only
+      // on mount; remount per jump target so the new window is used.
+      key={around ? jumpId : "latest"}
       initialPeerName={peerName}
       verifiedAdminIds={await listVerifiedAdminIds()}
       userId={user.id}
@@ -80,6 +90,15 @@ const CoachChatPage = async ({
       replyPost={replyPost}
       jumpToId={around ? jumpId : null}
       jumpMissed={jumpId !== null && !around}
+      searchContext={
+        searchQuery === null
+          ? null
+          : {
+              query: searchQuery,
+              endpoint: "/api/chat/search",
+              paths: chatPaths("user", user.id),
+            }
+      }
       initial={{
         ...payload,
         messages: (around?.messages ?? payload.messages).map(serializeMessage),

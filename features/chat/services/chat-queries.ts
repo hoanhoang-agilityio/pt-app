@@ -125,6 +125,8 @@ const messageColumns = {
   replyPostId: chatMessages.replyPostId,
   editedAt: chatMessages.editedAt,
   deletedAt: chatMessages.deletedAt,
+  // Moderation: never leaves the server, only turns `deleted` on.
+  hiddenByAdminId: chatMessages.hiddenByAdminId,
   updatedAt: chatMessages.updatedAt,
 };
 
@@ -144,6 +146,7 @@ interface MessageRow {
   replyPostId: number | null;
   editedAt: Date | null;
   deletedAt: Date | null;
+  hiddenByAdminId: number | null;
   updatedAt: Date | null;
 }
 
@@ -151,10 +154,23 @@ interface MessageRow {
 // messages lose their body, quote and reactions here, so every reader of this
 // module gets the same redaction. Quoted posts are checked per `viewer` on
 // every read, so a post made private later never leaks through the chat.
+// A message hidden by an admin reads as unsent everywhere.
+const asUnsentWhenHidden = <
+  T extends { deletedAt: Date | null; hiddenByAdminId: number | null },
+>(
+  row: T,
+  fallbackDate: Date,
+): T =>
+  row.hiddenByAdminId !== null && row.deletedAt === null
+    ? { ...row, deletedAt: fallbackDate }
+    : row;
+
 const hydrateMessages = async (
-  rows: MessageRow[],
+  storedRows: MessageRow[],
   viewer?: SocialActor,
 ): Promise<ChatMessage[]> => {
+  const rows = storedRows.map((row) => asUnsentWhenHidden(row, row.createdAt));
+
   if (rows.length === 0) {
     return [];
   }
@@ -198,6 +214,7 @@ const hydrateMessages = async (
               photoId: chatMessages.photoId,
               senderRole: chatMessages.senderRole,
               deletedAt: chatMessages.deletedAt,
+              hiddenByAdminId: chatMessages.hiddenByAdminId,
             })
             .from(chatMessages)
             .where(inArray(chatMessages.id, replyIds)),
@@ -238,7 +255,9 @@ const hydrateMessages = async (
         : new Map<number, DmReplyPostView>(),
     ]);
   const photoSizeById = new Map(photoRows.map((row) => [row.id, row]));
-  const targetById = new Map(targets.map((row) => [row.id, row]));
+  const targetById = new Map(
+    targets.map((row) => [row.id, asUnsentWhenHidden(row, new Date(0))]),
+  );
   const traineeName = new Map(
     traineeRows.map((row) => [row.conversationId, row.name]),
   );
@@ -737,6 +756,7 @@ const latestLoudIncomingIds = async (
         inArray(chatMessages.conversationId, conversationIds),
         eq(chatMessages.senderRole, senderRole),
         isNull(chatMessages.deletedAt),
+        isNull(chatMessages.hiddenByAdminId),
         sql`coalesce(${chatMessages.silent}, 0) = 0`,
         gt(chatMessages.id, sql`coalesce(${chatReads.lastReadMessageId}, 0)`),
       ),
@@ -918,6 +938,7 @@ const loadInbox = async (
         lastStickerRef: chatMessages.stickerRef,
         lastPhotoId: chatMessages.photoId,
         lastDeletedAt: chatMessages.deletedAt,
+        lastHiddenByAdminId: chatMessages.hiddenByAdminId,
         lastSenderRole: chatMessages.senderRole,
         lastSenderAdminId: chatMessages.senderAdminId,
         lastSenderAdminName: admins.username,
@@ -981,13 +1002,14 @@ const loadInbox = async (
       row.userName,
     ),
     chatEnabled: row.chatEnabled === true,
-    preview: row.lastDeletedAt
-      ? ""
-      : row.lastStickerRef
-        ? stickerPreview(locale)
-        : row.lastPhotoId
-          ? photoPreview(toPreview(row.lastBody ?? ""), locale)
-          : toPreview(row.lastBody ?? ""),
+    preview:
+      row.lastDeletedAt || row.lastHiddenByAdminId !== null
+        ? ""
+        : row.lastStickerRef
+          ? stickerPreview(locale)
+          : row.lastPhotoId
+            ? photoPreview(toPreview(row.lastBody ?? ""), locale)
+            : toPreview(row.lastBody ?? ""),
     lastFromAdmin: row.lastSenderRole === "admin",
     lastSenderAdminId: row.lastSenderAdminId,
     lastSenderAdminName: row.lastSenderAdminName,

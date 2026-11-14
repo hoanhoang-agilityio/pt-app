@@ -1,4 +1,5 @@
 import { ADMIN_MESSAGES_SEGMENT, ROUTES } from "@/constants/routes";
+import { isSearchableQuery } from "@/features/chat/utils/search-rules";
 
 // Where the chat, its info page and the info sub-pages live for each side
 // (KAN-160). The trainee has one fixed set; an admin has one per trainee.
@@ -22,8 +23,27 @@ export const chatPaths = (role: "user" | "admin", userId: number): ChatPaths =>
     : pathsUnder(ROUTES.MESSAGES_COACH);
 
 // The chat opened at one message: it is loaded, scrolled to and highlighted.
-export const jumpHref = (chatPath: string, messageId: number) =>
-  `${chatPath}?m=${messageId}`;
+// With `query` (a search result) the chat also shows the result bar.
+export const jumpHref = (
+  chatPath: string,
+  messageId: number,
+  query?: string,
+) =>
+  query === undefined
+    ? `${chatPath}?m=${messageId}`
+    : `${chatPath}?${new URLSearchParams({ m: String(messageId), q: query })}`;
+
+// The search page with the query kept in its URL.
+export const searchHref = (searchPath: string, query: string) =>
+  `${searchPath}?${new URLSearchParams({ q: query })}`;
+
+// `?q=` of the chat or search page: the trimmed query when it is a searchable
+// one (two to SEARCH_MAX_LENGTH characters), otherwise null.
+export const parseSearchQuery = (value: string | string[] | undefined) => {
+  const raw = (Array.isArray(value) ? value[0] : value)?.trim();
+
+  return raw !== undefined && isSearchableQuery(raw) ? raw : null;
+};
 
 // `?m=` of the chat page; anything that is not a plain positive id is ignored.
 export const parseJumpId = (value: string | string[] | undefined) => {

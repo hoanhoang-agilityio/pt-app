@@ -25,6 +25,10 @@ import { MessageBubble } from "@/features/chat/components/MessageBubble";
 import { PushOptInCard } from "@/features/chat/components/PushOptInCard";
 import { ReplyBar } from "@/features/chat/components/ReplyBar";
 import { ReplyPostBar } from "@/features/chat/components/ReplyPostBar";
+import {
+  type SearchContext,
+  SearchResultBar,
+} from "@/features/chat/components/SearchResultBar";
 import { TypingIndicator } from "@/features/chat/components/TypingIndicator";
 import { useChatAdapter } from "@/features/chat/hooks/use-chat-adapter";
 import type { ThreadSnapshot } from "@/features/chat/hooks/use-chat-messages";
@@ -40,6 +44,7 @@ import {
 } from "@/features/chat/utils/chat-settings";
 import {
   buildThreadItems,
+  canReportMessage,
   firstStoredId,
   isNearBottom,
   latestAdminId,
@@ -74,6 +79,8 @@ export interface ChatThreadProps {
   // `?m=` was given but the message is gone (deleted or not in this chat):
   // the chat opens at the newest and says so.
   jumpMissed?: boolean;
+  // Opened from a search result (`?q=`): shows the result bar on top.
+  searchContext?: SearchContext | null;
   // The page header; rendered inside the shell so the keyboard resize keeps
   // it in place. A function receives the username of the newest PT who wrote
   // in the loaded messages (null if none or deleted) and the peer presence
@@ -135,6 +142,13 @@ const MessageActionsSheet = dynamic(
     ),
   { ssr: false },
 );
+const ReportSheet = dynamic(
+  () =>
+    import("@/features/social/components/ReportSheet").then(
+      (module) => module.ReportSheet,
+    ),
+  { ssr: false },
+);
 const ReactorsSheet = dynamic(
   () =>
     import("@/features/chat/components/ReactorsSheet").then(
@@ -154,7 +168,7 @@ const HIGHLIGHT_MS = 1500;
 // A jumped-to message stays marked a little longer.
 const JUMP_HIGHLIGHT_MS = 2000;
 
-type SheetKind = "actions" | "reactors" | "history";
+type SheetKind = "actions" | "reactors" | "history" | "report";
 
 // Follows the visual viewport so the composer stays above the on-screen
 // keyboard (iOS does not resize the layout viewport).
@@ -222,6 +236,7 @@ export const ChatThread = ({
   infoHref,
   jumpToId = null,
   jumpMissed = false,
+  searchContext = null,
   viewer = USER_VIEWER,
   fallbackPeerName = "PT",
   verifiedAdminIds = NO_VERIFIED,
@@ -758,6 +773,9 @@ export const ChatThread = ({
       ) : (
         headerNode
       )}
+      {searchContext !== null && (
+        <SearchResultBar context={searchContext} currentId={jumpToId} />
+      )}
       <div className="relative min-h-0 flex-1">
         <div
           ref={scroller}
@@ -969,6 +987,21 @@ export const ChatThread = ({
           onCopy={() => void handleCopy(sheetMessage)}
           onEdit={() => handleEdit(sheetMessage)}
           onUnsend={() => void handleUnsend(sheetMessage)}
+          onReport={
+            canReportMessage(sheetMessage, adapter.viewer)
+              ? () => openSheet("report", sheetMessage)
+              : undefined
+          }
+        />
+      )}
+      {sheet?.kind === "report" && sheetMessage?.id != null && (
+        <ReportSheet
+          key={sheetMessage.id}
+          isOpen={isSheetOpen}
+          onOpenChange={setIsSheetOpen}
+          mode={viewer.role}
+          targetKind="message"
+          targetId={sheetMessage.id}
         />
       )}
       {sheet?.kind === "reactors" && sheetMessage && (

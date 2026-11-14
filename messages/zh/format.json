@@ -102,6 +102,8 @@
   "fallback": {
     "deletedAccount": "已删除的账号",
     "deletedAccountDm": "已删除的账号",
-    "postImageOnly": "（仅图片的帖子）"
+    "postImageOnly": "（仅图片的帖子）",
+    "stickerMessage": "（贴纸）",
+    "photoMessage": "（图片）"
   }
 }

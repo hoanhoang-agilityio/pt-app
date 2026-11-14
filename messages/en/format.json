@@ -102,6 +102,8 @@
   "fallback": {
     "deletedAccount": "Deleted account",
     "deletedAccountDm": "Deleted account",
-    "postImageOnly": "(Photo-only post)"
+    "postImageOnly": "(Photo-only post)",
+    "stickerMessage": "(Sticker)",
+    "photoMessage": "(Photo)"
   }
 }

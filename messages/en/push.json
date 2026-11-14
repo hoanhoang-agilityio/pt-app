@@ -18,5 +18,12 @@
     "adminPostList": "{name} posted something new",
     "adminPost": "{name} posted: {preview}",
     "adminPostPhoto": "{name} posted a new photo"
+  },
+  "report": "New report: {kind}",
+  "reportKinds": {
+    "post": "post",
+    "comment": "comment",
+    "user": "user",
+    "message": "message"
   }
 }

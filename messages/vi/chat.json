@@ -129,6 +129,13 @@
     "empty": "Không tìm thấy tin nhắn nào",
     "loadMore": "Xem thêm kết quả"
   },
+  "searchResultBar": {
+    "backToResults": "Quay lại kết quả tìm kiếm",
+    "resultsFor": "Kết quả cho “{query}”",
+    "older": "Kết quả cũ hơn",
+    "newer": "Kết quả mới hơn",
+    "close": "Đóng kết quả tìm kiếm"
+  },
   "messageActions": {
     "title": "Tuỳ chọn tin nhắn",
     "sentAt": "Gửi lúc {time}",

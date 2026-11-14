@@ -4,6 +4,8 @@ import {
   chatPaths,
   jumpHref,
   parseJumpId,
+  parseSearchQuery,
+  searchHref,
 } from "@/features/chat/utils/chat-links";
 
 describe("chatPaths", () => {
@@ -41,5 +43,31 @@ describe("jumpHref / parseJumpId", () => {
     for (const bad of [undefined, "", "0", "-1", "1e3", "abc", " 4"]) {
       expect(parseJumpId(bad)).toBeNull();
     }
+  });
+});
+
+describe("jumpHref with a query / parseSearchQuery", () => {
+  it("adds an encoded q and reads it back", () => {
+    const href = jumpHref("/messages/coach", 7, "ăn & uống");
+    const q = new URL(href, "http://x").searchParams.get("q") ?? "";
+
+    expect(href.startsWith("/messages/coach?m=7&q=")).toBe(true);
+    expect(parseSearchQuery(q)).toBe("ăn & uống");
+  });
+
+  it("builds the search href", () => {
+    expect(searchHref("/messages/coach/search", "a b")).toBe(
+      "/messages/coach/search?q=a+b",
+    );
+  });
+
+  it("accepts only searchable queries", () => {
+    expect(parseSearchQuery(" ab ")).toBe("ab");
+    expect(parseSearchQuery(["xy", "zz"])).toBe("xy");
+    expect(parseSearchQuery("a")).toBeNull();
+    expect(parseSearchQuery("   ")).toBeNull();
+    expect(parseSearchQuery(undefined)).toBeNull();
+    expect(parseSearchQuery("x".repeat(101))).toBeNull();
+    expect(parseSearchQuery("x".repeat(100))).toBe("x".repeat(100));
   });
 });

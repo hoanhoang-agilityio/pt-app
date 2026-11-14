@@ -17,6 +17,7 @@ interface TraineeChatThreadProps extends Pick<
   | "userId"
   | "conversationId"
   | "avatars"
+  | "fallbackPeerAvatar"
   | "jumpToId"
   | "jumpMissed"
   | "searchContext"

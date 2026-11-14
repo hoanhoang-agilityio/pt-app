@@ -8,7 +8,7 @@ import { TraineeChatThread } from "@/features/chat/components/TraineeChatThread"
 import { isChatEnabled } from "@/features/chat/services/chat-permission";
 import {
   findConversationByUserId,
-  findLatestAdminSenderName,
+  findLatestAdminSender,
   getOrCreateConversation,
   listMessagesAround,
 } from "@/features/chat/services/chat-queries";
@@ -19,7 +19,10 @@ import {
   parseJumpId,
   parseSearchQuery,
 } from "@/features/chat/utils/chat-links";
-import { serializeMessage } from "@/features/chat/utils/chat-thread-rules";
+import {
+  pickCoachAvatar,
+  serializeMessage,
+} from "@/features/chat/utils/chat-thread-rules";
 import { isEmbedParam } from "@/features/chat-bubbles/utils/bubble-links";
 import { actorOfUser } from "@/features/social/services/post-context";
 import { parseDmId } from "@/features/social/utils/dm-rules";
@@ -68,10 +71,11 @@ const CoachChatPage = async ({
     jumpId !== null && existing
       ? await listMessagesAround(existing.id, jumpId, actorOfUser(user))
       : null;
-  const adminAvatars = await listAdminAvatarUrls();
-  const peerName = existing
-    ? await findLatestAdminSenderName(existing.id)
-    : null;
+  const [adminAvatars, sender] = await Promise.all([
+    listAdminAvatarUrls(),
+    existing ? findLatestAdminSender(existing.id) : null,
+  ]);
+  const peerName = sender?.name ?? null;
 
   return (
     <TraineeChatThread
@@ -85,6 +89,11 @@ const CoachChatPage = async ({
       isEmbed={isEmbedParam(query.embed)}
       avatars={Object.fromEntries(
         [...adminAvatars].map(([id, url]) => [`admin:${id}`, url]),
+      )}
+      fallbackPeerAvatar={pickCoachAvatar(
+        sender?.id ?? null,
+        user.ptAdminId,
+        adminAvatars,
       )}
       conversationId={conversation?.id ?? null}
       replyPost={replyPost}

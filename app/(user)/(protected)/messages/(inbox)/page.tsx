@@ -8,8 +8,14 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { ROUTES } from "@/constants/routes";
 import { CARD, PAGE_CONTAINER, SECTION_TITLE } from "@/constants/styles";
 import { TIME_ZONE } from "@/constants/time";
+import { listAdminAvatarUrls } from "@/features/avatar/services/avatar";
 import { isChatEnabled } from "@/features/chat/services/chat-permission";
-import { countUnreadForUser } from "@/features/chat/services/chat-queries";
+import {
+  countUnreadForUser,
+  findConversationByUserId,
+  findLatestAdminSender,
+} from "@/features/chat/services/chat-queries";
+import { pickCoachAvatar } from "@/features/chat/utils/chat-thread-rules";
 import { BubbleRowTrigger } from "@/features/chat-bubbles/components/BubbleRowTrigger";
 import { bubbleKeyFor } from "@/features/chat-bubbles/utils/bubble-links";
 import { GroupInboxSection } from "@/features/chat-groups/components/GroupInboxSection";
@@ -46,11 +52,16 @@ const MessagesInboxPage = async () => {
   const dm = await getTranslations("social.dm");
   const locale = await getLocale();
   const user = await requireUser();
-  const [coachUnread, chats, groups] = await Promise.all([
-    countUnreadForUser(user.id),
-    hasAcceptedTerms(user) ? listDmInbox(user.id, locale) : [],
-    listGroupsForSession(sessionOfUser(user)),
-  ]);
+  const [coachUnread, chats, groups, adminAvatars, coachSender] =
+    await Promise.all([
+      countUnreadForUser(user.id),
+      hasAcceptedTerms(user) ? listDmInbox(user.id, locale) : [],
+      listGroupsForSession(sessionOfUser(user)),
+      listAdminAvatarUrls(),
+      findConversationByUserId(user.id).then((conversation) =>
+        conversation ? findLatestAdminSender(conversation.id) : null,
+      ),
+    ]);
 
   return (
     <>
@@ -68,7 +79,15 @@ const MessagesInboxPage = async () => {
               disabled={!isChatEnabled(user)}
             >
               <Link href={ROUTES.MESSAGES_COACH} className={ROW}>
-                <Avatar name="PT" className="size-12 shrink-0 text-base" />
+                <Avatar
+                  name="PT"
+                  src={pickCoachAvatar(
+                    coachSender?.id ?? null,
+                    user.ptAdminId,
+                    adminAvatars,
+                  )}
+                  className="size-12 shrink-0 text-base"
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-fg">
                     {dm("coachTitle")}

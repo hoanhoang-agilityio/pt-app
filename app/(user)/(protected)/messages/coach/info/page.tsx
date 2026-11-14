@@ -14,6 +14,7 @@ import {
   findLatestAdminSender,
 } from "@/features/chat/services/chat-queries";
 import { chatPaths } from "@/features/chat/utils/chat-links";
+import { pickCoachAvatar } from "@/features/chat/utils/chat-thread-rules";
 import { INFO_PREVIEW_COUNT } from "@/features/chat/utils/gallery-rules";
 import { userActorKey } from "@/features/contact-aliases/utils/alias-rules";
 import { requireUser } from "@/services/auth-guard";
@@ -53,9 +54,11 @@ const MessagesInfoPage = async () => {
       peerName={sender?.name ?? t("fallbackPeer")}
       initialProfile={profile}
       chatEnabled={isChatEnabled(user)}
-      peerAvatarUrl={
-        sender?.id != null ? (adminAvatars.get(sender.id) ?? null) : null
-      }
+      peerAvatarUrl={pickCoachAvatar(
+        sender?.id ?? null,
+        user.ptAdminId,
+        adminAvatars,
+      )}
       paths={chatPaths("user", user.id)}
       preview={gallery.items}
     />

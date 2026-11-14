@@ -129,6 +129,13 @@
     "empty": "No messages found",
     "loadMore": "Load more results"
   },
+  "searchResultBar": {
+    "backToResults": "Back to search results",
+    "resultsFor": "Results for “{query}”",
+    "older": "Older result",
+    "newer": "Newer result",
+    "close": "Close search results"
+  },
   "messageActions": {
     "title": "Message options",
     "sentAt": "Sent at {time}",

@@ -23,7 +23,11 @@ import {
   listMessagesAround,
 } from "@/features/chat/services/chat-queries";
 import { loadCoachReplyPostFor } from "@/features/chat/services/chat-reply-post";
-import { parseJumpId } from "@/features/chat/utils/chat-links";
+import {
+  chatPaths,
+  parseJumpId,
+  parseSearchQuery,
+} from "@/features/chat/utils/chat-links";
 import { serializeMessage } from "@/features/chat/utils/chat-thread-rules";
 import { serializeLastSeen } from "@/features/chat/utils/presence";
 import { isEmbedParam } from "@/features/chat-bubbles/utils/bubble-links";
@@ -99,6 +103,8 @@ const AdminMessagesPage = async ({
   }
   const viewer = actorOfAdmin({ id: admin.id, role: toAdminRole(admin.role) });
   const jumpId = parseJumpId(query.m);
+  // `?q=` comes from a search result; it shows the result bar in the chat.
+  const searchQuery = jumpId === null ? null : parseSearchQuery(query.q);
   // `?replyPost=<id>`: this trainee's post quoted above the composer; only when
   // the chat is open for writing and the admin may see that post.
   const replyPostId = parseDmId(readSearchParam(query.replyPost) ?? "");
@@ -139,7 +145,10 @@ const AdminMessagesPage = async ({
     <AdminChatThread
       // The switch refreshes the page; remount so the thread picks up the new
       // lock state at once instead of on the next poll.
-      key={chatEnabled ? "enabled" : "locked"}
+      // A new `?m=` (the result bar's up/down) comes with a new message
+      // window, but the thread keeps its messages in client state seeded only
+      // on mount; remount per jump target so the new window is used.
+      key={`${chatEnabled ? "enabled" : "locked"}:${around ? jumpId : ""}`}
       below={below}
       isEmbed={isEmbed}
       userName={user.name}
@@ -148,6 +157,15 @@ const AdminMessagesPage = async ({
       replyPost={replyPost}
       jumpToId={around ? jumpId : null}
       jumpMissed={jumpId !== null && !around}
+      searchContext={
+        searchQuery === null
+          ? null
+          : {
+              query: searchQuery,
+              endpoint: `/api/admin/chat/${conversation.id}/search`,
+              paths: chatPaths("admin", user.id),
+            }
+      }
       viewer={{
         role: "admin",
         adminId: admin.id,

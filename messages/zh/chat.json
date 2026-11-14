@@ -129,6 +129,13 @@
     "empty": "未找到消息",
     "loadMore": "查看更多结果"
   },
+  "searchResultBar": {
+    "backToResults": "返回搜索结果",
+    "resultsFor": "“{query}”的结果",
+    "older": "更早的结果",
+    "newer": "更新的结果",
+    "close": "关闭搜索结果"
+  },
   "messageActions": {
     "title": "消息选项",
     "sentAt": "发送于 {time}",

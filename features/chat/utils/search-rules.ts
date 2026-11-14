@@ -161,6 +161,11 @@ export interface SearchPage {
   nextCursor: number | null;
 }
 
+export const isSearchPage = (value: unknown): value is SearchPage =>
+  typeof value === "object" &&
+  value !== null &&
+  Array.isArray((value as SearchPage).results);
+
 // Who wrote it, as the viewer sees names: their own messages are "Bạn",
 // the viewer's private nicknames apply (a trainee uses their nickname for the PT side).
 export const searchSenderLabel = (

@@ -21,6 +21,7 @@ interface AdminChatThreadProps extends Pick<
   | "conversationId"
   | "jumpToId"
   | "jumpMissed"
+  | "searchContext"
   | "viewer"
   | "emptyText"
   | "ariaLabel"

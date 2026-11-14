@@ -25,6 +25,10 @@ import { MessageBubble } from "@/features/chat/components/MessageBubble";
 import { PushOptInCard } from "@/features/chat/components/PushOptInCard";
 import { ReplyBar } from "@/features/chat/components/ReplyBar";
 import { ReplyPostBar } from "@/features/chat/components/ReplyPostBar";
+import {
+  type SearchContext,
+  SearchResultBar,
+} from "@/features/chat/components/SearchResultBar";
 import { TypingIndicator } from "@/features/chat/components/TypingIndicator";
 import { useChatAdapter } from "@/features/chat/hooks/use-chat-adapter";
 import type { ThreadSnapshot } from "@/features/chat/hooks/use-chat-messages";
@@ -74,6 +78,8 @@ export interface ChatThreadProps {
   // `?m=` was given but the message is gone (deleted or not in this chat):
   // the chat opens at the newest and says so.
   jumpMissed?: boolean;
+  // Opened from a search result (`?q=`): shows the result bar on top.
+  searchContext?: SearchContext | null;
   // The page header; rendered inside the shell so the keyboard resize keeps
   // it in place. A function receives the username of the newest PT who wrote
   // in the loaded messages (null if none or deleted) and the peer presence
@@ -222,6 +228,7 @@ export const ChatThread = ({
   infoHref,
   jumpToId = null,
   jumpMissed = false,
+  searchContext = null,
   viewer = USER_VIEWER,
   fallbackPeerName = "PT",
   verifiedAdminIds = NO_VERIFIED,
@@ -757,6 +764,9 @@ export const ChatThread = ({
         </div>
       ) : (
         headerNode
+      )}
+      {searchContext !== null && (
+        <SearchResultBar context={searchContext} currentId={jumpToId} />
       )}
       <div className="relative min-h-0 flex-1">
         <div

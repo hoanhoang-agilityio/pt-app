@@ -47,6 +47,7 @@ import {
   type StickerInput,
   toStoredSticker,
 } from "@/features/chat/utils/sticker-rules";
+import { restrictionErrorFor } from "@/features/restrictions/services/restriction-guard";
 import {
   actorOfAdmin,
   actorOfUser,
@@ -157,7 +158,11 @@ export const sendMessageAction = withResultErrorHandling(
   "sendChatMessage",
   async (input: SendInput): Promise<SendResult> => {
     const user = await requireUser();
+    const restricted = await restrictionErrorFor(user.id);
 
+    if (restricted) {
+      return fail(restricted);
+    }
     if (!isChatEnabled(user)) {
       return fail(CHAT_MESSAGES.CHAT_LOCKED);
     }
@@ -356,15 +361,24 @@ export const adminSendMessageAction = withResultErrorHandling(
 );
 
 // Trainee reaction, edit and unsend (KAN-138). Same rules as sending: the
-// conversation comes from the session and a locked chat is read-only.
+// conversation comes from the session and a locked chat is read-only. A
+// restricted trainee may not react or edit; taking their own message back
+// (`allowRestricted`) stays possible.
 const withTraineeConversation = async <T>(
   run: (
     actor: ChatActor,
     conversation: { id: number; userId: number },
   ) => Promise<T>,
+  { allowRestricted = false }: { allowRestricted?: boolean } = {},
 ) => {
   const user = await requireUser();
+  const restricted = allowRestricted
+    ? null
+    : await restrictionErrorFor(user.id);
 
+  if (restricted) {
+    return fail(restricted);
+  }
   if (!isChatEnabled(user)) {
     return fail(CHAT_MESSAGES.CHAT_LOCKED);
   }
@@ -395,8 +409,9 @@ export const editMessageAction = withResultErrorHandling(
 export const unsendMessageAction = withResultErrorHandling(
   "unsendChatMessage",
   async (input: { messageId: number }) =>
-    withTraineeConversation((actor, conversation) =>
-      unsendChatMessage(actor, conversation, input),
+    withTraineeConversation(
+      (actor, conversation) => unsendChatMessage(actor, conversation, input),
+      { allowRestricted: true },
     ),
 );
 

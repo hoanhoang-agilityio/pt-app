@@ -44,6 +44,7 @@ import {
 } from "@/features/dashboard/utils/summary";
 import { AddMemberButton } from "@/features/members/components/AddMemberButton";
 import { listPtOptions } from "@/features/pts/services/pt-queries";
+import { listActiveRestrictions } from "@/features/restrictions/services/restriction-queries";
 import { countOpenReports } from "@/features/social/services/report-queries";
 import { adminProfilePath } from "@/features/social/utils/post-rules";
 import { isSuperAdmin } from "@/services/admin-scope";
@@ -98,6 +99,9 @@ const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
     loadAdminAccountColor(admin.id),
     isSuperAdmin(admin) ? countOpenReports() : 0,
   ]);
+  const restrictions = await listActiveRestrictions(
+    members.map((member) => member.id),
+  );
   const displayNames = new Map(
     members.map((member) => [member.id, member.displayName]),
   );
@@ -113,6 +117,12 @@ const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
     locale,
     unreadByUserId: new Map(
       unreadByTrainee.map((row) => [row.userId, row.unread]),
+    ),
+    restrictionByUserId: new Map(
+      [...restrictions].map(([userId, restriction]) => [
+        userId,
+        restriction.level,
+      ]),
     ),
   });
 

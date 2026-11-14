@@ -3,6 +3,7 @@ import type {
   MemberRow,
   WeekSummary,
 } from "@/features/dashboard/types/dashboard";
+import type { RestrictionLevel } from "@/features/restrictions/types/restriction";
 import { DEFAULT_LOCALE, type Locale } from "@/utils/locale";
 import { calculatePercent, formatRelativeTime } from "@/utils/time";
 
@@ -40,6 +41,8 @@ interface MemberRowOptions {
   getHref: (memberId: number, weekStart: string) => string;
   // Unread counts keyed by trainee id; trainees without unread are absent.
   unreadByUserId?: ReadonlyMap<number, number>;
+  // Active block level per trainee id; unblocked trainees are absent.
+  restrictionByUserId?: ReadonlyMap<number, RestrictionLevel>;
   locale?: Locale;
 }
 
@@ -53,6 +56,7 @@ export const toMemberRows = (
     now,
     getHref,
     unreadByUserId,
+    restrictionByUserId,
     locale = DEFAULT_LOCALE,
   }: MemberRowOptions,
 ): MemberRow[] =>
@@ -66,4 +70,5 @@ export const toMemberRows = (
         : formatRelativeTime(member.lastActiveAt, timeZone, now, locale),
     href: getHref(member.id, weekStart),
     unread: unreadByUserId?.get(member.id) ?? 0,
+    restrictionLevel: restrictionByUserId?.get(member.id),
   }));

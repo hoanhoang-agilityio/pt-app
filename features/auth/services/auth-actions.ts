@@ -8,6 +8,8 @@ import {
   AUTH_MESSAGES,
   LOGIN_FAILURE_DELAY_MS,
 } from "@/features/auth/constants/messages";
+import { describeSuspension } from "@/features/restrictions/services/restriction-messages";
+import { findActiveRestriction } from "@/features/restrictions/services/restriction-queries";
 import { withFormErrorHandling } from "@/services/action-errors";
 import { clearUnlock } from "@/services/admin-lock";
 import { findAdminByUsername } from "@/services/admins";
@@ -70,6 +72,16 @@ export const loginWithEmailAction = withFormErrorHandling(
     }
 
     await clearAttempts(limiterKey);
+
+    // Checked after the password, so a wrong password never reveals that an
+    // account is suspended. No session is started.
+    const restriction = await findActiveRestriction(user.id);
+
+    if (restriction?.level === "suspended") {
+      return createErrorState(await describeSuspension(restriction), {
+        values,
+      });
+    }
     await startUserSession(user.id);
     await applyStoredLocale(user.locale);
     redirect(ROUTES.WORKOUTS);

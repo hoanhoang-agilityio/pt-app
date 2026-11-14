@@ -6,6 +6,7 @@ import { ROUTES } from "@/constants/routes";
 import { SOCIAL_MESSAGES } from "@/features/social/constants/social";
 import {
   resolveActor,
+  restrictedWriteError,
   traineeActor,
   type Who,
 } from "@/features/social/services/actor-guard";
@@ -75,6 +76,11 @@ export const createPostAction = withResultErrorHandling(
     if (!actor) {
       return fail(SOCIAL_MESSAGES.TERMS_REQUIRED);
     }
+    const restricted = await restrictedWriteError(actor);
+
+    if (restricted) {
+      return fail(restricted);
+    }
     const parsed = createPostSchema.safeParse(input);
 
     if (!parsed.success) {
@@ -104,6 +110,11 @@ export const editPostAction = withResultErrorHandling(
 
     if (!actor) {
       return fail(SOCIAL_MESSAGES.TERMS_REQUIRED);
+    }
+    const restricted = await restrictedWriteError(actor);
+
+    if (restricted) {
+      return fail(restricted);
     }
     const parsed = editPostSchema.safeParse(input);
 
@@ -150,6 +161,11 @@ export const updateBioAction = withResultErrorHandling(
 
     if (!actor) {
       return fail(SOCIAL_MESSAGES.TERMS_REQUIRED);
+    }
+    const restricted = await restrictedWriteError(actor);
+
+    if (restricted) {
+      return fail(restricted);
     }
     const parsed = bioSchema.safeParse(bio);
 

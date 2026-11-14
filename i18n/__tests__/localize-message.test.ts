@@ -19,6 +19,7 @@ import {
 import { MEMBER_MESSAGES } from "@/features/members/constants/messages";
 import { NUTRITION_MESSAGES } from "@/features/nutrition/constants/nutrition";
 import { PT_MESSAGES } from "@/features/pts/constants/messages";
+import { RESTRICTION_MESSAGES } from "@/features/restrictions/constants/messages";
 import { DM_MESSAGES } from "@/features/social/constants/dm";
 import {
   FRIEND_MESSAGES,
@@ -45,6 +46,7 @@ const CONSTANTS: Record<string, Record<string, string>> = {
   MEMBER_MESSAGES,
   NUTRITION_MESSAGES,
   PT_MESSAGES,
+  RESTRICTION_MESSAGES,
   DM_MESSAGES,
   FRIEND_MESSAGES,
   SOCIAL_MESSAGES,
@@ -138,6 +140,7 @@ describe("localizeMessageFor", () => {
     expect(vi.photo).toEqual(PHOTO_ERRORS);
     expect(vi.generic.default).toBe(GENERIC_ERROR_MESSAGE);
     expect(vi.workouts).toEqual(WORKOUT_MESSAGES);
+    expect(vi.restriction).toEqual(RESTRICTION_MESSAGES);
     expect(vi.members.PASSWORD_ONCE).toBe(MEMBER_MESSAGES.PASSWORD_ONCE);
   });
 

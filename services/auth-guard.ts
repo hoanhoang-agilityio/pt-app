@@ -5,6 +5,7 @@ import { cache } from "react";
 
 import { ROUTES, SESSION_ROLE_PARAM } from "@/constants/routes";
 import { ADMIN_COOKIE, USER_COOKIE } from "@/constants/session";
+import { getRequestRestriction } from "@/features/restrictions/services/restriction-queries";
 import { isAdminLocked } from "@/services/admin-lock";
 import { isSuperAdmin } from "@/services/admin-scope";
 import { findAdminById } from "@/services/admins";
@@ -28,6 +29,11 @@ export const getCurrentUser = cache(async () => {
     !user ||
     isSessionStale(sessionAuthTime(session), user.passwordChangedAt)
   ) {
+    return null;
+  }
+  // A suspended trainee is signed out on their next request, like a deleted
+  // one; a mere restriction keeps the session (the write actions refuse).
+  if ((await getRequestRestriction(user.id))?.level === "suspended") {
     return null;
   }
   return user;

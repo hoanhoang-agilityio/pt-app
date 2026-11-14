@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { checkPhoto, PHOTO_ERRORS } from "@/features/chat/utils/photo-rules";
+import { RESTRICTION_MESSAGES } from "@/features/restrictions/constants/messages";
+import { restrictionErrorFor } from "@/features/restrictions/services/restriction-guard";
 import { POST_PHOTO_MAX_BYTES } from "@/features/social/constants/social";
 import {
   createPendingPostPhoto,
@@ -60,6 +62,12 @@ export const POST = async (request: NextRequest) => {
   }
   if (uploader === "terms") {
     return reply({ error: "terms_required" }, 403);
+  }
+  if (uploader.kind === "user" && (await restrictionErrorFor(uploader.id))) {
+    return reply(
+      { error: "restricted", message: RESTRICTION_MESSAGES.RESTRICTED },
+      403,
+    );
   }
   const declared = Number(request.headers.get("content-length"));
 

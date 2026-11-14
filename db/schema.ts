@@ -978,3 +978,28 @@ export const dmReads = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.conversationId, table.userId] })],
 );
+
+// Admin restrictions on a trainee (super admin only). "restricted" blocks the
+// trainee's chat and social writes, "suspended" blocks login and hides them
+// from other trainees. `until` null = permanent. Active while lifted_at is null
+// and (until is null or until > now), computed at read time (no cron). One
+// active row per trainee; blocking again lifts the previous one first, so the
+// older rows stay as history. No foreign keys (D10): the member delete removes
+// the rows.
+export const userRestrictions = sqliteTable(
+  "user_restrictions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id").notNull(),
+    level: text("level", { enum: ["restricted", "suspended"] }).notNull(),
+    until: integer("until", { mode: "timestamp_ms" }),
+    reason: text("reason").notNull().default(""),
+    createdByAdminId: integer("created_by_admin_id").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    liftedAt: integer("lifted_at", { mode: "timestamp_ms" }),
+    liftedByAdminId: integer("lifted_by_admin_id"),
+  },
+  (table) => [
+    index("user_restrictions_user_created").on(table.userId, table.createdAt),
+  ],
+);

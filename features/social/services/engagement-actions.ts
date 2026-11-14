@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 
 import { SOCIAL_MESSAGES } from "@/features/social/constants/social";
-import { resolveActor, type Who } from "@/features/social/services/actor-guard";
+import {
+  resolveActor,
+  restrictedWriteError,
+  type Who,
+} from "@/features/social/services/actor-guard";
 import {
   addComment,
   deleteComment,
@@ -54,6 +58,11 @@ export const reactAction = withResultErrorHandling(
     if (!actor) {
       return fail(SOCIAL_MESSAGES.TERMS_REQUIRED);
     }
+    const restricted = await restrictedWriteError(actor);
+
+    if (restricted) {
+      return fail(restricted);
+    }
     const parsed = reactSchema.safeParse(input);
 
     if (!parsed.success) {
@@ -82,6 +91,11 @@ export const addCommentAction = withResultErrorHandling(
 
     if (!actor) {
       return fail(SOCIAL_MESSAGES.TERMS_REQUIRED);
+    }
+    const restricted = await restrictedWriteError(actor);
+
+    if (restricted) {
+      return fail(restricted);
     }
     const parsed = addCommentSchema.safeParse(input);
 
@@ -116,6 +130,11 @@ export const editCommentAction = withResultErrorHandling(
 
     if (!actor) {
       return fail(SOCIAL_MESSAGES.TERMS_REQUIRED);
+    }
+    const restricted = await restrictedWriteError(actor);
+
+    if (restricted) {
+      return fail(restricted);
     }
     const parsed = editCommentSchema.safeParse(input);
 

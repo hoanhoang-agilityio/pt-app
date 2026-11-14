@@ -19,6 +19,8 @@ import { MemberLoginCard } from "@/features/members/components/MemberLoginCard";
 import { listMembers } from "@/features/members/services/member-queries";
 import { PtAssignSelect } from "@/features/pts/components/PtAssignSelect";
 import { listPtOptions } from "@/features/pts/services/pt-queries";
+import { BlockUserControl } from "@/features/restrictions/components/BlockUserControl";
+import { findActiveRestriction } from "@/features/restrictions/services/restriction-queries";
 import { CopyWeekButton } from "@/features/workouts/components/CopyWeekButton";
 import { WorkoutWeekEditor } from "@/features/workouts/components/WorkoutWeekEditor";
 import { getWeekScheduleWithSets } from "@/features/workouts/services/workout-queries";
@@ -64,11 +66,13 @@ const AdminUserPage = async ({
     today,
   );
   const ptOptions = isSuperAdmin(admin) ? await listPtOptions() : [];
-  const [days, members, activity, isHidden] = await Promise.all([
+  const [days, members, activity, isHidden, restriction] = await Promise.all([
     getWeekScheduleWithSets(user.id, schedule.weekStart),
     listMembers(admin.id, user.id),
     getRecentActivity({ userId: user.id, limit: MEMBER_ACTIVITY_LIMIT }),
     isUserHidden(admin.id, user.id),
+    // Only a super admin sees (and can change) a block; a PT sees nothing.
+    isSuperAdmin(admin) ? findActiveRestriction(user.id) : null,
   ]);
 
   return (
@@ -134,6 +138,9 @@ const AdminUserPage = async ({
             isHidden={isHidden}
             hasPasscode={admin.hasPasscode}
           />
+          {isSuperAdmin(admin) && (
+            <BlockUserControl userId={user.id} restriction={restriction} />
+          )}
           <DeleteMemberButton userId={user.id} />
         </section>
       </main>

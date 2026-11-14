@@ -1,3 +1,4 @@
+import type { RestrictionLevel } from "@/features/restrictions/types/restriction";
 import type { BestSet } from "@/features/workouts/types/workout";
 
 export interface MemberProgress {
@@ -29,6 +30,8 @@ export interface MemberRow extends MemberProgress {
   href: string;
   // Unread chat messages from this trainee for the signed-in admin.
   unread: number;
+  // Active admin block on this trainee, if any (badge in the list).
+  restrictionLevel?: RestrictionLevel;
 }
 
 export interface WeekSummary {

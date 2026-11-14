@@ -886,15 +886,21 @@ export const socialReports = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     reporterKey: text("reporter_key").notNull(),
     targetKind: text("target_kind", {
-      enum: ["post", "comment", "user"],
+      enum: ["post", "comment", "user", "message"],
     }).notNull(),
+    // post, comment or user id; chat_messages.id for "message".
     targetId: integer("target_id").notNull(),
+    // Free-text note (optional).
     reason: text("reason").notNull().default(""),
+    // Fixed reason list; null on reports filed before it existed.
+    reasonCode: text("reason_code", {
+      enum: ["spam", "harassment", "inappropriate", "scam", "other"],
+    }),
     status: text("status", { enum: ["open", "resolved"] }).notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     resolvedBy: integer("resolved_by"),
     resolvedAt: integer("resolved_at", { mode: "timestamp_ms" }),
-    resolution: text("resolution", { enum: ["kept", "deleted"] }),
+    resolution: text("resolution", { enum: ["kept", "deleted", "hidden"] }),
   },
   (table) => [index("social_reports_status").on(table.status, table.createdAt)],
 );

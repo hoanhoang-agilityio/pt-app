@@ -28,17 +28,25 @@ describe("parseSearchEmail", () => {
 
 describe("reportSchema", () => {
   it("defaults the reason to empty and trims it", () => {
-    expect(reportSchema.parse({ targetKind: "post", targetId: 1 }).reason).toBe(
-      "",
-    );
     expect(
-      reportSchema.parse({ targetKind: "user", targetId: 1, reason: " x " })
-        .reason,
+      reportSchema.parse({
+        targetKind: "post",
+        targetId: 1,
+        reasonCode: "spam",
+      }).reason,
+    ).toBe("");
+    expect(
+      reportSchema.parse({
+        targetKind: "user",
+        targetId: 1,
+        reasonCode: "other",
+        reason: " x ",
+      }).reason,
     ).toBe("x");
   });
 
   it("caps the reason at 500 characters and checks kind and id", () => {
-    const base = { targetKind: "post", targetId: 1 };
+    const base = { targetKind: "post", targetId: 1, reasonCode: "other" };
 
     expect(
       reportSchema.safeParse({ ...base, reason: "x".repeat(500) }).success,
@@ -52,5 +60,28 @@ describe("reportSchema", () => {
     expect(reportSchema.safeParse({ ...base, targetId: 0 }).success).toBe(
       false,
     );
+    expect(
+      reportSchema.safeParse({ ...base, targetKind: "message" }).success,
+    ).toBe(true);
+  });
+
+  it("needs a reason code from the fixed list", () => {
+    const base = { targetKind: "post", targetId: 1 };
+
+    expect(reportSchema.safeParse(base).success).toBe(false);
+    expect(
+      reportSchema.safeParse({ ...base, reasonCode: "rude" }).success,
+    ).toBe(false);
+    for (const reasonCode of [
+      "spam",
+      "harassment",
+      "inappropriate",
+      "scam",
+      "other",
+    ]) {
+      expect(reportSchema.safeParse({ ...base, reasonCode }).success).toBe(
+        true,
+      );
+    }
   });
 });

@@ -53,6 +53,7 @@ export const searchConversation = async (
         and(
           eq(chatMessages.conversationId, conversationId),
           isNull(chatMessages.deletedAt),
+          isNull(chatMessages.hiddenByAdminId),
           isNull(chatMessages.stickerRef),
           ne(chatMessages.body, ""),
           cursor === undefined ? undefined : lt(chatMessages.id, cursor),

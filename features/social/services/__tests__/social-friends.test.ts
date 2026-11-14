@@ -742,6 +742,7 @@ describe("reports", () => {
         await reports.createReport(asUser(alice), {
           targetKind: "post",
           targetId: post,
+          reasonCode: "other",
           reason: "spam",
         })
       ).ok,
@@ -749,16 +750,19 @@ describe("reports", () => {
     await reports.createReport(asUser(alice), {
       targetKind: "post",
       targetId: post,
+      reasonCode: "other",
       reason: "again",
     });
     await reports.createReport(asUser(alice), {
       targetKind: "comment",
       targetId: comment.commentId,
+      reasonCode: "other",
       reason: "",
     });
     await reports.createReport(asUser(alice), {
       targetKind: "user",
       targetId: bob,
+      reasonCode: "other",
       reason: "",
     });
     const rows = await db.select().from(socialReports);
@@ -782,7 +786,11 @@ describe("reports", () => {
       { targetKind: "user", targetId: 9999 },
     ] as const) {
       expect(
-        await reports.createReport(asUser(alice), { ...input, reason: "" }),
+        await reports.createReport(asUser(alice), {
+          ...input,
+          reasonCode: "other",
+          reason: "",
+        }),
       ).toEqual({ ok: false, error: "not_found" });
     }
     await friends.blockUser(alice, bob);
@@ -790,6 +798,7 @@ describe("reports", () => {
       await reports.createReport(asUser(alice), {
         targetKind: "user",
         targetId: bob,
+        reasonCode: "other",
         reason: "",
       }),
     ).toEqual({ ok: false, error: "not_found" });
@@ -802,6 +811,7 @@ describe("reports", () => {
         await reports.createReport(asAdmin(ptA, "pt"), {
           targetKind: "user",
           targetId: alice,
+          reasonCode: "other",
           reason: "",
         })
       ).ok,
@@ -811,6 +821,7 @@ describe("reports", () => {
         await reports.createReport(asAdmin(ptA, "pt"), {
           targetKind: "user",
           targetId: bob,
+          reasonCode: "other",
           reason: "",
         })
       ).ok,
@@ -823,6 +834,7 @@ describe("reports", () => {
     await reports.createReport(asUser(alice), {
       targetKind: "post",
       targetId: post,
+      reasonCode: "other",
       reason: "spam",
     });
     const [report] = await reportQueries.listOpenReports();
@@ -832,6 +844,7 @@ describe("reports", () => {
       preview: "x",
       targetName: "bob",
       reporterName: "alice",
+      reasonCode: "other",
       reason: "spam",
     });
   });
@@ -842,6 +855,7 @@ describe("reports", () => {
     await reports.createReport(asUser(alice), {
       targetKind: "post",
       targetId: post,
+      reasonCode: "other",
       reason: "",
     });
     const [report] = await db.select().from(socialReports);
@@ -873,6 +887,7 @@ describe("reports", () => {
     await reports.createReport(asUser(alice), {
       targetKind: "post",
       targetId: post,
+      reasonCode: "other",
       reason: "",
     });
     const [report] = await db.select().from(socialReports);
@@ -917,6 +932,7 @@ describe("reports", () => {
       await reports.createReport(asUser(reporter), {
         targetKind: "post",
         targetId: post,
+        reasonCode: "other",
         reason: "",
       });
     }
@@ -949,11 +965,13 @@ describe("reports", () => {
     await reports.createReport(asUser(alice), {
       targetKind: "comment",
       targetId: comment.commentId,
+      reasonCode: "other",
       reason: "",
     });
     await reports.createReport(asUser(alice), {
       targetKind: "user",
       targetId: bob,
+      reasonCode: "other",
       reason: "",
     });
     const rows = await db.select().from(socialReports);
@@ -987,6 +1005,7 @@ describe("reports", () => {
     await reports.createReport(asUser(alice), {
       targetKind: "post",
       targetId: post,
+      reasonCode: "other",
       reason: "",
     });
     await db
@@ -1014,6 +1033,7 @@ describe("reports", () => {
       await friendActions.reportAction("user", {
         targetKind: "post",
         targetId: post,
+        reasonCode: "other",
         reason: "x".repeat(501),
       }),
     ).toMatchObject({ status: "error" });
@@ -1021,9 +1041,25 @@ describe("reports", () => {
       await friendActions.reportAction("user", {
         targetKind: "post",
         targetId: post,
+        reasonCode: "other",
         reason: "x".repeat(500),
       }),
     ).toMatchObject({ status: "success" });
+  });
+
+  it("the report action refuses a missing or unknown reason code", async () => {
+    const post = await insertPost("user", bob, "everyone");
+
+    for (const reasonCode of [undefined, "rude"]) {
+      expect(
+        await friendActions.reportAction("user", {
+          targetKind: "post",
+          targetId: post,
+          reasonCode,
+        }),
+      ).toMatchObject({ status: "error" });
+    }
+    expect(await db.select().from(socialReports)).toHaveLength(0);
   });
 });
 
@@ -1046,26 +1082,31 @@ describe("member delete cleanup", () => {
     await reports.createReport(asUser(alice), {
       targetKind: "post",
       targetId: bobPost,
+      reasonCode: "other",
       reason: "",
     });
     await reports.createReport(asUser(bob), {
       targetKind: "post",
       targetId: alicePost,
+      reasonCode: "other",
       reason: "",
     });
     await reports.createReport(asUser(carol), {
       targetKind: "user",
       targetId: alice,
+      reasonCode: "other",
       reason: "",
     });
     await reports.createReport(asUser(carol), {
       targetKind: "comment",
       targetId: comment.commentId,
+      reasonCode: "other",
       reason: "",
     });
     await reports.createReport(asUser(await addUser("dave")), {
       targetKind: "user",
       targetId: bob,
+      reasonCode: "other",
       reason: "keep",
     });
 

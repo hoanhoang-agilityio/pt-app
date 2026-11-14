@@ -85,6 +85,7 @@ export const listGalleryPhotos = async (
       and(
         eq(chatMessages.conversationId, conversationId),
         isNull(chatMessages.deletedAt),
+        isNull(chatMessages.hiddenByAdminId),
         before === undefined ? undefined : lt(chatMessages.id, before),
       ),
     )
@@ -140,6 +141,7 @@ const selectMessages = (
       and(
         eq(chatMessages.conversationId, conversationId),
         isNull(chatMessages.deletedAt),
+        isNull(chatMessages.hiddenByAdminId),
         extra,
         before === undefined ? undefined : lt(chatMessages.id, before),
       ),

@@ -79,6 +79,10 @@ const loadStored = async (
 
 type StoredMessage = NonNullable<Awaited<ReturnType<typeof findStoredMessage>>>;
 
+// Unsent, or hidden by an admin: nothing left to react to or change.
+const isGone = (stored: StoredMessage) =>
+  stored.deletedAt !== null || stored.hiddenByAdminId !== null;
+
 const isOwnMessage = (actor: ChatActor, stored: StoredMessage) =>
   actor.role === "user"
     ? stored.senderRole === "user"
@@ -165,7 +169,7 @@ export const reactToMessage = async (
   if (!stored) {
     return fail(CHAT_MESSAGES.MESSAGE_NOT_FOUND);
   }
-  if (stored.deletedAt !== null) {
+  if (isGone(stored)) {
     return fail(CHAT_MESSAGES.MESSAGE_UNSENT);
   }
   const reactorKey = reactorKeyOf(actor);
@@ -227,7 +231,7 @@ export const editChatMessage = async (
   if (!isOwnMessage(actor, stored)) {
     return fail(CHAT_MESSAGES.NOT_YOUR_MESSAGE);
   }
-  if (stored.deletedAt !== null) {
+  if (isGone(stored)) {
     return fail(CHAT_MESSAGES.MESSAGE_UNSENT);
   }
   // A sticker has no text to edit.
@@ -272,7 +276,7 @@ export const unsendChatMessage = async (
   if (!isOwnMessage(actor, stored)) {
     return fail(CHAT_MESSAGES.NOT_YOUR_MESSAGE);
   }
-  if (stored.deletedAt !== null) {
+  if (isGone(stored)) {
     return current(actor, messageId);
   }
   await db

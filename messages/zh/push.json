@@ -18,5 +18,12 @@
     "adminPostList": "{name} 发布了新帖子",
     "adminPost": "{name} 发布了新帖子：{preview}",
     "adminPostPhoto": "{name} 发布了一张新照片"
+  },
+  "report": "新举报：{kind}",
+  "reportKinds": {
+    "post": "帖子",
+    "comment": "评论",
+    "user": "用户",
+    "message": "消息"
   }
 }

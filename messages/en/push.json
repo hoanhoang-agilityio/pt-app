@@ -24,6 +24,7 @@
     "post": "post",
     "comment": "comment",
     "user": "user",
-    "message": "message"
+    "message": "message",
+    "group_message": "group message"
   }
 }

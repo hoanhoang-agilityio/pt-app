@@ -27,6 +27,13 @@ export const getAdminGroupPath = (groupId: number) =>
 export const getAdminGroupInfoPath = (groupId: number) =>
   `${getAdminGroupPath(groupId)}/info`;
 
+// A trainee's group thread and its info page.
+export const getUserGroupPath = (groupId: number) =>
+  `${ROUTES.MESSAGES_GROUPS}/${groupId}`;
+
+export const getUserGroupInfoPath = (groupId: number) =>
+  `${getUserGroupPath(groupId)}/info`;
+
 export const getFoodPath = (foodId: number) => `${ROUTES.FOODS}/${foodId}`;
 
 export const getAdminFoodPath = (foodId: number) =>

@@ -12,12 +12,15 @@ import { isChatEnabled } from "@/features/chat/services/chat-permission";
 import { countUnreadForUser } from "@/features/chat/services/chat-queries";
 import { BubbleRowTrigger } from "@/features/chat-bubbles/components/BubbleRowTrigger";
 import { bubbleKeyFor } from "@/features/chat-bubbles/utils/bubble-links";
+import { GroupInboxSection } from "@/features/chat-groups/components/GroupInboxSection";
+import { sessionOfUser } from "@/features/chat-groups/services/group-access";
+import { listGroupsForSession } from "@/features/chat-groups/services/group-queries";
 import { DmInboxRefresh } from "@/features/social/components/DmInboxRefresh";
 import { listDmInbox } from "@/features/social/services/dm-queries";
 import { hasAcceptedTerms } from "@/features/social/services/terms";
 import { dmPath } from "@/features/social/utils/dm-rules";
 import { requireUser } from "@/services/auth-guard";
-import { formatRelativeTime } from "@/utils/time";
+import { formatRelativeTime, getRequestTime } from "@/utils/time";
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const t = await getTranslations("chat.pages");
@@ -36,15 +39,17 @@ const UnreadDot = ({ label }: { label: string }) => (
 );
 
 // The Messages tab: the coach chat first (unchanged, under /messages/coach),
-// then the old read-only chats with friends (shown only when any exist).
+// then the groups the trainee is in, then the old read-only chats with
+// friends (each shown only when any exist).
 const MessagesInboxPage = async () => {
   const t = await getTranslations("chat.pages");
   const dm = await getTranslations("social.dm");
   const locale = await getLocale();
   const user = await requireUser();
-  const [coachUnread, chats] = await Promise.all([
+  const [coachUnread, chats, groups] = await Promise.all([
     countUnreadForUser(user.id),
     hasAcceptedTerms(user) ? listDmInbox(user.id, locale) : [],
+    listGroupsForSession(sessionOfUser(user)),
   ]);
 
   return (
@@ -77,6 +82,15 @@ const MessagesInboxPage = async () => {
             </BubbleRowTrigger>
           </li>
         </ul>
+        {groups.length > 0 && (
+          <GroupInboxSection
+            groups={groups}
+            role="user"
+            viewerKey={`user:${user.id}`}
+            nowMs={getRequestTime()}
+            showEmptyHint={false}
+          />
+        )}
         {chats.length > 0 && (
           <>
             <h2 className={SECTION_TITLE}>{t("friendsSection")}</h2>

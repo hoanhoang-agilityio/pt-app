@@ -8,7 +8,10 @@ import {
   useUnreadPayload,
 } from "@/features/chat/hooks/unread-store";
 import { unreadPollMs } from "@/features/chat/utils/polling-rules";
-import { adminBadgeCount } from "@/features/chat/utils/unread-payload";
+import {
+  adminBadgeCount,
+  userBadgeCount,
+} from "@/features/chat/utils/unread-payload";
 
 export const USER_UNREAD_URL = "/api/chat/unread";
 export const ADMIN_UNREAD_URL = "/api/chat/unread?as=admin";
@@ -34,13 +37,10 @@ export const useChatUnread = (
     pollMs,
   );
   const count = useMemo(() => {
-    // The admin's number covers group chats too (trainee: PR 3).
-    if (role === "admin") {
-      return adminBadgeCount(payload, initialCount);
-    }
-    const value = (payload as { count?: unknown } | null)?.count;
-
-    return typeof value === "number" ? value : initialCount;
+    // Both numbers cover group chats too.
+    return role === "admin"
+      ? adminBadgeCount(payload, initialCount)
+      : userBadgeCount(payload, initialCount);
   }, [payload, initialCount, role]);
 
   return paused ? 0 : count;

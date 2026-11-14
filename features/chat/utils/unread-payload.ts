@@ -89,11 +89,16 @@ export const parseAdminUnread = (data: unknown): AdminUnread => {
   };
 };
 
-// The admin's badge: trainee chats plus group chats. A payload that is not
-// there yet (first poll) shows the server-rendered `fallback`.
-export const adminBadgeCount = (data: unknown, fallback: number): number => {
-  const record = asRecord(data);
-  const count = asNumber(record.count);
+// A badge number: the chat count of the payload plus group chats. A payload
+// that is not there yet (first poll) shows the server-rendered `fallback`.
+const badgeCount = (data: unknown, fallback: number): number => {
+  const count = asNumber(asRecord(data).count);
 
   return count === null ? fallback : count + parseGroupUnread(data).total;
 };
+
+// The admin's badge: trainee chats plus group chats.
+export const adminBadgeCount = badgeCount;
+
+// The trainee's tab-bar badge: coach chat and friend chats plus group chats.
+export const userBadgeCount = badgeCount;

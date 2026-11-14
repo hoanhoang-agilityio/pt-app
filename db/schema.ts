@@ -886,9 +886,10 @@ export const socialReports = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     reporterKey: text("reporter_key").notNull(),
     targetKind: text("target_kind", {
-      enum: ["post", "comment", "user", "message"],
+      enum: ["post", "comment", "user", "message", "group_message"],
     }).notNull(),
-    // post, comment or user id; chat_messages.id for "message".
+    // post, comment or user id; chat_messages.id for "message";
+    // chat_group_messages.id for "group_message".
     targetId: integer("target_id").notNull(),
     // Free-text note (optional).
     reason: text("reason").notNull().default(""),

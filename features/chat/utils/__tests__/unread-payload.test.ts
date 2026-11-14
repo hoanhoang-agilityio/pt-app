@@ -5,6 +5,7 @@ import {
   parseAdminUnread,
   parseGroupUnread,
   parseUserUnread,
+  userBadgeCount,
 } from "@/features/chat/utils/unread-payload";
 
 const groups = {
@@ -92,5 +93,24 @@ describe("adminBadgeCount", () => {
   it("shows the server-rendered number before the first poll", () => {
     expect(adminBadgeCount(null, 6)).toBe(6);
     expect(adminBadgeCount({ groups }, 6)).toBe(6);
+  });
+});
+
+describe("userBadgeCount", () => {
+  it("adds the group total to the coach and friend chat count", () => {
+    expect(userBadgeCount({ count: 2, coachCount: 1, groups }, 0)).toBe(7);
+  });
+
+  it("counts groups even when nothing else is unread", () => {
+    expect(userBadgeCount({ count: 0, groups }, 0)).toBe(5);
+  });
+
+  it("is the old number when the payload has no groups", () => {
+    expect(userBadgeCount({ count: 3 }, 0)).toBe(3);
+  });
+
+  it("shows the initial number before the first poll or on a bad payload", () => {
+    expect(userBadgeCount(null, 4)).toBe(4);
+    expect(userBadgeCount({ count: "x", groups }, 4)).toBe(4);
   });
 });

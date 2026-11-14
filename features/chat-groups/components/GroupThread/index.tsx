@@ -27,8 +27,10 @@ import {
   useChatMessages,
 } from "@/features/chat/hooks/use-chat-messages";
 import { useChatTransport } from "@/features/chat/hooks/use-chat-transport";
+import { useClearNotifications } from "@/features/chat/hooks/use-clear-notifications";
 import {
   buildThreadItems,
+  canReportGroupMessage,
   firstStoredId,
   isNearBottom,
   markUnsentQuotes,
@@ -37,6 +39,7 @@ import {
   senderLabel,
   type ThreadMessage,
 } from "@/features/chat/utils/chat-thread-rules";
+import { groupNotificationTags } from "@/features/chat/utils/clear-notifications";
 import type { PreparedPhoto } from "@/features/chat/utils/encode-photo";
 import { useVisualViewport } from "@/features/chat-bubbles/hooks/use-visual-viewport";
 import { GroupSystemLine } from "@/features/chat-groups/components/GroupSystemLine";
@@ -73,12 +76,41 @@ export interface GroupThreadProps {
   canResolveAlert: boolean;
   // False when only the server knows this person may not write.
   canWriteBase: boolean;
+  // Why canWriteBase is false, for the banner: the trainee's chat switch is
+  // off, or the block feature restricts them. Reading stays open.
+  lockReason?: "chat_off" | "restricted" | null;
   initialManagersOnly: boolean;
   initialDissolved: boolean;
   initial: ThreadSnapshot;
   backHref: string;
   infoHref: string;
 }
+
+// The banner that replaces the composer: the group state first (it applies to
+// everyone), then what only this trainee's account causes.
+const lockedKey = ({
+  dissolved,
+  managersOnly,
+  lockReason,
+}: {
+  dissolved: boolean;
+  managersOnly: boolean;
+  lockReason: "chat_off" | "restricted" | null;
+}) => {
+  if (dissolved) {
+    return "thread.dissolvedBanner";
+  }
+  if (managersOnly) {
+    return "thread.managersOnlyBanner";
+  }
+  if (lockReason === "chat_off") {
+    return "thread.chatOffBanner";
+  }
+  if (lockReason === "restricted") {
+    return "thread.restrictedBanner";
+  }
+  return "thread.managersOnlyBanner";
+};
 
 const HEART = "❤️";
 const HIGHLIGHT_MS = 1500;
@@ -105,6 +137,13 @@ const EditHistorySheet = dynamic(
     ),
   { ssr: false },
 );
+const ReportSheet = dynamic(
+  () =>
+    import("@/features/social/components/ReportSheet").then(
+      (module) => module.ReportSheet,
+    ),
+  { ssr: false },
+);
 const BottomSheet = dynamic(
   () =>
     import("@/components/common/BottomSheet").then(
@@ -113,7 +152,7 @@ const BottomSheet = dynamic(
   { ssr: false },
 );
 
-type SheetKind = "actions" | "history" | "seen" | "hidden";
+type SheetKind = "actions" | "history" | "seen" | "hidden" | "report";
 
 const SHEET_ROW =
   "flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-base font-medium text-fg transition active:bg-line";
@@ -135,6 +174,7 @@ export const GroupThread = ({
   canManage,
   canResolveAlert,
   canWriteBase,
+  lockReason = null,
   initialManagersOnly,
   initialDissolved,
   initial,
@@ -167,6 +207,9 @@ export const GroupThread = ({
   });
   const chat = useChatMessages({ adapter, initial, isViewing: isVisible });
   const { messages, hasMore, chatEnabled, sync } = chat;
+
+  // Reading the group closes its notification (one per group).
+  useClearNotifications(groupNotificationTags(groupId), messages.at(-1)?.id);
   const viewport = useVisualViewport();
   const scroller = useRef<HTMLDivElement>(null);
   const wasNearBottom = useRef(true);
@@ -648,11 +691,13 @@ export const GroupThread = ({
           />
         ) : (
           <LockedBanner
-            text={
-              groupState.dissolved
-                ? t("thread.dissolvedBanner")
-                : t("thread.managersOnlyBanner")
-            }
+            text={t(
+              lockedKey({
+                dissolved: groupState.dissolved,
+                managersOnly: groupState.managersOnly && !isManager,
+                lockReason,
+              }),
+            )}
           />
         )}
       </div>
@@ -693,6 +738,11 @@ export const GroupThread = ({
             );
           }}
           onUnsend={() => void handleUnsend(sheetMessage)}
+          onReport={
+            canReportGroupMessage(sheetMessage, adapter.viewer, canResolveAlert)
+              ? () => openSheet("report", sheetMessage)
+              : undefined
+          }
           extra={
             canManage ? (
               <button
@@ -705,6 +755,16 @@ export const GroupThread = ({
               </button>
             ) : undefined
           }
+        />
+      )}
+      {sheet?.kind === "report" && sheetMessage?.id != null && (
+        <ReportSheet
+          key={sheetMessage.id}
+          isOpen={isSheetOpen}
+          onOpenChange={setIsSheetOpen}
+          mode={role}
+          targetKind="group_message"
+          targetId={sheetMessage.id}
         />
       )}
       {sheet?.kind === "hidden" && sheetMessage && (

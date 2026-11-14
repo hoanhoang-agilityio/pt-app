@@ -14,6 +14,10 @@ import {
 import { hideMessageByAdmin } from "@/features/chat/services/chat-moderation";
 import { findConversationById } from "@/features/chat/services/chat-queries";
 import {
+  canReportGroupMessage,
+  hideReportedGroupMessage,
+} from "@/features/chat-groups/services/group-report";
+import {
   deleteComment,
   type EngagementError,
 } from "@/features/social/services/engagement-mutations";
@@ -86,6 +90,9 @@ const canReport = async (
 
   if (kind === "message") {
     return canReportMessage(actor, targetId);
+  }
+  if (kind === "group_message") {
+    return canReportGroupMessage(actor, targetId);
   }
   if (kind === "post") {
     const post = await loadVisiblePost(actor, targetId);
@@ -173,7 +180,7 @@ const isMissing = (error: EngagementError | string) => error === "not_found";
 // Super admin only (spec A14). "kept" leaves the content alone; "deleted"
 // removes the post or comment with the existing mutations (a user target has
 // nothing to delete and is just closed as kept); "hidden" is for a chat
-// message only and hides it for everybody. A message cannot be "deleted" and
+// message (coach chat or group) only and hides it for everybody. A message cannot be "deleted" and
 // a post, comment or user cannot be "hidden". Every open report on the same
 // target is closed with it.
 export const resolveReport = async (
@@ -198,7 +205,8 @@ export const resolveReport = async (
   }
   let applied = resolution;
 
-  const isMessage = report.targetKind === "message";
+  const isMessage =
+    report.targetKind === "message" || report.targetKind === "group_message";
 
   if (
     (isMessage && resolution === "deleted") ||
@@ -210,7 +218,11 @@ export const resolveReport = async (
     applied = "kept";
   } else if (resolution === "hidden") {
     // Already gone counts as done.
-    await hideMessageByAdmin(actor.id, report.targetId);
+    if (report.targetKind === "group_message") {
+      await hideReportedGroupMessage(actor.id, report.targetId);
+    } else {
+      await hideMessageByAdmin(actor.id, report.targetId);
+    }
   } else if (resolution === "deleted") {
     // Already gone counts as done.
     const result =

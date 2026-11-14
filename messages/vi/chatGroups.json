@@ -36,7 +36,9 @@
     "unhide": "Hiện lại tin nhắn",
     "actionFailed": "Không thực hiện được. Hãy thử lại.",
     "sendFailed": "Không gửi được tin nhắn.",
-    "reactionsHint": "Chạm vào tin nhắn để thả cảm xúc"
+    "reactionsHint": "Chạm vào tin nhắn để thả cảm xúc",
+    "chatOffBanner": "Chat đang tắt cho tài khoản của bạn. Bạn vẫn xem lại được tin nhắn.",
+    "restrictedBanner": "Tài khoản của bạn đang bị hạn chế nên chưa gửi được tin nhắn."
   },
   "systemLine": {
     "member_added": "{actor} đã thêm {members} vào nhóm",
@@ -136,6 +138,8 @@
     "notificationsSection": "Thông báo",
     "cancel": "Huỷ",
     "failed": "Không thực hiện được. Hãy thử lại.",
-    "membersLoadFailed": "Không tải được danh sách thành viên."
+    "membersLoadFailed": "Không tải được danh sách thành viên.",
+    "leaveTraineeDescription": "Bạn sẽ không còn xem được nhóm. Quản lý có thể thêm bạn lại.",
+    "managersOnlyNote": "Chỉ quản lý được nhắn tin trong nhóm này."
   }
 }

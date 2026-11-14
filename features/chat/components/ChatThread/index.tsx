@@ -110,6 +110,8 @@ export interface ChatThreadProps {
   // Photos of the people in this thread (versioned /api/avatar URLs), keyed
   // like nicknames: "user" or "admin:<id>". Only people with a photo.
   avatars?: Readonly<Record<string, string>>;
+  // Trainee header photo when the loaded messages name no PT with a photo.
+  fallbackPeerAvatar?: string | null;
   // A post to reply to, opened from a post card (`?replyPost=`); sent with the
   // next text message. Attaching it replaces a message reply and vice versa.
   replyPost?: (DmReplyPostView & { available: true }) | null;
@@ -243,6 +245,7 @@ export const ChatThread = ({
   emptyText,
   ariaLabel,
   avatars = NO_AVATARS,
+  fallbackPeerAvatar = null,
   replyPost = null,
   isEmbed = false,
 }: ChatThreadProps) => {
@@ -731,7 +734,7 @@ export const ChatThread = ({
   const peerAvatar =
     viewer.role === "admin"
       ? (avatars.user ?? null)
-      : (avatars[`admin:${latestAdminId(messages)}`] ?? null);
+      : (avatars[`admin:${latestAdminId(messages)}`] ?? fallbackPeerAvatar);
   const verifiedIds = new Set(verifiedAdminIds);
   const headerNode =
     isEmbed || isFramed

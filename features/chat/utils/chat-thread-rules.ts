@@ -863,3 +863,20 @@ export const quoteLabel = (
     ? displayNameFor(nicknames, "user", viewer.peerName ?? t("thread.trainee"))
     : displayNameFor(nicknames, "pt", t("thread.pt"));
 };
+
+// The coach's photo for a trainee: the PT who wrote last, else the assigned
+// PT, else null (initials). A PT without a photo is skipped, not the end.
+export const pickCoachAvatar = (
+  latestSenderId: number | null,
+  ptAdminId: number | null,
+  avatars: ReadonlyMap<number, string>,
+): string | null => {
+  for (const id of [latestSenderId, ptAdminId]) {
+    const url = id === null ? undefined : avatars.get(id);
+
+    if (url) {
+      return url;
+    }
+  }
+  return null;
+};

@@ -102,6 +102,8 @@
   "fallback": {
     "deletedAccount": "Đã xóa",
     "deletedAccountDm": "Đã xoá",
-    "postImageOnly": "(Bài viết chỉ có ảnh)"
+    "postImageOnly": "(Bài viết chỉ có ảnh)",
+    "stickerMessage": "(Sticker)",
+    "photoMessage": "(Ảnh)"
   }
 }

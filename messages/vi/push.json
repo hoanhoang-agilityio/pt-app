@@ -18,5 +18,12 @@
     "adminPostList": "{name} vừa đăng bài mới",
     "adminPost": "{name} vừa đăng bài mới: {preview}",
     "adminPostPhoto": "{name} vừa đăng một ảnh mới"
+  },
+  "report": "Báo cáo mới: {kind}",
+  "reportKinds": {
+    "post": "bài viết",
+    "comment": "bình luận",
+    "user": "người dùng",
+    "message": "tin nhắn"
   }
 }

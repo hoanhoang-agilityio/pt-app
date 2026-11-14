@@ -3,7 +3,16 @@ import "server-only";
 import { asc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
-import { socialComments, socialPosts, socialReports, users } from "@/db/schema";
+import {
+  admins,
+  chatConversations,
+  chatMessages,
+  socialComments,
+  socialPosts,
+  socialReports,
+  users,
+} from "@/db/schema";
+import { chatPaths, jumpHref } from "@/features/chat/utils/chat-links";
 import { loadAccounts } from "@/features/social/services/account-lookup";
 import type { ReportView } from "@/features/social/types/social";
 import { adminPostPath } from "@/features/social/utils/engagement-rules";
@@ -52,7 +61,10 @@ export const listOpenReports = async (
   const userIds = reports
     .filter((report) => report.targetKind === "user")
     .map((report) => report.targetId);
-  const [posts, comments, targetUsers] = await Promise.all([
+  const messageIds = reports
+    .filter((report) => report.targetKind === "message")
+    .map((report) => report.targetId);
+  const [posts, comments, targetUsers, messageRows] = await Promise.all([
     postIds.length
       ? db.select().from(socialPosts).where(inArray(socialPosts.id, postIds))
       : [],
@@ -68,6 +80,29 @@ export const listOpenReports = async (
           .from(users)
           .where(inArray(users.id, userIds))
       : [],
+    messageIds.length
+      ? db
+          .select({
+            id: chatMessages.id,
+            body: chatMessages.body,
+            stickerRef: chatMessages.stickerRef,
+            photoId: chatMessages.photoId,
+            senderRole: chatMessages.senderRole,
+            deletedAt: chatMessages.deletedAt,
+            hiddenByAdminId: chatMessages.hiddenByAdminId,
+            senderAdminName: admins.username,
+            traineeId: chatConversations.userId,
+            traineeName: users.name,
+          })
+          .from(chatMessages)
+          .innerJoin(
+            chatConversations,
+            eq(chatConversations.id, chatMessages.conversationId),
+          )
+          .innerJoin(users, eq(users.id, chatConversations.userId))
+          .leftJoin(admins, eq(admins.id, chatMessages.senderAdminId))
+          .where(inArray(chatMessages.id, messageIds))
+      : [],
   ]);
   const accounts = await loadAccounts([
     ...reports.map((report) => report.reporterKey),
@@ -79,6 +114,7 @@ export const listOpenReports = async (
   const postById = new Map(posts.map((post) => [post.id, post]));
   const commentById = new Map(comments.map((comment) => [comment.id, comment]));
   const userById = new Map(targetUsers.map((user) => [user.id, user]));
+  const messageById = new Map(messageRows.map((row) => [row.id, row]));
 
   return reports.map((report): ReportView => {
     const base = {
@@ -87,8 +123,51 @@ export const listOpenReports = async (
       targetId: report.targetId,
       reporterName: nameOf(report.reporterKey),
       reason: report.reason,
+      reasonCode: report.reasonCode,
+      message: null,
       createdAt: report.createdAt.getTime(),
     };
+
+    if (report.targetKind === "message") {
+      const message = messageById.get(report.targetId);
+
+      // Unsent or already hidden: nothing left to look at.
+      if (
+        !message ||
+        message.deletedAt !== null ||
+        message.hiddenByAdminId !== null
+      ) {
+        return { ...base, preview: null, targetName: null, href: null };
+      }
+      const kind = message.stickerRef
+        ? "sticker"
+        : message.photoId !== null && message.body.trim() === ""
+          ? "photo"
+          : "text";
+      const senderName =
+        message.senderRole === "user"
+          ? message.traineeName
+          : (message.senderAdminName ?? "PT");
+
+      return {
+        ...base,
+        message: {
+          senderRole: message.senderRole,
+          senderName,
+          traineeId: message.traineeId,
+          traineeName: message.traineeName,
+          kind,
+        },
+        preview:
+          kind === "sticker"
+            ? t("fallback.stickerMessage")
+            : kind === "photo"
+              ? t("fallback.photoMessage")
+              : snippet(message.body, ""),
+        targetName: senderName,
+        href: jumpHref(chatPaths("admin", message.traineeId).chat, message.id),
+      };
+    }
 
     if (report.targetKind === "post") {
       const post = postById.get(report.targetId);

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildThreadItems,
+  canReportMessage,
   dayLabel,
   firstStoredId,
   formatSentAt,
@@ -678,5 +679,39 @@ describe("reply and time helpers", () => {
   it("formats the exact send time as HH:mm, dd/MM in the app time zone", () => {
     // 03:42 UTC = 10:42 in Asia/Ho_Chi_Minh (UTC+7).
     expect(formatSentAt("2026-11-06T03:42:00.000Z")).toBe("10:42, 06/11");
+  });
+});
+
+describe("canReportMessage", () => {
+  const stored = (overrides: Partial<SerializedChatMessage> = {}) =>
+    toThreadMessage(msg(1, overrides));
+  const fromTrainee = { senderRole: "user", senderAdminId: null } as const;
+  const trainee = { role: "user" } as const;
+  const admin = (isSuperAdmin: boolean) =>
+    ({
+      role: "admin",
+      adminId: 1,
+      adminName: "pt",
+      peerName: "An",
+      isSuperAdmin,
+    }) as const;
+
+  it("a trainee reports what the PT side wrote, never their own", () => {
+    expect(canReportMessage(stored(), trainee)).toBe(true);
+    expect(canReportMessage(stored(fromTrainee), trainee)).toBe(false);
+  });
+
+  it("a PT reports what the trainee wrote, never admin messages", () => {
+    expect(canReportMessage(stored(fromTrainee), admin(false))).toBe(true);
+    expect(canReportMessage(stored(), admin(false))).toBe(false);
+  });
+
+  it("a super admin reports nothing", () => {
+    expect(canReportMessage(stored(fromTrainee), admin(true))).toBe(false);
+  });
+
+  it("not on unsent or not yet stored messages", () => {
+    expect(canReportMessage(stored({ deleted: true }), trainee)).toBe(false);
+    expect(canReportMessage(pendingMsg("c9"), admin(false))).toBe(false);
   });
 });

@@ -153,6 +153,7 @@ const AdminMessagesPage = async ({
         adminId: admin.id,
         adminName: admin.username,
         peerName: user.name,
+        isSuperAdmin: toAdminRole(admin.role) === "super_admin",
       }}
       avatars={avatars}
       emptyText={t("emptyText")}

@@ -11,6 +11,7 @@ import {
   LogOut,
   Monitor,
   Moon,
+  Paintbrush,
   Palette,
   Settings,
   Sun,
@@ -97,6 +98,8 @@ interface HeaderMenusProps {
   // the online status is switched off.
   accountColor?: ChatColorKey | null;
   isPresenceHidden?: boolean;
+  // Super admin only: shows the "Màu chủ đạo của app" entry.
+  canPickAppColor?: boolean;
 }
 
 const ITEM =
@@ -128,6 +131,7 @@ export const HeaderMenus = ({
   avatarUrl = null,
   accountColor = null,
   isPresenceHidden = false,
+  canPickAppColor = false,
 }: HeaderMenusProps) => {
   const [openMenu, setOpenMenu] = useState<MenuId | null>(null);
   const [isPasscodeOpen, setIsPasscodeOpen] = useState(false);
@@ -443,6 +447,17 @@ export const HeaderMenus = ({
                     <Palette className="size-5 text-muted" aria-hidden />
                     {t("accountColor")}
                   </button>
+                  {canPickAppColor && (
+                    <Link
+                      href={ROUTES.ADMIN_THEME}
+                      role="menuitem"
+                      className={ITEM}
+                      onClick={() => setOpenMenu(null)}
+                    >
+                      <Paintbrush className="size-5 text-muted" aria-hidden />
+                      {t("appColor")}
+                    </Link>
+                  )}
                   <button
                     type="button"
                     role="menuitemcheckbox"

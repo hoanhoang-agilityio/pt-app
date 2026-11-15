@@ -56,6 +56,9 @@ export const admins = sqliteTable("admins", {
   // Preferred UI language (i18n): "vi" or "en", validated on write. Nullable
   // on purpose (null = not chosen, use the device cookie or the default).
   locale: text("locale"),
+  // App primary color the super admin picked for themselves (accent-color
+  // spec): normalized "#rrggbb"; null = no personal override.
+  accentColor: text("accent_color"),
   createdAt: createdAt(),
 });
 
@@ -1154,3 +1157,18 @@ export const chatGroupPhotos = sqliteTable(
     index("chat_group_photos_group").on(table.groupId),
   ],
 );
+
+// App primary color per audience (accent-color spec). One row per scope that
+// has an override; no row = that scope uses the next one in the precedence
+// (role > all > default orange). Only the super admin writes it.
+export const themeSettings = sqliteTable("theme_settings", {
+  scope: text("scope", { enum: ["all", "trainee", "pt"] }).primaryKey(),
+  // Normalized "#rrggbb".
+  accent: text("accent").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedByAdminId: integer("updated_by_admin_id").references(() => admins.id, {
+    onDelete: "set null",
+  }),
+});

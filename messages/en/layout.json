@@ -37,6 +37,7 @@
     "language": "Language",
     "localeLabel": { "vi": "Vietnamese", "en": "English", "zh": "Chinese" },
     "accountColor": "Account color",
+    "appColor": "App primary color",
     "presence": "Activity status",
     "presenceOn": "Activity status turned on",
     "presenceOff": "Activity status turned off",

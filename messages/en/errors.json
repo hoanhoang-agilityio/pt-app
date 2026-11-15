@@ -297,5 +297,9 @@
     "CANNOT_REMOVE_MANAGER": "A super admin cannot be removed from the group",
     "ALERT_NOT_FOUND": "This alert was not found",
     "ALERT_HANDLED": "This alert has already been handled"
+  },
+  "theme": {
+    "INVALID_COLOR": "Invalid color",
+    "INVALID_SCOPE": "Invalid scope"
   }
 }

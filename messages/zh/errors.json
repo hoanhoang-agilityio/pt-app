@@ -297,5 +297,9 @@
     "CANNOT_REMOVE_MANAGER": "无法将超级管理员移出群聊",
     "ALERT_NOT_FOUND": "找不到该提醒",
     "ALERT_HANDLED": "该提醒已被处理"
+  },
+  "theme": {
+    "INVALID_COLOR": "颜色无效",
+    "INVALID_SCOPE": "范围无效"
   }
 }

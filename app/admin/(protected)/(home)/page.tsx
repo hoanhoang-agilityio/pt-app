@@ -156,6 +156,7 @@ const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
               avatarUrl={avatarUrl}
               accountColor={accountColor}
               isPresenceHidden={admin.presenceHidden}
+              canPickAppColor={isSuper}
               hasPasscode={admin.hasPasscode}
               profileHref={adminProfilePath("admin", admin.id)}
             />

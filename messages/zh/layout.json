@@ -35,6 +35,7 @@
     "language": "语言",
     "localeLabel": { "vi": "越南语", "en": "英语", "zh": "中文" },
     "accountColor": "账号颜色",
+    "appColor": "应用主题色",
     "presence": "在线状态",
     "presenceOn": "已开启在线状态",
     "presenceOff": "已关闭在线状态",

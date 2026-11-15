@@ -31,7 +31,6 @@ import {
 import { serializeMessage } from "@/features/chat/utils/chat-thread-rules";
 import { serializeLastSeen } from "@/features/chat/utils/presence";
 import { isEmbedParam } from "@/features/chat-bubbles/utils/bubble-links";
-import { adminActorKey } from "@/features/contact-aliases/utils/alias-rules";
 import { actorOfAdmin } from "@/features/social/services/post-context";
 import { parseDmId } from "@/features/social/utils/dm-rules";
 import { toAdminRole } from "@/services/admin-scope";
@@ -129,7 +128,7 @@ const AdminMessagesPage = async ({
         hasNewer: false,
       })),
     getPeerReadCursor(conversation.id, "admin"),
-    loadChatProfile(conversation.id, adminActorKey(admin.id)),
+    loadChatProfile(conversation.id),
     listAdminAvatarUrls(),
     getAvatarUrl("user", user.id),
   ]);

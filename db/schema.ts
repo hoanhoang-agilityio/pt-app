@@ -630,10 +630,13 @@ export const chatMessageEdits = sqliteTable(
   (table) => [index("chat_message_edits_message_id").on(table.messageId)],
 );
 
-// Legacy (KAN-141): shared nicknames per conversation, replaced by the private
-// contact_aliases. App code no longer reads or writes it; the setup script
-// copies its rows into contactAliases once. A member's removal still clears
-// the rows of their conversation.
+// Shared nicknames per conversation, Messenger style (KAN-141, live again, see
+// docs/specs/messenger-nicknames.md). Anyone in the conversation may set or
+// clear the nickname of anyone in it; every member sees it. target_key is
+// "user" (the trainee), "pt" (the PT side as a whole) or "admin:<id>";
+// set_by_key is who last set it ("user" or "admin:<id>"). A cleared nickname
+// deletes the row. Private contact_aliases are separate and used outside chat
+// only. A member's removal clears the rows of their conversation.
 export const chatNicknames = sqliteTable(
   "chat_nicknames",
   {

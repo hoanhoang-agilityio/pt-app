@@ -22,6 +22,7 @@ import {
   chatConversations,
   chatMessageEdits,
   chatMessages,
+  chatNicknames,
   chatPhotos,
   chatReactions,
   chatReads,
@@ -878,7 +879,36 @@ export const findLatestAdminSender = async (conversationId: number) => {
 export const findLatestAdminSenderName = async (conversationId: number) =>
   (await findLatestAdminSender(conversationId))?.name ?? null;
 
-// The name admin pages show for one trainee to this admin: their private
+// The shared nickname set for each trainee in their conversation (target
+// "user", the one the inbox and the thread header show), by user id. Trainees
+// without one are absent.
+export const listTraineeNicknames = async (
+  userIds: readonly number[],
+): Promise<Map<number, string>> => {
+  if (userIds.length === 0) {
+    return new Map();
+  }
+  const rows = await db
+    .select({
+      userId: chatConversations.userId,
+      nickname: chatNicknames.nickname,
+    })
+    .from(chatNicknames)
+    .innerJoin(
+      chatConversations,
+      eq(chatConversations.id, chatNicknames.conversationId),
+    )
+    .where(
+      and(
+        eq(chatNicknames.targetKey, USER_READER_KEY),
+        inArray(chatConversations.userId, [...userIds]),
+      ),
+    );
+
+  return new Map(rows.map((row) => [row.userId, row.nickname]));
+};
+
+// The name admin pages OUTSIDE chat show for one trainee to this admin: their private
 // nickname for the trainee if they set one, else the real name (same rule as
 // the inbox and dashboard).
 export const getTraineeDisplayName = async (
@@ -894,7 +924,7 @@ export interface InboxItem {
   conversationId: number;
   userId: number;
   userName: string;
-  // This admin's private nickname for the trainee, else the real name.
+  // The conversation's shared nickname for the trainee, else the real name.
   displayName: string;
   chatEnabled: boolean;
   preview: string;
@@ -986,8 +1016,7 @@ const loadInbox = async (
       )
       .orderBy(asc(users.name)),
   ]);
-  const nicknameByUserId = await loadTraineeAliases(
-    adminId,
+  const nicknameByUserId = await listTraineeNicknames(
     rows.map((row) => row.userId),
   );
   const unreadById = new Map(

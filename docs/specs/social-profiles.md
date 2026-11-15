@@ -101,6 +101,16 @@ Owner decision: trainee-to-trainee chat ("DM") is turned off.
 - Removed: the friend "Nhắn tin" buttons (friends list, profile) and the friend reply-to-post-in-chat button on the post card. A trainee can still reply in chat to a PT's post (coach chat).
 - Q6, A6 and A7 above are superseded by this change. The terms version is not bumped; the terms text now says the old messages are kept.
 
+## Change 2026-11-15 (chat photos)
+
+Chat messages carry up to 10 photos (2026-11-15), sent as one message shown as a photo grid, in the coach chat (`chat_photos`), the old trainee chats (`dm_photos`) and group chats (`chat_group_photos`).
+
+- Additive schema only: a nullable `position` on each of the three photo tables (null = 0). The message's `photo_id` stays the first photo, so old single-photo messages still return exactly one photo.
+- Send actions take `photoIds: number[]` (positive, unique, at most 10). The server checks that every id is a pending photo of the same uploader in the same conversation or group, then stores the message and attaches all photos in one transaction (position = index); one bad id stores nothing.
+- Message payloads (thread, polling, realtime, DM thread) carry `photos[]` in order, loaded in one query per page. Unsend deletes every photo row of the message. The photo routes authorize by conversation or group, so every photo of a message is served, not only the cover.
+- The composer uploads each picked photo at once (3 at a time, per-photo retry and remove); send waits while any upload is pending or failed. One caption per message.
+- Inbox, push and quote texts name the count when there are several ("📷 3 ảnh", "Đã gửi 3 ảnh"); one photo keeps the old text. The chat gallery lists every photo.
+
 ## Out of scope
 
 Cover photos, video, nested comments, mentions, hashtags, shares, stories, post search, PT-to-PT features, signed-out profiles, e2e tests.

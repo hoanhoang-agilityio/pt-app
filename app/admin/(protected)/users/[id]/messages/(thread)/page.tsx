@@ -87,10 +87,7 @@ const AdminMessagesPage = async ({
   if (!conversation) {
     return (
       <>
-        <AppHeader
-          title={t("threadTitle", { name: user.name })}
-          backHref={ROUTES.ADMIN_MESSAGES}
-        />
+        <AppHeader title={user.name} backHref={ROUTES.ADMIN_MESSAGES} />
         {below}
         <main className={`${PAGE_CONTAINER} pt-10`}>
           <p className="px-6 text-center text-sm text-muted">

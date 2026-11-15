@@ -224,9 +224,6 @@
       "green": "Xanh lá"
     }
   },
-  "adminChatThread": {
-    "title": "Nhắn tin với {name}"
-  },
   "adminInbox": {
     "passcodeRequired": "Hãy đặt mã khoá trước khi ẩn học viên.",
     "hiddenToast": "Đã ẩn {count, plural, other {# học viên}}",

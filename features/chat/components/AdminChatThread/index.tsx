@@ -1,6 +1,5 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { ROUTES } from "@/constants/routes";
@@ -44,8 +43,6 @@ export const AdminChatThread = ({
   below,
   ...thread
 }: AdminChatThreadProps) => {
-  const t = useTranslations("chat.adminChatThread");
-
   return (
     <ChatThread
       {...thread}
@@ -61,7 +58,6 @@ export const AdminChatThread = ({
           <>
             <ChatHeader
               name={name}
-              title={t("title", { name })}
               backHref={ROUTES.ADMIN_MESSAGES}
               presence={presence}
               avatarSrc={peerAvatar}

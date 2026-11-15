@@ -169,6 +169,7 @@ describe("trainee replies to an admin post", () => {
       authorAvatarUrl: null,
       caption: "Squat 3x10",
       photo: null,
+      photoCount: 0,
     });
     expect(await storedPostId(sent.message.id)).toBe(postId);
 
@@ -213,6 +214,7 @@ describe("trainee replies to an admin post", () => {
     expect(sent.status === "success" && sent.message.post).toMatchObject({
       available: true,
       photo: { url: `/api/social/photos/${photo.id}`, width: 800, height: 600 },
+      photoCount: 1,
     });
   });
 
@@ -321,6 +323,7 @@ describe("admin replies to the trainee's post", () => {
       authorAvatarUrl: null,
       caption: "PR mới!",
       photo: null,
+      photoCount: 0,
     };
 
     expect(sent.message.post).toEqual(expected);

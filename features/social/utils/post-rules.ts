@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   BIO_MAX_LENGTH,
   CAPTION_MAX_LENGTH,
+  MAX_POST_PHOTOS,
   POST_PRIVACIES,
   POSTS_PREFETCH_AT,
   SOCIAL_MESSAGES,
@@ -26,11 +27,31 @@ export const bioSchema = z
 
 const idSchema = z.number().int().positive();
 
+export { MAX_POST_PHOTOS };
+
+// Ids of the uploaded photos of a post, in display order (the first is the
+// cover): 0..MAX_POST_PHOTOS, each id once.
+export const photoIdsSchema = z
+  .array(idSchema)
+  .max(MAX_POST_PHOTOS, SOCIAL_MESSAGES.TOO_MANY_PHOTOS)
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: SOCIAL_MESSAGES.PHOTO_NOT_FOUND,
+  });
+
 export const createPostSchema = z.object({
   caption: captionSchema,
   privacy: privacySchema,
-  photoId: idSchema.nullable(),
+  photoIds: photoIdsSchema,
 });
+
+// How many of `picked` new photos fit next to `current` ones, and how many do
+// not (the composer keeps the first ones and says so).
+export const photoSlots = (current: number, picked: number) => {
+  const free = Math.max(0, MAX_POST_PHOTOS - current);
+  const accepted = Math.min(free, Math.max(0, picked));
+
+  return { accepted, dropped: Math.max(0, picked) - accepted };
+};
 
 export const editPostSchema = z.object({
   postId: idSchema,

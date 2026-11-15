@@ -10,6 +10,8 @@ export type DmReplyPostView =
       // The full caption; the compact composer bar clamps it with CSS.
       caption: string;
       photo: { url: string; width: number; height: number } | null;
+      // Photos of the post; the quote shows the first one and "+N" for the rest.
+      photoCount: number;
     };
 
 export interface DmMessageView {

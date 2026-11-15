@@ -11,10 +11,11 @@ import {
   canDeletePost,
   canEditPost,
   isPostEmpty,
+  MAX_POST_PHOTOS,
 } from "@/features/social/utils/post-rules";
 
 export type PostMutationError =
-  "empty" | "not_found" | "forbidden" | "photo_not_found";
+  "empty" | "not_found" | "forbidden" | "photo_not_found" | "too_many_photos";
 
 type Outcome<T = object> =
   ({ ok: true } & T) | { ok: false; error: PostMutationError };
@@ -23,13 +24,19 @@ const failure = (error: PostMutationError) => ({ ok: false as const, error });
 
 export const createPost = async (
   actor: SocialActor,
-  input: { caption: string; privacy: PostPrivacy; photoId: number | null },
+  input: { caption: string; privacy: PostPrivacy; photoIds: number[] },
   now = new Date(),
 ): Promise<Outcome<{ postId: number }>> => {
   const caption = input.caption.trim();
 
-  if (isPostEmpty(caption, input.photoId !== null)) {
+  if (isPostEmpty(caption, input.photoIds.length > 0)) {
     return failure("empty");
+  }
+  if (input.photoIds.length > MAX_POST_PHOTOS) {
+    return failure("too_many_photos");
+  }
+  if (new Set(input.photoIds).size !== input.photoIds.length) {
+    return failure("photo_not_found");
   }
   try {
     const postId = await db.transaction(async (tx) => {
@@ -45,14 +52,15 @@ export const createPost = async (
         })
         .returning({ id: socialPosts.id });
 
-      if (input.photoId !== null) {
-        // Only the uploader's own pending photo can be attached, once.
+      // Only the uploader's own pending photos can be attached, once each; the
+      // array order is the display order and the first one is the cover.
+      for (const [position, photoId] of input.photoIds.entries()) {
         const attached = await tx
           .update(socialPostPhotos)
-          .set({ postId: post.id })
+          .set({ postId: post.id, position })
           .where(
             and(
-              eq(socialPostPhotos.id, input.photoId),
+              eq(socialPostPhotos.id, photoId),
               eq(socialPostPhotos.uploaderKey, uploaderKeyOf(actor)),
               isNull(socialPostPhotos.postId),
             ),
@@ -62,9 +70,11 @@ export const createPost = async (
         if (attached.length === 0) {
           throw new PhotoNotFoundError();
         }
+      }
+      if (input.photoIds.length > 0) {
         await tx
           .update(socialPosts)
-          .set({ photoId: input.photoId })
+          .set({ photoId: input.photoIds[0] })
           .where(eq(socialPosts.id, post.id));
       }
       if (actor.kind === "user") {

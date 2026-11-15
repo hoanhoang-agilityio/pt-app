@@ -224,9 +224,6 @@
       "green": "绿色"
     }
   },
-  "adminChatThread": {
-    "title": "与 {name} 聊天"
-  },
   "adminInbox": {
     "passcodeRequired": "隐藏学员前请先设置密码锁。",
     "hiddenToast": "已隐藏 {count, plural, other {# 位学员}}",

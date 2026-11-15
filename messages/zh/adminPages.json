@@ -85,7 +85,6 @@
   },
   "messages": {
     "metaTitle": "私信",
-    "threadTitle": "与 {name} 的私信",
     "threadAriaLabel": "与 {name} 的会话",
     "emptyText": "与该学员暂无消息",
     "lockedEmptyText": "聊天已被锁定且暂无消息。重新开启后即可发送消息。"

@@ -224,9 +224,6 @@
       "green": "Green"
     }
   },
-  "adminChatThread": {
-    "title": "Chat with {name}"
-  },
   "adminInbox": {
     "passcodeRequired": "Set a passcode before hiding trainees.",
     "hiddenToast": "{count, plural, one {# trainee hidden} other {# trainees hidden}}",

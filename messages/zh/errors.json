@@ -301,6 +301,7 @@
   },
   "theme": {
     "INVALID_COLOR": "颜色无效",
-    "INVALID_SCOPE": "范围无效"
+    "INVALID_SCOPE": "范围无效",
+    "LOCKED": "管理员已锁定应用主题色的修改"
   }
 }

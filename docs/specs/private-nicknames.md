@@ -4,6 +4,8 @@ Replaces the shared per-conversation nicknames of KAN-141 (`docs/specs/chat-ux-v
 
 Source: Hoan's request for Zalo-style nicknames. Example: the super admin chats with trainee A; A renames the super admin in A's view. Only A sees that name; the super admin still sees their own real name, and everybody else still sees the real name. It works the other way round too: an admin can nickname a trainee privately.
 
+> Note: INSIDE chat this spec is superseded by `docs/specs/messenger-nicknames.md` (shared, per-conversation nicknames in `chat_nicknames` again, no private aliases in chat). Everything outside chat below still applies.
+
 ## Decisions
 
 - P1. A nickname (alias) belongs to ONE person, the owner, and is only ever shown to the owner. Nobody else can read it, not the person it names, not another admin, not the super admin. Replaces KAN-141 D1 ("visible to both sides"); the shared behaviour is gone.

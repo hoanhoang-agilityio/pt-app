@@ -70,6 +70,9 @@ export const users = sqliteTable(
     // Preferred UI language (i18n): "vi" or "en", validated on write. Nullable
     // on purpose (null = not chosen, use the device cookie or the default).
     locale: text("locale"),
+    // The trainee's own app primary color, normalized "#rrggbb" (accent-color
+    // spec). Null = none picked. Kept while the trainee lock is on.
+    accentColor: text("accent_color"),
     // Lower-cased, whitespace-collapsed name used for login lookups.
     nameKey: text("name_key").notNull().unique(),
     // The trainee's meal plan request (KAN-69, Q1): meals per day (2-6) and
@@ -631,10 +634,13 @@ export const chatMessageEdits = sqliteTable(
   (table) => [index("chat_message_edits_message_id").on(table.messageId)],
 );
 
-// Legacy (KAN-141): shared nicknames per conversation, replaced by the private
-// contact_aliases. App code no longer reads or writes it; the setup script
-// copies its rows into contactAliases once. A member's removal still clears
-// the rows of their conversation.
+// Shared nicknames per conversation, Messenger style (KAN-141, live again, see
+// docs/specs/messenger-nicknames.md). Anyone in the conversation may set or
+// clear the nickname of anyone in it; every member sees it. target_key is
+// "user" (the trainee), "pt" (the PT side as a whole) or "admin:<id>";
+// set_by_key is who last set it ("user" or "admin:<id>"). A cleared nickname
+// deletes the row. Private contact_aliases are separate and used outside chat
+// only. A member's removal clears the rows of their conversation.
 export const chatNicknames = sqliteTable(
   "chat_nicknames",
   {
@@ -1177,6 +1183,20 @@ export const themeSettings = sqliteTable("theme_settings", {
   scope: text("scope", { enum: ["all", "trainee", "pt"] }).primaryKey(),
   // Normalized "#rrggbb".
   accent: text("accent").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedByAdminId: integer("updated_by_admin_id").references(() => admins.id, {
+    onDelete: "set null",
+  }),
+});
+
+// Super admin switches that stop a role from picking a personal app color
+// (accent-color spec, D12). One row per role; no row = unlocked. A lock hides
+// the picker and ignores the stored personal colors (they are kept).
+export const themeLocks = sqliteTable("theme_locks", {
+  scope: text("scope", { enum: ["trainee", "pt"] }).primaryKey(),
+  locked: integer("locked", { mode: "boolean" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

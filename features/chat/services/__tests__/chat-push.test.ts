@@ -5,6 +5,7 @@ import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
 import {
   adminHiddenUsers,
   admins,
+  chatNicknames,
   contactAliases,
   pushSubscriptions,
   users,
@@ -165,50 +166,40 @@ describe("sendChatPush", () => {
     expect(sender.mock.calls[0][1].body).toBe("Mai tập ngực");
   });
 
-  it("titles each push with the RECIPIENT's own nickname for the sender", async () => {
-    const addAdmin = async (username: string) =>
-      (
-        await db
-          .insert(admins)
-          .values({
-            username,
-            usernameKey: `${username}-nick`,
-            passwordHash: "x",
-            role: "super_admin",
-          })
-          .returning({ id: admins.id })
-      )[0].id;
-    const hoan = await addAdmin("Hoan");
-    const minh = await addAdmin("Minh");
-    const alias = (ownerKey: string, targetKey: string, value: string) => ({
-      ownerKey,
+  it("titles pushes with the conversation's shared nicknames when set", async () => {
+    const [admin] = await db
+      .insert(admins)
+      .values({
+        username: "Hoan",
+        usernameKey: "hoan-nick",
+        passwordHash: "x",
+        role: "super_admin",
+      })
+      .returning({ id: admins.id });
+    const nickRow = (targetKey: string, nickname: string) => ({
+      conversationId: 3,
       targetKey,
-      alias: value,
+      nickname,
+      setByKey: "user",
       updatedAt: new Date(),
     });
 
     await db
-      .insert(contactAliases)
-      .values([
-        alias(`admin:${hoan}`, `user:${traineeId}`, "Lan béo"),
-        alias(`user:${traineeId}`, "pt", "Thầy"),
-      ]);
+      .insert(chatNicknames)
+      .values([nickRow("user", "Lan béo"), nickRow("pt", "Thầy")]);
+    // A private alias of a recipient never reaches the title inside chat.
+    await db.insert(contactAliases).values({
+      ownerKey: `admin:${admin.id}`,
+      targetKey: `user:${traineeId}`,
+      alias: "Riêng",
+      updatedAt: new Date(),
+    });
     await addSub(`user:${traineeId}`, "t");
-    await addSub(`admin:${hoan}`, "hoan");
-    await addSub(`admin:${minh}`, "minh");
+    await addSub(`admin:${admin.id}`, "a");
     const sender = vi.fn<
       import("@/features/chat/services/chat-push").PushSender
     >(async () => undefined);
-    const titles = () =>
-      Object.fromEntries(
-        sender.mock.calls.map((call) => [
-          call[0].endpoint.replace("https://push.example/", ""),
-          call[1].title,
-        ]),
-      );
 
-    // Trainee writes: Hoan sees his nickname, Minh (who set none) the real
-    // name; the nickname is not leaked to him.
     await push.sendChatPush(
       {
         senderRole: "user",
@@ -218,41 +209,59 @@ describe("sendChatPush", () => {
       },
       sender,
     );
-    expect(titles()).toEqual({ hoan: "Lan béo", minh: "Lan" });
-
-    // Admin writes: the trainee's nickname for the PT side applies.
-    sender.mockClear();
     await push.sendChatPush(
       {
         senderRole: "admin",
-        senderAdminId: hoan,
+        senderAdminId: admin.id,
         traineeUserId: traineeId,
         conversationId: 3,
         body: "hi",
       },
       sender,
     );
-    expect(titles()).toEqual({ t: "Thầy" });
+    expect(sender.mock.calls.map((call) => call[1].title)).toEqual([
+      "Lan béo",
+      "Thầy",
+    ]);
 
     // A nickname for that very admin wins over the PT-side one.
     await db
-      .insert(contactAliases)
-      .values(alias(`user:${traineeId}`, `admin:${hoan}`, "Coach Hoan"));
-    sender.mockClear();
+      .insert(chatNicknames)
+      .values(nickRow(`admin:${admin.id}`, "Coach Hoan"));
     await push.sendChatPush(
       {
         senderRole: "admin",
-        senderAdminId: hoan,
+        senderAdminId: admin.id,
         traineeUserId: traineeId,
         conversationId: 3,
         body: "hi",
       },
       sender,
     );
-    expect(titles()).toEqual({ t: "Coach Hoan" });
+    expect(sender.mock.calls[2][1].title).toBe("Coach Hoan");
   });
 
-  it("ignores nicknames other people set for the sender", async () => {
+  it("ignores nicknames of another conversation", async () => {
+    await db.insert(chatNicknames).values({
+      conversationId: 99,
+      targetKey: "user",
+      nickname: "Other",
+      setByKey: "user",
+      updatedAt: new Date(),
+    });
+    await addSub("admin:1", "a1");
+    const sender = vi.fn<
+      import("@/features/chat/services/chat-push").PushSender
+    >(async () => undefined);
+
+    await push.sendChatPush(
+      { senderRole: "user", traineeUserId: traineeId, conversationId: 3 },
+      sender,
+    );
+    expect(sender.mock.calls[0][1].title).toBe("Lan");
+  });
+
+  it("ignores private aliases other people set for the sender", async () => {
     await db.insert(contactAliases).values({
       ownerKey: "admin:2",
       targetKey: `user:${traineeId}`,

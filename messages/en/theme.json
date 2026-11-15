@@ -55,5 +55,17 @@
     "saved": "Primary color saved",
     "resetDone": "Default color restored",
     "failed": "Could not save. Try again later."
+  },
+  "locks": {
+    "title": "Allow color changes",
+    "trainee": "Lock color changes for trainees",
+    "traineeHint": "Trainees can no longer pick their own app color; they get the trainee color or the one for everyone.",
+    "pt": "Lock color changes for PTs",
+    "ptHint": "PTs can no longer pick their own app color; they get the PT color or the one for everyone.",
+    "lockedDone": "Color changes locked",
+    "unlockedDone": "Color changes unlocked"
+  },
+  "personal": {
+    "description": "Pick the app primary color just for you: buttons, the active tab and highlights. Only you see this color. The app works out the dark mode color for you."
   }
 }

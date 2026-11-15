@@ -301,6 +301,7 @@
   },
   "theme": {
     "INVALID_COLOR": "Invalid color",
-    "INVALID_SCOPE": "Invalid scope"
+    "INVALID_SCOPE": "Invalid scope",
+    "LOCKED": "The administrator has locked changing the app color"
   }
 }

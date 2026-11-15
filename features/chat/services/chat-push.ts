@@ -8,9 +8,13 @@ import { db } from "@/db";
 import {
   adminHiddenUsers,
   admins as adminsTable,
+  chatNicknames,
   pushSubscriptions,
   users,
 } from "@/db/schema";
+import { parseAdminTarget } from "@/features/chat/utils/chat-rules";
+import { adminLabel } from "@/features/chat/utils/chat-settings";
+import { displayNameFor } from "@/features/chat/utils/display-name";
 import {
   ADMIN_OWNER_PREFIX,
   adminOwnerKey,
@@ -21,15 +25,6 @@ import {
   type PushSubscriptionInput,
   userOwnerKey,
 } from "@/features/chat/utils/push-rules";
-import {
-  loadAliases,
-  loadAliasesForOwners,
-} from "@/features/contact-aliases/services/contact-aliases";
-import {
-  adminActorKey,
-  PT_ALIAS_TARGET,
-  userActorKey,
-} from "@/features/contact-aliases/utils/alias-rules";
 import { getPushTranslator } from "@/i18n/push-translator";
 import { isUserInAdminScope, toAdminRole } from "@/services/admin-scope";
 import { getVapidConfig } from "@/services/env";
@@ -192,6 +187,19 @@ const loadTargets = async (
   );
 };
 
+// The conversation's shared nicknames, by "user" / "pt" / "admin:<id>".
+const loadNicknames = async (conversationId: number) => {
+  const rows = await db
+    .select({
+      targetKey: chatNicknames.targetKey,
+      nickname: chatNicknames.nickname,
+    })
+    .from(chatNicknames)
+    .where(eq(chatNicknames.conversationId, conversationId));
+
+  return Object.fromEntries(rows.map((row) => [row.targetKey, row.nickname]));
+};
+
 const ownerIdOf = (ownerKey: string, prefix: string) =>
   ownerKey.startsWith(prefix) ? Number(ownerKey.slice(prefix.length)) : NaN;
 
@@ -318,21 +326,12 @@ export const sendChatPush = async (
       return;
     }
     const recipientRole = senderRole === "user" ? "admin" : "user";
-    // The title names the sender the way each RECIPIENT calls them: their own
-    // private nickname when they set one, else the real name. Nobody else's
-    // nickname is ever used, so the devices are grouped by that name.
-    const senderKeys =
-      recipientRole === "admin"
-        ? [userActorKey(traineeUserId)]
-        : [
-            ...(senderAdminId != null ? [adminActorKey(senderAdminId)] : []),
-            PT_ALIAS_TARGET,
-          ];
-    const aliasesByOwner = await loadAliasesForOwners(
-      targets.map((target) => target.ownerKey),
-      senderKeys,
-    );
-    let realName: string | null = null;
+    // The title uses the conversation's shared nickname for the sender when
+    // one is set, else the real name, as the chat itself does. A private
+    // contact alias is never used inside chat.
+    const nicknames = await loadNicknames(conversationId);
+    let traineeName: string | null = null;
+    let senderName = "PT";
 
     if (recipientRole === "admin") {
       const [trainee] = await db
@@ -340,51 +339,44 @@ export const sendChatPush = async (
         .from(users)
         .where(eq(users.id, traineeUserId));
 
-      realName = trainee?.name ?? null;
+      traineeName = trainee?.name ?? null;
     } else if (senderAdminId != null) {
       const [admin] = await db
         .select({ username: adminsTable.username })
         .from(adminsTable)
         .where(eq(adminsTable.id, senderAdminId));
 
-      realName = admin?.username ?? null;
+      senderName = adminLabel(
+        nicknames,
+        senderAdminId,
+        admin?.username ?? "PT",
+        "pt",
+      );
     }
-    const groups = new Map<string, StoredSubscription[]>();
 
-    for (const target of targets) {
-      const aliases = aliasesByOwner.get(target.ownerKey);
-      const alias = senderKeys
-        .map((key) => aliases?.get(key)?.trim())
-        .find(Boolean);
-      const group = alias ?? "";
-
-      groups.set(group, [...(groups.get(group) ?? []), target]);
-    }
-    await Promise.all(
-      [...groups].map(([alias, group]) =>
-        deliverLocalized(
-          group,
-          (locale) =>
-            buildChatPushPayload({
-              recipientRole,
-              senderName:
-                alias ||
-                realName ||
-                (recipientRole === "admin"
-                  ? getPushTranslator(locale)("traineeFallback")
-                  : "PT"),
-              traineeUserId,
-              conversationId,
-              body,
-              sticker,
-              photo,
-              photoCount,
-              locale,
-            }),
-          vapid,
-          sender,
-        ),
-      ),
+    await deliverLocalized(
+      targets,
+      (locale) =>
+        buildChatPushPayload({
+          recipientRole,
+          senderName:
+            recipientRole === "admin"
+              ? displayNameFor(
+                  nicknames,
+                  "user",
+                  traineeName ?? getPushTranslator(locale)("traineeFallback"),
+                )
+              : senderName,
+          traineeUserId,
+          conversationId,
+          body,
+          sticker,
+          photo,
+          photoCount,
+          locale,
+        }),
+      vapid,
+      sender,
     );
   } catch (error) {
     logServerError("sendChatPush", error, { conversationId });
@@ -396,8 +388,8 @@ export interface SendReactionPushInput {
   recipient:
     { role: "user"; userId: number } | { role: "admin"; adminId: number };
   reactorName: string;
-  // The reactor's account key ("user:<id>" / "admin:<id>"): the recipient's
-  // own nickname for them, if any, replaces `reactorName`.
+  // The reactor's chat key ("user" / "admin:<id>"): the conversation's shared
+  // nickname for them, if any, replaces `reactorName`.
   reactorKey?: string;
   emoji: string;
   traineeUserId: number;
@@ -445,24 +437,19 @@ export const sendReactionPush = async (
     if (targets.length === 0) {
       return;
     }
-    // The recipient's private nickname for the reactor (a trainee also has
-    // one for the whole PT side), never anybody else's.
-    const recipientKey =
-      recipient.role === "user"
-        ? userActorKey(recipient.userId)
-        : adminActorKey(recipient.adminId);
-    const aliasKeys = reactorKey
-      ? [
-          reactorKey,
-          ...(recipient.role === "user" && reactorKey.startsWith("admin:")
-            ? [PT_ALIAS_TARGET]
-            : []),
-        ]
-      : [];
-    const aliases = await loadAliases(recipientKey, aliasKeys);
+    // The conversation's shared nickname for the reactor (a trainee also
+    // sees the one for the whole PT side), never a private alias.
+    const nicknames = await loadNicknames(conversationId);
+    const adminId = reactorKey ? parseAdminTarget(reactorKey) : null;
     const shownName =
-      aliasKeys.map((key) => aliases.get(key)?.trim()).find(Boolean) ??
-      reactorName;
+      !reactorKey || reactorKey.startsWith("admin:")
+        ? adminLabel(
+            nicknames,
+            adminId,
+            reactorName,
+            recipient.role === "user" ? "pt" : undefined,
+          )
+        : displayNameFor(nicknames, reactorKey, reactorName);
 
     await deliverLocalized(
       targets,

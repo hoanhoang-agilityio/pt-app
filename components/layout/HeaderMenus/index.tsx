@@ -98,7 +98,8 @@ interface HeaderMenusProps {
   // the online status is switched off.
   accountColor?: ChatColorKey | null;
   isPresenceHidden?: boolean;
-  // Super admin only: shows the "Màu chủ đạo của app" entry.
+  // Shows the "Màu chủ đạo của app" entry: false while the super admin has
+  // locked color changes for this role.
   canPickAppColor?: boolean;
 }
 
@@ -433,6 +434,21 @@ export const HeaderMenus = ({
               </div>
               <hr className="my-1 border-line" />
               <PushToggle role={role} itemClassName={ITEM} />
+              {canPickAppColor && (
+                <Link
+                  href={
+                    role === "admin"
+                      ? ROUTES.ADMIN_THEME
+                      : ROUTES.SETTINGS_THEME
+                  }
+                  role="menuitem"
+                  className={ITEM}
+                  onClick={() => setOpenMenu(null)}
+                >
+                  <Paintbrush className="size-5 text-muted" aria-hidden />
+                  {t("appColor")}
+                </Link>
+              )}
               {role === "admin" && (
                 <>
                   <button
@@ -447,17 +463,6 @@ export const HeaderMenus = ({
                     <Palette className="size-5 text-muted" aria-hidden />
                     {t("accountColor")}
                   </button>
-                  {canPickAppColor && (
-                    <Link
-                      href={ROUTES.ADMIN_THEME}
-                      role="menuitem"
-                      className={ITEM}
-                      onClick={() => setOpenMenu(null)}
-                    >
-                      <Paintbrush className="size-5 text-muted" aria-hidden />
-                      {t("appColor")}
-                    </Link>
-                  )}
                   <button
                     type="button"
                     role="menuitemcheckbox"

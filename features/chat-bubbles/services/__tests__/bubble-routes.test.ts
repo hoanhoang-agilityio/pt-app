@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
-import { admins, contactAliases, users } from "@/db/schema";
+import { admins, chatNicknames, contactAliases, users } from "@/db/schema";
 
 const state = vi.hoisted(() => ({
   db: null as unknown,
@@ -116,7 +116,7 @@ describe("GET /api/chat/bubbles (trainee)", () => {
     ]);
   });
 
-  it("uses the trainee's private nickname for the PT", async () => {
+  it("uses the conversation's shared nickname for the PT, not a private alias", async () => {
     const conversation = await q.getOrCreateConversation(userId);
 
     await q.insertMessage({
@@ -126,10 +126,17 @@ describe("GET /api/chat/bubbles (trainee)", () => {
       body: "chào",
       clientId: "00000000-0000-4000-8000-000000000001",
     });
+    await db.insert(chatNicknames).values({
+      conversationId: conversation.id,
+      targetKey: "pt",
+      nickname: "Thầy Hoan",
+      setByKey: "admin:1",
+      updatedAt: new Date(),
+    });
     await db.insert(contactAliases).values({
       ownerKey: `user:${userId}`,
       targetKey: "pt",
-      alias: "Thầy Hoan",
+      alias: "Riêng",
       updatedAt: new Date(),
     });
     const body = await (await route.GET(get("/api/chat/bubbles"))).json();
@@ -197,11 +204,20 @@ describe("GET /api/chat/bubbles?as=admin", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns the alias name and links per allowed trainee", async () => {
+  it("returns the shared nickname (not a private alias) and links per allowed trainee", async () => {
+    const conversation = await q.getOrCreateConversation(userId);
+
+    await db.insert(chatNicknames).values({
+      conversationId: conversation.id,
+      targetKey: "user",
+      nickname: "Bé An",
+      setByKey: "user",
+      updatedAt: new Date(),
+    });
     await db.insert(contactAliases).values({
       ownerKey: `admin:${adminId}`,
       targetKey: `user:${userId}`,
-      alias: "Bé An",
+      alias: "Riêng",
       updatedAt: new Date(),
     });
     const body = await (

@@ -2,12 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   ALIAS_MAX_LENGTH,
-  aliasesToConversationNicknames,
   aliasValueSchema,
   canSaveAlias,
   checkAliasTarget,
-  conversationKeyToTarget,
-  mapLegacyNickname,
   overlayName,
   parseActorRef,
   setAliasInputSchema,
@@ -153,122 +150,5 @@ describe("overlayName", () => {
     expect(overlayName(aliases, "user:3", "Lan")).toBe("Lan");
     expect(overlayName(null, "user:2", "Na")).toBe("Na");
     expect(overlayName(undefined, "user:2", "Na")).toBe("Na");
-  });
-});
-
-describe("aliasesToConversationNicknames", () => {
-  const aliases = new Map([
-    ["user:5", "Bé Na"],
-    ["pt", "Thầy"],
-    ["admin:2", "Thầy Hai"],
-    ["user:9", "Someone else's trainee"],
-    ["admin:1", "Myself"],
-  ]);
-
-  it("translates the viewer's aliases into the conversation's keys", () => {
-    expect(
-      aliasesToConversationNicknames(aliases, {
-        viewerKey: "admin:3",
-        traineeUserId: 5,
-      }),
-    ).toEqual({
-      user: "Bé Na",
-      pt: "Thầy",
-      "admin:2": "Thầy Hai",
-      "admin:1": "Myself",
-    });
-  });
-
-  it("never aliases the viewer themselves", () => {
-    expect(
-      aliasesToConversationNicknames(aliases, {
-        viewerKey: "admin:1",
-        traineeUserId: 5,
-      }),
-    ).not.toHaveProperty("admin:1");
-    expect(
-      aliasesToConversationNicknames(aliases, {
-        viewerKey: "user:5",
-        traineeUserId: 5,
-      }),
-    ).not.toHaveProperty("user");
-  });
-
-  it("drops other trainees and blank aliases", () => {
-    const result = aliasesToConversationNicknames(
-      new Map([
-        ["user:9", "x"],
-        ["admin:2", "  "],
-      ]),
-      { viewerKey: "user:5", traineeUserId: 5 },
-    );
-
-    expect(result).toEqual({});
-  });
-});
-
-describe("conversationKeyToTarget", () => {
-  it("maps the conversation's trainee key to the global key", () => {
-    expect(conversationKeyToTarget("user", 8)).toBe("user:8");
-    expect(conversationKeyToTarget("pt", 8)).toBe("pt");
-    expect(conversationKeyToTarget("admin:2", 8)).toBe("admin:2");
-  });
-});
-
-describe("mapLegacyNickname (KAN-141 -> private aliases)", () => {
-  const row = (
-    targetKey: string,
-    setByKey: string,
-    nickname = "Biệt danh",
-    conversationUserId = 7,
-  ) => ({ targetKey, setByKey, nickname, conversationUserId });
-
-  it("makes the trainee's nickname for the PT side theirs", () => {
-    expect(mapLegacyNickname(row("pt", "user"))).toEqual({
-      ownerKey: "user:7",
-      targetKey: "pt",
-      alias: "Biệt danh",
-    });
-  });
-
-  it("maps 'user' to the conversation's trainee on either end", () => {
-    expect(mapLegacyNickname(row("user", "admin:2"))).toEqual({
-      ownerKey: "admin:2",
-      targetKey: "user:7",
-      alias: "Biệt danh",
-    });
-    expect(mapLegacyNickname(row("admin:2", "user"))).toEqual({
-      ownerKey: "user:7",
-      targetKey: "admin:2",
-      alias: "Biệt danh",
-    });
-  });
-
-  it("keeps admin-to-admin nicknames", () => {
-    expect(mapLegacyNickname(row("admin:3", "admin:2"))).toEqual({
-      ownerKey: "admin:2",
-      targetKey: "admin:3",
-      alias: "Biệt danh",
-    });
-  });
-
-  it("skips people who named themselves", () => {
-    expect(mapLegacyNickname(row("user", "user"))).toBeNull();
-    expect(mapLegacyNickname(row("admin:2", "admin:2"))).toBeNull();
-  });
-
-  it("skips what cannot be a private alias", () => {
-    // An admin naming the PT side as a whole has no meaning.
-    expect(mapLegacyNickname(row("pt", "admin:2"))).toBeNull();
-    expect(mapLegacyNickname(row("everyone", "user"))).toBeNull();
-    expect(mapLegacyNickname(row("user", "nobody"))).toBeNull();
-    expect(mapLegacyNickname(row("pt", "user", "   "))).toBeNull();
-    expect(mapLegacyNickname(row("pt", "user", "x".repeat(31)))).toBeNull();
-  });
-
-  it("normalises the stored value", () => {
-    expect(mapLegacyNickname(row("pt", "user", "  Big   Coach "))?.alias).toBe(
-      "Big Coach",
-    );
   });
 });

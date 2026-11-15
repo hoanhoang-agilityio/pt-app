@@ -16,7 +16,6 @@ import {
 import { chatPaths } from "@/features/chat/utils/chat-links";
 import { pickCoachAvatar } from "@/features/chat/utils/chat-thread-rules";
 import { INFO_PREVIEW_COUNT } from "@/features/chat/utils/gallery-rules";
-import { userActorKey } from "@/features/contact-aliases/utils/alias-rules";
 import { requireUser } from "@/services/auth-guard";
 
 export const generateMetadata = async (): Promise<Metadata> => {
@@ -33,9 +32,7 @@ const MessagesInfoPage = async () => {
   const locale = await getLocale();
   const conversation = await findConversationByUserId(user.id);
   const [profile, sender, adminAvatars, gallery] = await Promise.all([
-    conversation
-      ? loadChatProfile(conversation.id, userActorKey(user.id))
-      : EMPTY_CHAT_PROFILE,
+    conversation ? loadChatProfile(conversation.id) : EMPTY_CHAT_PROFILE,
     conversation ? findLatestAdminSender(conversation.id) : null,
     listAdminAvatarUrls(),
     conversation
@@ -52,6 +49,7 @@ const MessagesInfoPage = async () => {
       userId={user.id}
       conversationId={conversation?.id ?? null}
       peerName={sender?.name ?? t("fallbackPeer")}
+      selfName={user.name}
       initialProfile={profile}
       chatEnabled={isChatEnabled(user)}
       peerAvatarUrl={pickCoachAvatar(

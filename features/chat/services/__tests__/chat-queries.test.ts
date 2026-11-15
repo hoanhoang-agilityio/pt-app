@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
-import { admins, contactAliases, users } from "@/db/schema";
+import { admins, chatNicknames, contactAliases, users } from "@/db/schema";
 
 const state = vi.hoisted(() => ({ db: null as unknown }));
 
@@ -263,7 +263,7 @@ describe("listAdminInbox", () => {
     expect(inbox.withoutConversation[0].lastSeenAt).toEqual(seen);
   });
 
-  it("shows the trainee nickname as displayName, real name as fallback", async () => {
+  it("shows the conversation's shared nickname as displayName (to every admin), real name as fallback", async () => {
     const anId = await addUser("An");
     const binhId = await addUser("Binh");
     const an = await q.getOrCreateConversation(anId);
@@ -272,29 +272,38 @@ describe("listAdminInbox", () => {
 
     await send(an.id, "user", "hi");
     await send(binh.id, "user", "hi");
-    await db.insert(contactAliases).values([
+    await db.insert(chatNicknames).values([
       {
-        ownerKey: "admin:1",
-        targetKey: `user:${anId}`,
-        alias: "Bé Na",
+        conversationId: an.id,
+        targetKey: "user",
+        nickname: "Bé Na",
+        setByKey: "admin:2",
         updatedAt,
       },
-      // Another admin's nickname, the trainee's own "pt" nickname and a blank
-      // one never become the name this admin sees.
+      // The PT-side nickname and one for another conversation never become
+      // the trainee's name.
       {
-        ownerKey: "admin:2",
-        targetKey: `user:${binhId}`,
-        alias: "Của admin 2",
+        conversationId: an.id,
+        targetKey: "pt",
+        nickname: "Thầy",
+        setByKey: "user",
         updatedAt,
       },
-      { ownerKey: `user:${anId}`, targetKey: "pt", alias: "Thầy", updatedAt },
       {
-        ownerKey: "admin:1",
-        targetKey: `user:${binhId}`,
-        alias: "   ",
+        conversationId: 999,
+        targetKey: "user",
+        nickname: "Của chỗ khác",
+        setByKey: "admin:1",
         updatedAt,
       },
     ]);
+    // A private alias is not used inside chat: the inbox ignores it.
+    await db.insert(contactAliases).values({
+      ownerKey: "admin:1",
+      targetKey: `user:${binhId}`,
+      alias: "Riêng của admin 1",
+      updatedAt,
+    });
     const { conversations } = await q.listAdminInbox(1);
     const byId = new Map(conversations.map((c) => [c.conversationId, c]));
 
@@ -306,6 +315,12 @@ describe("listAdminInbox", () => {
       displayName: "Binh",
       userName: "Binh",
     });
+    // Another admin sees the same shared nickname.
+    expect(
+      (await q.listAdminInbox(2)).conversations.find(
+        (c) => c.conversationId === an.id,
+      )?.displayName,
+    ).toBe("Bé Na");
   });
 
   it("flags a last message sent by an admin", async () => {
@@ -323,7 +338,7 @@ describe("listAdminInbox", () => {
 });
 
 describe("getTraineeDisplayName", () => {
-  it("returns this admin's own nickname for the trainee, else the real name", async () => {
+  it("returns this admin's private alias for the trainee (outside chat), else the real name", async () => {
     const anId = await addUser("An");
     const binhId = await addUser("Bình");
 

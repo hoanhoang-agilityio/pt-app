@@ -5,6 +5,7 @@ import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
 import {
   adminHiddenUsers,
   admins,
+  chatNicknames,
   contactAliases,
   loginAttempts,
   pushSubscriptions,
@@ -245,22 +246,23 @@ describe("revealHiddenUsers", () => {
     expect(result.users.map((u) => u.userName)).toEqual(["An", "Binh"]);
   });
 
-  it("shows this admin's own nickname of a hidden trainee, else the real name", async () => {
+  it("shows the shared nickname of a hidden trainee, not a private alias, else the real name", async () => {
     const nick = await addTrainee("Binh");
     const plain = await addTrainee("An");
 
+    await db.insert(chatNicknames).values({
+      conversationId: nick.conversationId,
+      targetKey: "user",
+      nickname: "Bé Bình",
+      setByKey: "user",
+      updatedAt: new Date(),
+    });
+    // A private alias is not used inside chat.
     await db.insert(contactAliases).values([
       {
         ownerKey: "admin:1",
-        targetKey: `user:${nick.userId}`,
-        alias: "Bé Bình",
-        updatedAt: new Date(),
-      },
-      // Another admin's nickname is never shown to admin 1.
-      {
-        ownerKey: "admin:2",
         targetKey: `user:${plain.userId}`,
-        alias: "Của admin 2",
+        alias: "Riêng của admin 1",
         updatedAt: new Date(),
       },
     ]);

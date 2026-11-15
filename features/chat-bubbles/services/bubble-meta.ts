@@ -21,10 +21,6 @@ import {
   bubbleHrefs,
   bubbleKeyFor,
 } from "@/features/chat-bubbles/utils/bubble-links";
-import {
-  adminActorKey,
-  userActorKey,
-} from "@/features/contact-aliases/utils/alias-rules";
 import { canAdminAccessUser } from "@/services/hidden-users";
 import { findUserById } from "@/services/users";
 
@@ -43,7 +39,7 @@ export const loadCoachBubble = async (user: {
   const hrefs = bubbleHrefs("user", key);
   const [t, profile, latest, teamLastSeen] = await Promise.all([
     getTranslations("chat.shared"),
-    loadChatProfile(conversation.id, userActorKey(user.id)),
+    loadChatProfile(conversation.id),
     findLatestAdminSender(conversation.id),
     // Respects each PT's "Trạng thái hoạt động" switch.
     getAdminTeamLastSeen(),
@@ -59,7 +55,7 @@ export const loadCoachBubble = async (user: {
       userId: user.id,
       name: adminLabel(
         profile.nicknames,
-        null,
+        latest?.id ?? null,
         latest?.name ?? t("fallbackPeer"),
         "pt",
       ),
@@ -95,7 +91,7 @@ export const loadTraineeBubbles = async (
         return null;
       }
       const [profile, avatarSrc] = await Promise.all([
-        loadChatProfile(conversation.id, adminActorKey(adminId)),
+        loadChatProfile(conversation.id),
         getAvatarUrl("user", user.id),
       ]);
 

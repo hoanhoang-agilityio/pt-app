@@ -13,7 +13,6 @@ import {
   parseHistoryQuery,
 } from "@/features/chat/utils/chat-query";
 import { serializeLastSeen } from "@/features/chat/utils/presence";
-import { adminActorKey } from "@/features/contact-aliases/utils/alias-rules";
 import { actorOfAdmin } from "@/features/social/services/post-context";
 import { toAdminRole } from "@/services/admin-scope";
 import { getApiAdmin } from "@/services/auth-guard";
@@ -66,7 +65,7 @@ export const GET = async (
         viewer,
       ),
       getPeerReadCursor(conversation.id, "admin"),
-      loadChatProfile(conversation.id, adminActorKey(admin.id)),
+      loadChatProfile(conversation.id),
     ]);
 
   return json({

@@ -12,7 +12,8 @@
     "unsent": "消息已撤回",
     "hidden": "消息已被管理员隐藏",
     "noMessages": "暂无消息",
-    "membersLine": "{count} 位成员"
+    "membersLine": "{count} 位成员",
+    "photos": "{count} 张图片"
   },
   "pages": {
     "createTitle": "创建群聊",

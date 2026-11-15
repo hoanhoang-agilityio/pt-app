@@ -155,7 +155,7 @@ const uploadAs = async (bytes = png(), query = "") => {
 
 const sendPhoto = (photoId: number, extra: Record<string, unknown> = {}) =>
   actions.sendMessageAction({
-    photoId,
+    photoIds: [photoId],
     clientId: uuid(),
     ...extra,
   } as never);
@@ -371,7 +371,7 @@ describe("sending a photo", () => {
     expect(
       await actions.adminSendMessageAction({
         userId: bob,
-        photoId: theirs,
+        photoIds: [theirs],
         clientId: uuid(),
       } as never),
     ).toMatchObject({ status: "error" });
@@ -394,7 +394,7 @@ describe("sending a photo", () => {
     expect(
       await actions.adminSendMessageAction({
         userId: alice,
-        photoId: forBob,
+        photoIds: [forBob],
         clientId: uuid(),
       } as never),
     ).toMatchObject({ status: "error" });
@@ -416,7 +416,7 @@ describe("sending a photo", () => {
     const id = await uploadAs(png(), `?as=admin&userId=${alice}`);
     const result = await actions.adminSendMessageAction({
       userId: alice,
-      photoId: id,
+      photoIds: [id],
       body: "form tốt",
       clientId: uuid(),
     } as never);
@@ -520,7 +520,7 @@ describe("unsending a photo message", () => {
     const id = await uploadAs(png(), `?as=admin&userId=${alice}`);
     const sent = await actions.adminSendMessageAction({
       userId: alice,
-      photoId: id,
+      photoIds: [id],
       clientId: uuid(),
     } as never);
     const conversation = await queries.findConversationByUserId(alice);
@@ -598,5 +598,269 @@ describe("photo ownership rows", () => {
     expect(row.messageId).toBe(
       (sent as { message: { id: number } }).message.id,
     );
+  });
+});
+
+describe("several photos in one message", () => {
+  const uploadMany = async (count: number) => {
+    const ids: number[] = [];
+
+    for (let index = 0; index < count; index += 1) {
+      ids.push(await uploadAs(png(1000 + index, 700)));
+    }
+    return ids;
+  };
+  const sendMany = (photoIds: number[], extra: Record<string, unknown> = {}) =>
+    actions.sendMessageAction({
+      photoIds,
+      clientId: uuid(),
+      ...extra,
+    } as never);
+  const messageOf = (result: { status: string }) =>
+    (
+      result as unknown as {
+        message: {
+          id: number;
+          photo: { url: string } | null;
+          photos: { url: string; width: number }[];
+        };
+      }
+    ).message;
+
+  it("sends 3 photos as one message in the given order, the first is the cover", async () => {
+    const [a, b, c] = await uploadMany(3);
+    const result = await sendMany([c, a, b], { body: "buổi tập" });
+
+    expect(result.status).toBe("success");
+    const message = messageOf(result);
+
+    expect(message.photos.map((photo) => photo.url)).toEqual([
+      `/api/chat/photos/${c}`,
+      `/api/chat/photos/${a}`,
+      `/api/chat/photos/${b}`,
+    ]);
+    expect(message.photo?.url).toBe(`/api/chat/photos/${c}`);
+    expect(message.photos.map((photo) => photo.width)).toEqual([
+      1002, 1000, 1001,
+    ]);
+    expect(await db.select().from(chatMessages)).toHaveLength(1);
+    const [stored] = await db.select().from(chatMessages);
+
+    expect(stored.photoId).toBe(c);
+    const rows = (await photoRows()).sort((x, y) => x.id - y.id);
+
+    expect(rows.map((row) => [row.id, row.messageId, row.position])).toEqual([
+      [a, stored.id, 1],
+      [b, stored.id, 2],
+      [c, stored.id, 0],
+    ]);
+    expect(schedulePush).toHaveBeenCalledWith(
+      expect.objectContaining({ photo: true, photoCount: 3 }),
+    );
+  });
+
+  it("accepts exactly 10 photos and rejects 11 without storing anything", async () => {
+    const ids = await uploadMany(11);
+    const tooMany = await sendMany(ids);
+
+    expect(tooMany).toMatchObject({ status: "error" });
+    expect(await db.select().from(chatMessages)).toHaveLength(0);
+    expect((await photoRows()).every((row) => row.messageId === null)).toBe(
+      true,
+    );
+
+    const ten = await sendMany(ids.slice(0, 10));
+
+    expect(ten.status).toBe("success");
+    expect(messageOf(ten).photos).toHaveLength(10);
+  });
+
+  it("rejects the same photo twice in one message", async () => {
+    const [a] = await uploadMany(1);
+
+    expect(await sendMany([a, a])).toMatchObject({ status: "error" });
+    expect(await db.select().from(chatMessages)).toHaveLength(0);
+  });
+
+  it("rejects another person's photo and stores nothing, not even the valid ones", async () => {
+    const [mine] = await uploadMany(1);
+
+    asUser(bob);
+    const [theirs] = await uploadMany(1);
+
+    asUser(alice);
+    expect(await sendMany([mine, theirs])).toMatchObject({ status: "error" });
+    expect(await db.select().from(chatMessages)).toHaveLength(0);
+    expect((await photoRows()).every((row) => row.messageId === null)).toBe(
+      true,
+    );
+  });
+
+  it("rejects a photo uploaded for another conversation", async () => {
+    const [mine] = await uploadMany(1);
+
+    asAdmin(1);
+    const forBob = await uploadAs(png(), `?as=admin&userId=${bob}`);
+
+    asUser(alice);
+    expect(await sendMany([mine, forBob])).toMatchObject({ status: "error" });
+    expect(await db.select().from(chatMessages)).toHaveLength(0);
+  });
+
+  it("rejects a photo that is already attached to another message", async () => {
+    const [a, b] = await uploadMany(2);
+
+    expect((await sendMany([a])).status).toBe("success");
+    expect(await sendMany([b, a])).toMatchObject({ status: "error" });
+    expect(await db.select().from(chatMessages)).toHaveLength(1);
+    const rows = await photoRows();
+
+    expect(rows.find((row) => row.id === b)?.messageId).toBeNull();
+  });
+
+  it("answers a retried send with the stored message and its photos", async () => {
+    const ids = await uploadMany(3);
+    const clientId = uuid();
+    const first = await sendMany(ids, { clientId });
+    const again = await sendMany(ids, { clientId });
+
+    expect(messageOf(again).id).toBe(messageOf(first).id);
+    expect(messageOf(again).photos).toHaveLength(3);
+    expect(await db.select().from(chatMessages)).toHaveLength(1);
+    expect(schedulePush).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a PT send several photos to a trainee", async () => {
+    asAdmin(2);
+    const ids = [
+      await uploadAs(png(), `?as=admin&userId=${alice}`),
+      await uploadAs(png(), `?as=admin&userId=${alice}`),
+    ];
+    const result = await actions.adminSendMessageAction({
+      userId: alice,
+      photoIds: ids,
+      clientId: uuid(),
+    } as never);
+
+    expect(result.status).toBe("success");
+    expect(messageOf(result).photos).toHaveLength(2);
+    // A trainee's photos are not the PT's to attach.
+    asUser(alice);
+    const mine = await uploadAs();
+
+    asAdmin(2);
+    expect(
+      await actions.adminSendMessageAction({
+        userId: alice,
+        photoIds: [mine],
+        clientId: uuid(),
+      } as never),
+    ).toMatchObject({ status: "error" });
+  });
+
+  it("serves every photo of the message, not only the cover, to the trainee and the PT", async () => {
+    const ids = await uploadMany(3);
+
+    await sendMany(ids);
+    for (const id of ids) {
+      expect((await get(id)).status).toBe(200);
+    }
+    asAdmin(1);
+    for (const id of ids) {
+      expect((await get(id)).status).toBe(200);
+    }
+    asUser(bob);
+    for (const id of ids) {
+      expect((await get(id)).status).toBe(404);
+    }
+  });
+
+  it("returns the photos in order in the thread and a legacy message with one", async () => {
+    const [a, b] = await uploadMany(2);
+    const sent = messageOf(await sendMany([b, a]));
+    const conversation = await queries.findConversationByUserId(alice);
+    // A message from before several photos: photo_id only, no position.
+    const legacy = await uploadAs(png(640, 480));
+    const [legacyMessage] = await db
+      .insert(chatMessages)
+      .values({
+        conversationId: conversation!.id,
+        senderRole: "user",
+        body: "",
+        clientId: uuid(),
+        photoId: legacy,
+        createdAt: new Date(),
+      })
+      .returning({ id: chatMessages.id });
+
+    await db
+      .update(chatPhotos)
+      .set({ messageId: legacyMessage.id })
+      .where(eq(chatPhotos.id, legacy));
+    const { messages } = await queries.listMessages(conversation!.id);
+    const byId = new Map(messages.map((message) => [message.id, message]));
+
+    expect(byId.get(sent.id)?.photos.map((photo) => photo.url)).toEqual([
+      `/api/chat/photos/${b}`,
+      `/api/chat/photos/${a}`,
+    ]);
+    expect(byId.get(legacyMessage.id)?.photos).toEqual([
+      {
+        url: `/api/chat/photos/${legacy}`,
+        width: 640,
+        height: 480,
+        alt: "Ảnh trong tin nhắn",
+      },
+    ]);
+    expect(byId.get(legacyMessage.id)?.photo).toEqual(
+      byId.get(legacyMessage.id)?.photos[0],
+    );
+  });
+
+  it("unsending removes every photo row of the message and leaves others alone", async () => {
+    const other = await uploadAs();
+
+    await sendPhoto(other);
+    const ids = await uploadMany(3);
+    const sent = messageOf(await sendMany(ids));
+
+    expect((await photoRows()).map((row) => row.id).sort()).toEqual(
+      [other, ...ids].sort(),
+    );
+    const result = await actions.unsendMessageAction({ messageId: sent.id });
+
+    expect(result).toMatchObject({
+      status: "success",
+      message: { deleted: true, photo: null, photos: [] },
+    });
+    expect((await photoRows()).map((row) => row.id)).toEqual([other]);
+    for (const id of ids) {
+      expect((await get(id)).status).toBe(404);
+    }
+  });
+
+  it("names the count in the inbox line and the quote of a photo message", async () => {
+    const ids = await uploadMany(3);
+    const sent = messageOf(await sendMany(ids));
+
+    expect((await queries.listAdminInbox(1)).conversations[0].preview).toBe(
+      "📷 3 ảnh",
+    );
+    await sendMany(await uploadMany(2), { body: "kèm chữ" });
+    expect((await queries.listAdminInbox(1)).conversations[0].preview).toBe(
+      "📷 kèm chữ",
+    );
+
+    const reply = await actions.sendMessageAction({
+      body: "đẹp quá",
+      replyToMessageId: sent.id,
+      clientId: uuid(),
+    } as never);
+
+    expect(reply).toMatchObject({
+      message: {
+        replyTo: { id: sent.id, isPhoto: true, photoCount: 3 },
+      },
+    });
   });
 });

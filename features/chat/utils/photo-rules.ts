@@ -15,6 +15,11 @@ export const PHOTO_BUBBLE_MAX_WIDTH = 240;
 // A pending photo (uploaded, never sent) is dropped after this long.
 export const PHOTO_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
 
+// Photos in one message (the first is the cover); chat, DM and group chat.
+export const MAX_MESSAGE_PHOTOS = 10;
+// Photos encoded/uploaded at the same time by a composer.
+export const MESSAGE_PHOTO_UPLOAD_CONCURRENCY = 3;
+
 export const PHOTO_PREVIEW = "📷 Ảnh";
 export const PHOTO_ALT = "Ảnh trong tin nhắn";
 export const PHOTO_QUOTE_TEXT = "Ảnh";
@@ -201,12 +206,90 @@ export const parsePhotoId = (value: string) =>
 
 export const photoIdSchema = z.number().int().positive();
 
+// Ids of the uploaded photos of one message, in display order (the first is
+// the cover): 0..MAX_MESSAGE_PHOTOS, each id once.
+export const messagePhotoIdsSchema = z
+  .array(photoIdSchema)
+  .max(MAX_MESSAGE_PHOTOS)
+  .refine((ids) => new Set(ids).size === ids.length);
+
+// How many of `picked` new photos fit next to `current` ones, and how many do
+// not (the composer keeps the first ones and says so).
+export const photoSlots = (current: number, picked: number) => {
+  const free = Math.max(0, MAX_MESSAGE_PHOTOS - current);
+  const accepted = Math.min(free, Math.max(0, picked));
+
+  return { accepted, dropped: Math.max(0, picked) - accepted };
+};
+
+export interface StoredPhotoRow {
+  id: number;
+  // The message the row is attached to; null while pending.
+  messageId: number | null;
+  position: number | null;
+  width: number;
+  height: number;
+}
+
+// Groups photo rows by message, in display order: position (null counts as 0),
+// then id. A message from before several photos has its one photo here even
+// when only `photoId` points at it (`covers`: message id -> its photo_id).
+export const groupPhotosByMessage = <T extends StoredPhotoRow>(
+  rows: T[],
+  covers: ReadonlyMap<number, number | null>,
+): Map<number, T[]> => {
+  const coverOwner = new Map<number, number>();
+
+  for (const [messageId, photoId] of covers) {
+    if (photoId !== null) {
+      coverOwner.set(photoId, messageId);
+    }
+  }
+  const ordered = [...rows].sort(
+    (a, b) => (a.position ?? 0) - (b.position ?? 0) || a.id - b.id,
+  );
+  const result = new Map<number, T[]>();
+  const seen = new Set<number>();
+
+  for (const row of ordered) {
+    const owner = row.messageId ?? coverOwner.get(row.id);
+
+    if (owner === undefined || seen.has(row.id) || !covers.has(owner)) {
+      continue;
+    }
+    seen.add(row.id);
+    const list = result.get(owner) ?? [];
+
+    list.push(row);
+    result.set(owner, list);
+  }
+  return result;
+};
+
+export const toChatPhotos = (
+  rows: { id: number; width: number; height: number }[],
+): ChatPhoto[] =>
+  rows.map((row) => ({
+    url: chatPhotoUrl(row.id),
+    width: row.width,
+    height: row.height,
+    alt: PHOTO_ALT,
+  }));
+
 export interface ChatPhoto {
   url: string;
   width: number;
   height: number;
   alt: string;
 }
+
+// The photo id at the end of a photo URL (chat, DM and group URLs all end in
+// it); 0 when there is none.
+export const photoIdOfUrl = (url: string) => {
+  const id = Number(url.split("?")[0].split("/").pop());
+
+  return Number.isInteger(id) && id > 0 ? id : 0;
+};
 
 export const toChatPhoto = (
   photoId: number | null,
@@ -236,14 +319,22 @@ export const bubbleBox = (
   };
 };
 
-// Inbox line: "📷 Ảnh", or "📷 " + the caption when the photo has text.
+// Inbox line: "📷 Ảnh", "📷 3 ảnh" for several photos, or "📷 " + the caption
+// when the message has text.
 export const photoPreview = (
   caption: string,
   locale: Locale = DEFAULT_LOCALE,
-) =>
-  caption.trim() === ""
-    ? `📷 ${getFormatTranslator(locale)("thread.photo")}`
-    : `📷 ${caption}`;
+  count = 1,
+) => {
+  if (caption.trim() !== "") {
+    return `📷 ${caption}`;
+  }
+  const t = getFormatTranslator(locale);
+
+  return count > 1
+    ? `📷 ${t("thread.photos", { count })}`
+    : `📷 ${t("thread.photo")}`;
+};
 
 // Browser-side encoding plan. The photo is fitted into 1600 px and encoded
 // at the first quality; while it is bigger than the target the quality drops

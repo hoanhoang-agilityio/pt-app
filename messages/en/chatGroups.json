@@ -12,7 +12,8 @@
     "unsent": "Message unsent",
     "hidden": "Hidden by a manager",
     "noMessages": "No messages yet",
-    "membersLine": "{count} members"
+    "membersLine": "{count} members",
+    "photos": "{count} photos"
   },
   "pages": {
     "createTitle": "New group chat",

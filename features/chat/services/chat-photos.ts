@@ -1,10 +1,11 @@
 import "server-only";
 
-import { and, eq, isNotNull, isNull, lt } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import { chatConversations, chatPhotos } from "@/db/schema";
 import {
+  groupPhotosByMessage,
   PHOTO_PENDING_TTL_MS,
   type PhotoMime,
 } from "@/features/chat/utils/photo-rules";
@@ -61,36 +62,116 @@ export const createPendingPhoto = async (
   return row.id;
 };
 
-// A photo may be attached once, by the person who uploaded it, to a message in
-// the conversation it was uploaded for.
-export const isPhotoAttachable = async (
-  photoId: number,
+// Photos may be attached once, by the person who uploaded them, to a message in
+// the conversation they were uploaded for. True when every id qualifies.
+export const arePhotosAttachable = async (
+  photoIds: number[],
   conversationId: number,
   uploaderKey: string,
 ) => {
-  const [row] = await db
+  if (photoIds.length === 0) {
+    return true;
+  }
+  if (new Set(photoIds).size !== photoIds.length) {
+    return false;
+  }
+  const rows = await db
     .select({ id: chatPhotos.id })
     .from(chatPhotos)
     .where(
       and(
-        eq(chatPhotos.id, photoId),
+        inArray(chatPhotos.id, photoIds),
         eq(chatPhotos.conversationId, conversationId),
         eq(chatPhotos.uploaderKey, uploaderKey),
         isNull(chatPhotos.messageId),
       ),
     );
 
-  return Boolean(row);
+  return rows.length === photoIds.length;
 };
 
-export const attachPhotoToMessage = async (
-  photoId: number,
-  messageId: number,
+export class PhotosNotAttachableError extends Error {}
+
+type Executor = Pick<typeof db, "update">;
+
+// Attaches the photos to the message in the array order (position = index),
+// inside the caller's transaction. Throws when any of them is not a pending
+// photo of this uploader and conversation, so the whole send rolls back.
+export const attachPhotosToMessage = async (
+  executor: Executor,
+  input: {
+    photoIds: number[];
+    messageId: number;
+    conversationId: number;
+    uploaderKey: string;
+  },
 ) => {
-  await db
-    .update(chatPhotos)
-    .set({ messageId })
-    .where(and(eq(chatPhotos.id, photoId), isNull(chatPhotos.messageId)));
+  for (const [position, photoId] of input.photoIds.entries()) {
+    const attached = await executor
+      .update(chatPhotos)
+      .set({ messageId: input.messageId, position })
+      .where(
+        and(
+          eq(chatPhotos.id, photoId),
+          eq(chatPhotos.conversationId, input.conversationId),
+          eq(chatPhotos.uploaderKey, input.uploaderKey),
+          isNull(chatPhotos.messageId),
+        ),
+      )
+      .returning({ id: chatPhotos.id });
+
+    if (attached.length === 0) {
+      throw new PhotosNotAttachableError();
+    }
+  }
+};
+
+// The photos (size only, no bytes) of many messages in one query, in display
+// order. A message from before several photos has its one photo too.
+export const loadPhotosOfMessages = async (
+  messages: { id: number; photoId: number | null }[],
+) => {
+  if (messages.length === 0) {
+    return new Map<number, { id: number; width: number; height: number }[]>();
+  }
+  const coverIds = messages.flatMap((message) =>
+    message.photoId === null ? [] : [message.photoId],
+  );
+  const rows = await db
+    .select({
+      id: chatPhotos.id,
+      messageId: chatPhotos.messageId,
+      position: chatPhotos.position,
+      width: chatPhotos.width,
+      height: chatPhotos.height,
+    })
+    .from(chatPhotos)
+    .where(
+      or(
+        inArray(
+          chatPhotos.messageId,
+          messages.map((message) => message.id),
+        ),
+        coverIds.length > 0 ? inArray(chatPhotos.id, coverIds) : undefined,
+      ),
+    );
+
+  return groupPhotosByMessage(
+    rows,
+    new Map(messages.map((message) => [message.id, message.photoId])),
+  );
+};
+
+// How many photos each of the messages carries (one for a message from before
+// several photos); messages without photos are absent.
+export const countPhotosOfMessages = async (
+  messages: { id: number; photoId: number | null }[],
+) => {
+  const photos = await loadPhotosOfMessages(messages);
+
+  return new Map(
+    [...photos].map(([messageId, list]) => [messageId, list.length]),
+  );
 };
 
 // Unsend: the stored image goes with the message.

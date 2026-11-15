@@ -181,7 +181,7 @@ describe("sendMessageAction", () => {
   it("sends a photo with caption /imlang hi as caption hi, no push", async () => {
     const photoId = await addPendingPhoto("user");
     const result = await actions.sendMessageAction({
-      photoId,
+      photoIds: [photoId],
       body: "/imlang hi",
       clientId: uuid(1),
     });
@@ -199,7 +199,7 @@ describe("sendMessageAction", () => {
   it("sends a photo captioned only /imlang silently with no caption", async () => {
     const photoId = await addPendingPhoto("user");
     const result = await actions.sendMessageAction({
-      photoId,
+      photoIds: [photoId],
       body: "/imlang",
       clientId: uuid(1),
     });
@@ -336,7 +336,7 @@ describe("adminSendMessageAction", () => {
     const photoId = await addPendingPhoto("admin:7");
     const result = await actions.adminSendMessageAction({
       userId,
-      photoId,
+      photoIds: [photoId],
       body: "/imlang hi",
       clientId: uuid(1),
     });

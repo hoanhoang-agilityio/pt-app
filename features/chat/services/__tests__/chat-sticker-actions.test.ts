@@ -319,6 +319,7 @@ describe("acting on a sticker message", () => {
       body: "",
       isSticker: true,
       isPhoto: false,
+      photoCount: 0,
       senderRole: "user",
       deleted: false,
     });

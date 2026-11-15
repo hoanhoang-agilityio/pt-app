@@ -24,6 +24,8 @@ export interface SendGroupPushInput {
   body?: string | null;
   sticker?: boolean;
   photo?: boolean;
+  // Photos in the message when there are several (the preview names it).
+  photoCount?: number;
 }
 
 // Owner keys to notify: every active explicit member and every super admin
@@ -67,7 +69,7 @@ export const listGroupPushRecipients = async (
 // Never throws and never logs the body: only ids and counts. Two deliveries,
 // one per owner kind, because the deep link differs.
 export const sendGroupPush = async (
-  { groupId, senderKey, body, sticker, photo }: SendGroupPushInput,
+  { groupId, senderKey, body, sticker, photo, photoCount }: SendGroupPushInput,
   sender: PushSender = sendWithWebPush,
 ) => {
   try {
@@ -118,6 +120,7 @@ export const sendGroupPush = async (
                   body,
                   sticker,
                   photo,
+                  photoCount,
                   locale,
                 }),
               vapid,

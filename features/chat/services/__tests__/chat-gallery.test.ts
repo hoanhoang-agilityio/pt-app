@@ -238,6 +238,88 @@ describe("listGalleryPhotos", () => {
   });
 });
 
+describe("listGalleryPhotos with several photos per message", () => {
+  // The extra photos of a message, attached after its cover.
+  const addMorePhotos = async (messageId: number, count: number) => {
+    const ids: number[] = [];
+
+    for (let index = 1; index <= count; index += 1) {
+      const [photo] = await db
+        .insert(chatPhotos)
+        .values({
+          conversationId: aliceConversation,
+          messageId,
+          position: index,
+          uploaderKey: "user",
+          mime: "image/webp",
+          width: 800 + index,
+          height: 600,
+          data: Buffer.from([1]),
+          size: 1,
+          createdAt: new Date(),
+        })
+        .returning({ id: chatPhotos.id });
+
+      ids.push(photo.id);
+    }
+    return ids;
+  };
+
+  it("lists every photo of a message in order, not only the cover", async () => {
+    const message = await addMessage(aliceConversation, "user", {
+      photo: true,
+    });
+    const more = await addMorePhotos(message.messageId, 2);
+
+    const page = await gallery.listGalleryPhotos(aliceConversation);
+
+    expect(page.items.map((item) => item.photoId)).toEqual([
+      message.photoId,
+      ...more,
+    ]);
+    expect(page.items.map((item) => item.width)).toEqual([800, 801, 802]);
+    expect(
+      page.items.every((item) => item.messageId === message.messageId),
+    ).toBe(true);
+    expect(page.items.map((item) => item.url)).toEqual(
+      [message.photoId, ...more].map((id) => `/api/chat/photos/${id}`),
+    );
+  });
+
+  it("pages by message so a message is never split, and skips unsent ones", async () => {
+    const older = await addMessage(aliceConversation, "user", { photo: true });
+    const olderMore = await addMorePhotos(older.messageId, 3);
+    const unsent = await addMessage(aliceConversation, "user", {
+      photo: true,
+      deleted: true,
+    });
+
+    await addMorePhotos(unsent.messageId, 1);
+    const newer = await addMessage(aliceConversation, "admin", { photo: true });
+    const newerMore = await addMorePhotos(newer.messageId, 1);
+
+    const first = await gallery.listGalleryPhotos(aliceConversation, {
+      limit: 1,
+    });
+
+    expect(first.items.map((item) => item.photoId)).toEqual([
+      newer.photoId,
+      ...newerMore,
+    ]);
+    expect(first.nextCursor).toBe(newer.messageId);
+    const second = await gallery.listGalleryPhotos(aliceConversation, {
+      limit: 1,
+      before: first.nextCursor ?? undefined,
+    });
+
+    expect(second.items.map((item) => item.photoId)).toEqual([
+      older.photoId,
+      ...olderMore,
+    ]);
+    expect(second.nextCursor).toBeNull();
+  });
+});
+
 describe("GET /api/chat/gallery (trainee)", () => {
   it("serves only the trainee's own conversation", async () => {
     const mine = await addMessage(aliceConversation, "user", { photo: true });

@@ -23,6 +23,7 @@ import { LockedBanner } from "@/features/chat/components/LockedBanner";
 import { MessageBubble } from "@/features/chat/components/MessageBubble";
 import { ReplyBar } from "@/features/chat/components/ReplyBar";
 import {
+  type SentPhoto,
   type ThreadSnapshot,
   useChatMessages,
 } from "@/features/chat/hooks/use-chat-messages";
@@ -35,12 +36,12 @@ import {
   isNearBottom,
   markUnsentQuotes,
   myReactionOf,
+  photosOf,
   quoteText,
   senderLabel,
   type ThreadMessage,
 } from "@/features/chat/utils/chat-thread-rules";
 import { groupNotificationTags } from "@/features/chat/utils/clear-notifications";
-import type { PreparedPhoto } from "@/features/chat/utils/encode-photo";
 import { useVisualViewport } from "@/features/chat-bubbles/hooks/use-visual-viewport";
 import { GroupSystemLine } from "@/features/chat-groups/components/GroupSystemLine";
 import { SeenBySheet } from "@/features/chat-groups/components/SeenBySheet";
@@ -479,11 +480,11 @@ export const GroupThread = ({
     }, HIGHLIGHT_MS);
   };
 
-  const handleSend = (body: string, photo?: PreparedPhoto) => {
+  const handleSend = (body: string, photos?: SentPhoto[]) => {
     const reply = replyMessage;
 
-    if (photo) {
-      chat.sendPhoto(photo, body, reply);
+    if (photos) {
+      chat.sendPhotos(photos, body, reply);
     } else {
       chat.send(body, reply);
     }
@@ -662,6 +663,7 @@ export const GroupThread = ({
                 deleted: replyMessage.deleted,
                 isSticker: Boolean(replyMessage.sticker),
                 isPhoto: Boolean(replyMessage.photo),
+                photoCount: photosOf(replyMessage).length,
                 body: replyMessage.body,
               },
               locale,
@@ -674,6 +676,7 @@ export const GroupThread = ({
           <Composer
             onSend={handleSend}
             canAttachPhoto
+            uploadPhoto={chat.uploadPhoto}
             editing={activeEditing}
             onSaveEdit={(body) => {
               if (activeEditing) {

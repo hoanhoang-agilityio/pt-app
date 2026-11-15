@@ -10,13 +10,18 @@ import {
   dmReads,
   users,
 } from "@/db/schema";
+import { MAX_MESSAGE_PHOTOS } from "@/features/chat/utils/photo-rules";
 import { DM_MESSAGES } from "@/features/social/constants/dm";
 import {
   type DmView,
   findDmConversation,
   resolveDmView,
 } from "@/features/social/services/dm-access";
-import { isDmPhotoAttachable } from "@/features/social/services/dm-photos";
+import {
+  areDmPhotosAttachable,
+  attachDmPhotosToMessage,
+  DmPhotosNotAttachableError,
+} from "@/features/social/services/dm-photos";
 import { getDmMessageView } from "@/features/social/services/dm-queries";
 import { loadVisiblePost } from "@/features/social/services/post-access";
 import { isBlockedBetween } from "@/features/social/services/relationships";
@@ -79,7 +84,8 @@ export interface SendDmInput {
   senderId: number;
   clientId: string;
   body: string;
-  photoId: number | null;
+  // Up to 10 uploaded photos in display order (the first is the cover).
+  photoIds: number[];
   // The post this message replies to; needs a text.
   postId?: number | null;
 }
@@ -117,7 +123,7 @@ export const sendDmMessage = async (
   if (view.readOnlyReason !== null) {
     return { ok: false, error: "read_only", message: view.readOnlyReason };
   }
-  const content = checkDmContent(input.body, input.photoId);
+  const content = checkDmContent(input.body, input.photoIds[0] ?? null);
 
   if (!content.ok) {
     return {
@@ -143,29 +149,58 @@ export const sendDmMessage = async (
       };
     }
   }
+  if (input.photoIds.length > MAX_MESSAGE_PHOTOS) {
+    return { ok: false, error: "photo_not_found" };
+  }
   if (
-    input.photoId !== null &&
-    !(await isDmPhotoAttachable(
-      input.photoId,
+    !(await areDmPhotosAttachable(
+      input.photoIds,
       input.conversationId,
       input.senderId,
     ))
   ) {
     return { ok: false, error: "photo_not_found" };
   }
-  const [row] = await db
-    .insert(dmMessages)
-    .values({
-      conversationId: input.conversationId,
-      senderId: input.senderId,
-      body: content.body,
-      photoId: input.photoId,
-      replyPostId: postId,
-      clientId: input.clientId,
-      createdAt: now,
-    })
-    .onConflictDoNothing()
-    .returning();
+  // The message, the conversation pointer and every photo go in together: a
+  // photo that cannot be attached (used by a parallel send) undoes the send.
+  let row: typeof dmMessages.$inferSelect | undefined;
+
+  try {
+    row = await db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(dmMessages)
+        .values({
+          conversationId: input.conversationId,
+          senderId: input.senderId,
+          body: content.body,
+          photoId: input.photoIds[0] ?? null,
+          replyPostId: postId,
+          clientId: input.clientId,
+          createdAt: now,
+        })
+        .onConflictDoNothing()
+        .returning();
+
+      if (inserted) {
+        await attachDmPhotosToMessage(tx, {
+          photoIds: input.photoIds,
+          messageId: inserted.id,
+          conversationId: input.conversationId,
+          uploaderId: input.senderId,
+        });
+        await tx
+          .update(dmConversations)
+          .set({ lastMessageId: inserted.id, lastMessageAt: now })
+          .where(eq(dmConversations.id, input.conversationId));
+      }
+      return inserted;
+    });
+  } catch (error) {
+    if (error instanceof DmPhotosNotAttachableError) {
+      return { ok: false, error: "photo_not_found" };
+    }
+    throw error;
+  }
 
   if (!row) {
     // Lost a race with the same clientId: the other insert wins.
@@ -180,16 +215,6 @@ export const sendDmMessage = async (
         }
       : { ok: false, error: "not_found" };
   }
-  if (input.photoId !== null) {
-    await db
-      .update(dmPhotos)
-      .set({ messageId: row.id })
-      .where(eq(dmPhotos.id, input.photoId));
-  }
-  await db
-    .update(dmConversations)
-    .set({ lastMessageId: row.id, lastMessageAt: now })
-    .where(eq(dmConversations.id, input.conversationId));
   // Writing counts as having read everything up to the own message.
   await markDmRead(input.conversationId, input.senderId, row.id);
 

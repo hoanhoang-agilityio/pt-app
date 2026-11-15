@@ -1,6 +1,17 @@
 import "server-only";
 
-import { and, desc, eq, isNotNull, isNull, like, lt, or } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  exists,
+  isNotNull,
+  isNull,
+  like,
+  lt,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -10,6 +21,7 @@ import {
   chatPhotos,
   users,
 } from "@/db/schema";
+import { loadPhotosOfMessages } from "@/features/chat/services/chat-photos";
 import { findConversationById } from "@/features/chat/services/chat-queries";
 import {
   GALLERY_PAGE_SIZE,
@@ -42,9 +54,11 @@ const senderOf = (row: SenderColumns, peerDeleted: string) => ({
       : (row.senderAdminName ?? peerDeleted),
 });
 
-// Photos sent in a conversation, newest first (KAN-160). Only photo messages
-// that were not unsent; stickers are never in here (they have their own tab).
-// The cursor is the message id, which grows with time.
+// Photos sent in a conversation, newest first (KAN-160). Every photo of a
+// message is listed (a message with 3 photos gives 3 items, in their order);
+// only photo messages that were not unsent; stickers are never in here (they
+// have their own tab). The cursor is the message id, which grows with time, and
+// a page holds `limit` messages, so a message is never split across pages.
 export const listGalleryPhotos = async (
   conversationId: number,
   {
@@ -57,9 +71,7 @@ export const listGalleryPhotos = async (
   const rows = await db
     .select({
       messageId: chatMessages.id,
-      photoId: chatPhotos.id,
-      width: chatPhotos.width,
-      height: chatPhotos.height,
+      photoId: chatMessages.photoId,
       senderRole: chatMessages.senderRole,
       senderAdminId: chatMessages.senderAdminId,
       senderAdminName: admins.username,
@@ -67,14 +79,6 @@ export const listGalleryPhotos = async (
       createdAt: chatMessages.createdAt,
     })
     .from(chatMessages)
-    .innerJoin(
-      chatPhotos,
-      and(
-        eq(chatPhotos.id, chatMessages.photoId),
-        eq(chatPhotos.messageId, chatMessages.id),
-        eq(chatPhotos.conversationId, chatMessages.conversationId),
-      ),
-    )
     .innerJoin(
       chatConversations,
       eq(chatConversations.id, chatMessages.conversationId),
@@ -87,22 +91,38 @@ export const listGalleryPhotos = async (
         isNull(chatMessages.deletedAt),
         isNull(chatMessages.hiddenByAdminId),
         before === undefined ? undefined : lt(chatMessages.id, before),
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(chatPhotos)
+            .where(
+              and(
+                eq(chatPhotos.messageId, chatMessages.id),
+                eq(chatPhotos.conversationId, chatMessages.conversationId),
+              ),
+            ),
+        ),
       ),
     )
     .orderBy(desc(chatMessages.id))
     .limit(limit + 1);
   const page = rows.slice(0, limit);
+  const photosByMessage = await loadPhotosOfMessages(
+    page.map((row) => ({ id: row.messageId, photoId: row.photoId })),
+  );
 
   return {
-    items: page.map((row) => ({
-      photoId: row.photoId,
-      messageId: row.messageId,
-      ...senderOf(row, peerDeleted),
-      url: chatPhotoUrl(row.photoId),
-      width: row.width,
-      height: row.height,
-      createdAt: row.createdAt.toISOString(),
-    })),
+    items: page.flatMap((row) =>
+      (photosByMessage.get(row.messageId) ?? []).map((photo) => ({
+        photoId: photo.id,
+        messageId: row.messageId,
+        ...senderOf(row, peerDeleted),
+        url: chatPhotoUrl(photo.id),
+        width: photo.width,
+        height: photo.height,
+        createdAt: row.createdAt.toISOString(),
+      })),
+    ),
     nextCursor:
       rows.length > limit && page.length > 0
         ? page[page.length - 1].messageId

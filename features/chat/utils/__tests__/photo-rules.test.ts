@@ -4,6 +4,9 @@ import {
   bubbleBox,
   chatPhotoUrl,
   checkPhoto,
+  groupPhotosByMessage,
+  MAX_MESSAGE_PHOTOS,
+  messagePhotoIdsSchema,
   parsePhotoId,
   PHOTO_MAX_BYTES,
   PHOTO_MAX_ROUNDS,
@@ -11,7 +14,9 @@ import {
   PHOTO_PREVIEW,
   PHOTO_QUALITIES,
   PHOTO_TARGET_BYTES,
+  photoIdOfUrl,
   photoPreview,
+  photoSlots,
   pickEncodedIndex,
   readImageSize,
   shrinkPhotoSize,
@@ -264,6 +269,105 @@ describe("photoPreview", () => {
     expect(photoPreview("")).toBe(PHOTO_PREVIEW);
     expect(photoPreview("  ")).toBe("📷 Ảnh");
     expect(photoPreview("bữa trưa")).toBe("📷 bữa trưa");
+  });
+
+  it("names the count for several photos without a caption, in every language", () => {
+    expect(photoPreview("", "vi", 1)).toBe("📷 Ảnh");
+    expect(photoPreview("", "vi", 3)).toBe("📷 3 ảnh");
+    expect(photoPreview(" ", "en", 10)).toBe("📷 10 photos");
+    expect(photoPreview("", "zh", 2)).toBe("📷 2 张照片");
+    expect(photoPreview("bữa trưa", "vi", 3)).toBe("📷 bữa trưa");
+  });
+});
+
+describe("messagePhotoIdsSchema", () => {
+  it("allows 0 to 10 distinct positive integer ids", () => {
+    expect(MAX_MESSAGE_PHOTOS).toBe(10);
+    expect(messagePhotoIdsSchema.safeParse([]).success).toBe(true);
+    expect(messagePhotoIdsSchema.safeParse([5, 3, 9]).success).toBe(true);
+    expect(
+      messagePhotoIdsSchema.safeParse(
+        Array.from({ length: 10 }, (_, i) => i + 1),
+      ).success,
+    ).toBe(true);
+  });
+
+  it("rejects 11 ids, repeated ids and bad values", () => {
+    expect(
+      messagePhotoIdsSchema.safeParse(
+        Array.from({ length: 11 }, (_, i) => i + 1),
+      ).success,
+    ).toBe(false);
+    expect(messagePhotoIdsSchema.safeParse([4, 4]).success).toBe(false);
+    for (const bad of [[0], [-1], [1.5], ["4"], [null], "4", 4]) {
+      expect(messagePhotoIdsSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+});
+
+describe("photoSlots", () => {
+  it("keeps the photos that fit and counts the ones left out", () => {
+    expect(photoSlots(0, 3)).toEqual({ accepted: 3, dropped: 0 });
+    expect(photoSlots(8, 5)).toEqual({ accepted: 2, dropped: 3 });
+    expect(photoSlots(10, 1)).toEqual({ accepted: 0, dropped: 1 });
+    expect(photoSlots(12, 1)).toEqual({ accepted: 0, dropped: 1 });
+    expect(photoSlots(0, 0)).toEqual({ accepted: 0, dropped: 0 });
+  });
+});
+
+describe("groupPhotosByMessage", () => {
+  const row = (
+    id: number,
+    messageId: number | null,
+    position: number | null,
+  ) => ({ id, messageId, position, width: 10, height: 10 });
+
+  it("orders by position then id, a null position counting as 0", () => {
+    const grouped = groupPhotosByMessage(
+      [row(7, 1, 2), row(3, 1, 0), row(5, 1, null), row(9, 1, 1)],
+      new Map([[1, 3]]),
+    );
+
+    expect(grouped.get(1)?.map((photo) => photo.id)).toEqual([3, 5, 9, 7]);
+  });
+
+  it("keeps messages apart and gives a legacy message its photo_id photo", () => {
+    const grouped = groupPhotosByMessage(
+      [row(1, 10, 0), row(2, 10, 1), row(3, null, null), row(4, 11, null)],
+      new Map<number, number | null>([
+        [10, 1],
+        [11, 4],
+        [12, 3],
+        [13, null],
+      ]),
+    );
+
+    expect(grouped.get(10)?.map((photo) => photo.id)).toEqual([1, 2]);
+    expect(grouped.get(11)?.map((photo) => photo.id)).toEqual([4]);
+    // photo_id points at a row that is not attached yet: still its photo.
+    expect(grouped.get(12)?.map((photo) => photo.id)).toEqual([3]);
+    expect(grouped.has(13)).toBe(false);
+  });
+
+  it("ignores photos of messages that were not asked for and never lends a photo of another message", () => {
+    const grouped = groupPhotosByMessage(
+      [row(1, 99, 0), row(2, null, null)],
+      new Map([[10, 1]]),
+    );
+
+    expect([...grouped.keys()]).toEqual([]);
+  });
+});
+
+describe("photoIdOfUrl", () => {
+  it("reads the id at the end of chat, DM and group photo URLs", () => {
+    expect(photoIdOfUrl("/api/chat/photos/12")).toBe(12);
+    expect(photoIdOfUrl("/api/dm/photos/7")).toBe(7);
+    expect(photoIdOfUrl("/api/chat/groups/3/photos/41?v=2")).toBe(41);
+  });
+
+  it("is 0 for a local blob URL", () => {
+    expect(photoIdOfUrl("blob:http://localhost/3f2a-uuid")).toBe(0);
   });
 });
 

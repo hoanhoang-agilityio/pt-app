@@ -12,8 +12,8 @@ import {
 } from "@/features/chat/services/chat-mutations";
 import { isChatEnabled } from "@/features/chat/services/chat-permission";
 import {
-  attachPhotoToMessage,
-  isPhotoAttachable,
+  arePhotosAttachable,
+  PhotosNotAttachableError,
   photoUploaderKey,
 } from "@/features/chat/services/chat-photos";
 import { schedulePush } from "@/features/chat/services/chat-push";
@@ -76,8 +76,9 @@ interface SendInput {
     | { pack: string; id: string }
     | { giphyId: string; url: string }
     | { customId: number };
-  // KAN-160: a photo uploaded to /api/chat/photos, plus optional text.
-  photoId?: number;
+  // KAN-160: up to 10 photos uploaded to /api/chat/photos (the first is the
+  // cover), plus optional text.
+  photoIds?: number[];
   clientId: string;
   replyToMessageId?: number;
   // The social post being replied to; needs a text.
@@ -98,7 +99,7 @@ const ownsStickerInput = async (
 const resolveContent = (parsed: {
   body?: string;
   sticker?: StickerInput;
-  photoId?: number;
+  photoIds?: number[];
 }) => {
   if (parsed.sticker) {
     return {
@@ -108,11 +109,11 @@ const resolveContent = (parsed: {
   }
   const { body, effects } = parseChatCommand(parsed.body ?? "");
 
-  if (!body && parsed.photoId === undefined) {
+  if (!body && !parsed.photoIds?.length) {
     return null;
   }
   return {
-    content: { body, photoId: parsed.photoId ?? null },
+    content: { body },
     silent: effects.silent === true,
   };
 };
@@ -124,10 +125,10 @@ type Conversation = Awaited<ReturnType<typeof getOrCreateConversation>>;
 // since; both are answered with the stored message before any check.
 const findRetry = (
   conversation: Conversation,
-  parsed: { photoId?: number; postId?: number; clientId: string },
+  parsed: { photoIds?: number[]; postId?: number; clientId: string },
   viewer: SocialActor,
 ) =>
-  parsed.photoId === undefined && parsed.postId === undefined
+  !parsed.photoIds?.length && parsed.postId === undefined
     ? null
     : findMessageByClientId(conversation.id, parsed.clientId, viewer);
 
@@ -150,6 +151,31 @@ const postReplyError = async (
     ? null
     : CHAT_MESSAGES.POST_NOT_FOUND;
 };
+
+// The message and its photos are stored in one transaction. Null when a photo
+// could not be attached after all (used by a parallel send): nothing is stored.
+const insertWithPhotos = async (
+  input: Parameters<typeof insertMessageOnce>[0],
+  viewer: SocialActor,
+) => {
+  try {
+    return await insertMessageOnce(input, viewer);
+  } catch (error) {
+    if (error instanceof PhotosNotAttachableError) {
+      return null;
+    }
+    throw error;
+  }
+};
+
+// What the push needs to word the preview of a photo message.
+const photoPushFields = (photoIds: number[]) =>
+  photoIds.length === 0
+    ? {}
+    : {
+        photo: true,
+        ...(photoIds.length > 1 ? { photoCount: photoIds.length } : {}),
+      };
 
 // Trainee send. The conversation always comes from the session user, never
 // from the client. insertMessage is idempotent: a retried clientId returns
@@ -194,14 +220,10 @@ export const sendMessageAction = withResultErrorHandling(
     if (retried) {
       return { status: "success", message: retried };
     }
-    if (
-      parsed.data.photoId !== undefined &&
-      !(await isPhotoAttachable(
-        parsed.data.photoId,
-        conversation.id,
-        photoUploaderKey({ kind: "user" }),
-      ))
-    ) {
+    const photoIds = parsed.data.photoIds ?? [];
+    const uploaderKey = photoUploaderKey({ kind: "user" });
+
+    if (!(await arePhotosAttachable(photoIds, conversation.id, uploaderKey))) {
       return fail(CHAT_MESSAGES.INVALID_INPUT);
     }
     const postError = await postReplyError(
@@ -217,7 +239,7 @@ export const sendMessageAction = withResultErrorHandling(
     if (!(await isReplyTargetValid(conversation, replyToMessageId))) {
       return fail(CHAT_MESSAGES.INVALID_INPUT);
     }
-    const { message, created } = await insertMessageOnce(
+    const stored = await insertWithPhotos(
       {
         conversationId: conversation.id,
         senderRole: "user",
@@ -227,13 +249,17 @@ export const sendMessageAction = withResultErrorHandling(
         replyToMessageId,
         replyPostId: postId ?? null,
         silent: resolved.silent ? true : null,
+        ...(photoIds.length > 0
+          ? { photos: { ids: photoIds, uploaderKey } }
+          : {}),
       },
       sender,
     );
 
-    if (created && parsed.data.photoId !== undefined) {
-      await attachPhotoToMessage(parsed.data.photoId, message.id);
+    if (!stored) {
+      return fail(CHAT_MESSAGES.INVALID_INPUT);
     }
+    const { message, created } = stored;
     // After the DB write; publishChatEvent never throws. A retried send
     // republishes the stored message, clients dedupe by id.
     await publishNewMessage(conversation.id, message);
@@ -246,7 +272,7 @@ export const sendMessageAction = withResultErrorHandling(
         conversationId: conversation.id,
         body: resolved.content.body,
         ...(parsed.data.sticker ? { sticker: true } : {}),
-        ...(parsed.data.photoId === undefined ? {} : { photo: true }),
+        ...photoPushFields(photoIds),
       });
     }
     return { status: "success", message };
@@ -302,14 +328,10 @@ export const adminSendMessageAction = withResultErrorHandling(
     if (retried) {
       return { status: "success", message: retried };
     }
-    if (
-      parsed.data.photoId !== undefined &&
-      !(await isPhotoAttachable(
-        parsed.data.photoId,
-        conversation.id,
-        photoUploaderKey({ kind: "admin", id: admin.id }),
-      ))
-    ) {
+    const photoIds = parsed.data.photoIds ?? [];
+    const uploaderKey = photoUploaderKey({ kind: "admin", id: admin.id });
+
+    if (!(await arePhotosAttachable(photoIds, conversation.id, uploaderKey))) {
       return fail(CHAT_MESSAGES.INVALID_INPUT);
     }
     const postError = await postReplyError(
@@ -325,7 +347,7 @@ export const adminSendMessageAction = withResultErrorHandling(
     if (!(await isReplyTargetValid(conversation, replyToMessageId))) {
       return fail(CHAT_MESSAGES.INVALID_INPUT);
     }
-    const { message, created } = await insertMessageOnce(
+    const stored = await insertWithPhotos(
       {
         conversationId: conversation.id,
         senderRole: "admin",
@@ -335,15 +357,20 @@ export const adminSendMessageAction = withResultErrorHandling(
         replyToMessageId,
         replyPostId: postId ?? null,
         silent: resolved.silent ? true : null,
+        ...(photoIds.length > 0
+          ? { photos: { ids: photoIds, uploaderKey } }
+          : {}),
       },
       sender,
     );
 
+    if (!stored) {
+      return fail(CHAT_MESSAGES.INVALID_INPUT);
+    }
+    const { message, created } = stored;
+
     // After the DB write; publishChatEvent never throws. A retried send
     // republishes the stored message, clients dedupe by id.
-    if (created && parsed.data.photoId !== undefined) {
-      await attachPhotoToMessage(parsed.data.photoId, message.id);
-    }
     await publishNewMessage(conversation.id, message);
     if (created && !resolved.silent) {
       schedulePush({
@@ -353,7 +380,7 @@ export const adminSendMessageAction = withResultErrorHandling(
         conversationId: conversation.id,
         body: resolved.content.body,
         ...(parsed.data.sticker ? { sticker: true } : {}),
-        ...(parsed.data.photoId === undefined ? {} : { photo: true }),
+        ...photoPushFields(photoIds),
       });
     }
     return { status: "success", message };

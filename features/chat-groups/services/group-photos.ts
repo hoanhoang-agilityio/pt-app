@@ -1,11 +1,12 @@
 import "server-only";
 
-import { and, eq, isNotNull, isNull, lt } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import { chatGroupPhotos, chatGroups } from "@/db/schema";
 import { decodeAvatarDataUrl } from "@/features/avatar/utils/avatar-rules";
 import {
+  groupPhotosByMessage,
   PHOTO_PENDING_TTL_MS,
   type PhotoMime,
 } from "@/features/chat/utils/photo-rules";
@@ -58,38 +59,102 @@ export const createPendingGroupPhoto = async (
   return row.id;
 };
 
-// Attachable once, by its uploader, to a message of the group it was
-// uploaded for.
-export const isGroupPhotoAttachable = async (
-  photoId: number,
+// Attachable once, by their uploader, to a message of the group they were
+// uploaded for. True when every id qualifies.
+export const areGroupPhotosAttachable = async (
+  photoIds: number[],
   groupId: number,
   uploaderKey: string,
 ) => {
-  const [row] = await db
+  if (photoIds.length === 0) {
+    return true;
+  }
+  if (new Set(photoIds).size !== photoIds.length) {
+    return false;
+  }
+  const rows = await db
     .select({ id: chatGroupPhotos.id })
     .from(chatGroupPhotos)
     .where(
       and(
-        eq(chatGroupPhotos.id, photoId),
+        inArray(chatGroupPhotos.id, photoIds),
         eq(chatGroupPhotos.groupId, groupId),
         eq(chatGroupPhotos.uploaderKey, uploaderKey),
         isNull(chatGroupPhotos.messageId),
       ),
     );
 
-  return Boolean(row);
+  return rows.length === photoIds.length;
 };
 
-export const attachGroupPhotoToMessage = async (
-  photoId: number,
-  messageId: number,
+export class GroupPhotosNotAttachableError extends Error {}
+
+// Attaches the photos in array order (position = index) inside the caller's
+// transaction; throws when one is not a pending photo of this uploader and
+// group, which undoes the whole send.
+export const attachGroupPhotosToMessage = async (
+  executor: Pick<typeof db, "update">,
+  input: {
+    photoIds: number[];
+    messageId: number;
+    groupId: number;
+    uploaderKey: string;
+  },
 ) => {
-  await db
-    .update(chatGroupPhotos)
-    .set({ messageId })
+  for (const [position, photoId] of input.photoIds.entries()) {
+    const attached = await executor
+      .update(chatGroupPhotos)
+      .set({ messageId: input.messageId, position })
+      .where(
+        and(
+          eq(chatGroupPhotos.id, photoId),
+          eq(chatGroupPhotos.groupId, input.groupId),
+          eq(chatGroupPhotos.uploaderKey, input.uploaderKey),
+          isNull(chatGroupPhotos.messageId),
+        ),
+      )
+      .returning({ id: chatGroupPhotos.id });
+
+    if (attached.length === 0) {
+      throw new GroupPhotosNotAttachableError();
+    }
+  }
+};
+
+// The photos (size only) of many messages in one query, in display order. A
+// message from before several photos has its one photo too.
+export const loadPhotosOfGroupMessages = async (
+  messages: { id: number; photoId: number | null }[],
+) => {
+  if (messages.length === 0) {
+    return new Map<number, { id: number; width: number; height: number }[]>();
+  }
+  const coverIds = messages.flatMap((message) =>
+    message.photoId === null ? [] : [message.photoId],
+  );
+  const rows = await db
+    .select({
+      id: chatGroupPhotos.id,
+      messageId: chatGroupPhotos.messageId,
+      position: chatGroupPhotos.position,
+      width: chatGroupPhotos.width,
+      height: chatGroupPhotos.height,
+    })
+    .from(chatGroupPhotos)
     .where(
-      and(eq(chatGroupPhotos.id, photoId), isNull(chatGroupPhotos.messageId)),
+      or(
+        inArray(
+          chatGroupPhotos.messageId,
+          messages.map((message) => message.id),
+        ),
+        coverIds.length > 0 ? inArray(chatGroupPhotos.id, coverIds) : undefined,
+      ),
     );
+
+  return groupPhotosByMessage(
+    rows,
+    new Map(messages.map((message) => [message.id, message.photoId])),
+  );
 };
 
 // Unsend: the stored image goes with the message.

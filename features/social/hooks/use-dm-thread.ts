@@ -249,14 +249,14 @@ export const useDmThread = ({ conversationId, meId, initial }: Options) => {
   }, [conversationId]);
 
   const deliver = useCallback(
-    async (item: DmThreadItem, photoId: number | null) => {
+    async (item: DmThreadItem, photoIds: number[]) => {
       const postId = item.post?.id ?? null;
 
       const result = await sendDmAction({
         conversationId,
         clientId: item.clientId,
         body: item.body ?? "",
-        photoId,
+        photoIds,
         postId,
       });
 
@@ -281,14 +281,15 @@ export const useDmThread = ({ conversationId, meId, initial }: Options) => {
   const send = useCallback(
     (
       body: string,
-      photo: { id: number; url: string; width: number; height: number } | null,
+      photos: { id: number; url: string; width: number; height: number }[],
       post: DmReplyPostView | null = null,
     ) => {
       const item: DmThreadItem = {
         id: -Date.now(),
         senderId: meId,
         body: body.trim() === "" ? null : body.trim(),
-        photo,
+        photo: photos[0] ?? null,
+        photos,
         post,
         clientId: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
@@ -298,7 +299,10 @@ export const useDmThread = ({ conversationId, meId, initial }: Options) => {
       setItems((current) => [...current, item]);
       // A reply is likely soon: poll at the fast rate again.
       speedUpRef.current();
-      void deliver(item, photo?.id ?? null);
+      void deliver(
+        item,
+        photos.map((photo) => photo.id),
+      );
     },
     [deliver, meId],
   );
@@ -319,7 +323,12 @@ export const useDmThread = ({ conversationId, meId, initial }: Options) => {
             : entry,
         ),
       );
-      void deliver(item, item.photo ? photoIdOf(item.photo.url) : null);
+      void deliver(
+        item,
+        (item.photos ?? (item.photo ? [item.photo] : [])).map((photo) =>
+          photoIdOf(photo.url),
+        ),
+      );
     },
     [deliver],
   );

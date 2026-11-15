@@ -1,10 +1,11 @@
 import "server-only";
 
-import { and, eq, isNotNull, isNull, lt } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 
 import { db } from "@/db";
 import { dmMessages, dmPhotos } from "@/db/schema";
 import {
+  groupPhotosByMessage,
   PHOTO_PENDING_TTL_MS,
   type PhotoMime,
 } from "@/features/chat/utils/photo-rules";
@@ -53,26 +54,102 @@ export const createPendingDmPhoto = async (
   return row.id;
 };
 
-// Attachable once, by its uploader, to a message of the conversation it was
-// uploaded for.
-export const isDmPhotoAttachable = async (
-  photoId: number,
+// Attachable once, by their uploader, to a message of the conversation they
+// were uploaded for. True when every id qualifies.
+export const areDmPhotosAttachable = async (
+  photoIds: number[],
   conversationId: number,
   uploaderId: number,
 ) => {
-  const [row] = await db
+  if (photoIds.length === 0) {
+    return true;
+  }
+  if (new Set(photoIds).size !== photoIds.length) {
+    return false;
+  }
+  const rows = await db
     .select({ id: dmPhotos.id })
     .from(dmPhotos)
     .where(
       and(
-        eq(dmPhotos.id, photoId),
+        inArray(dmPhotos.id, photoIds),
         eq(dmPhotos.conversationId, conversationId),
         eq(dmPhotos.uploaderId, uploaderId),
         isNull(dmPhotos.messageId),
       ),
     );
 
-  return Boolean(row);
+  return rows.length === photoIds.length;
+};
+
+export class DmPhotosNotAttachableError extends Error {}
+
+// Attaches the photos in array order (position = index) inside the caller's
+// transaction; throws when one is not a pending photo of this uploader and
+// conversation, which undoes the whole send.
+export const attachDmPhotosToMessage = async (
+  executor: Pick<typeof db, "update">,
+  input: {
+    photoIds: number[];
+    messageId: number;
+    conversationId: number;
+    uploaderId: number;
+  },
+) => {
+  for (const [position, photoId] of input.photoIds.entries()) {
+    const attached = await executor
+      .update(dmPhotos)
+      .set({ messageId: input.messageId, position })
+      .where(
+        and(
+          eq(dmPhotos.id, photoId),
+          eq(dmPhotos.conversationId, input.conversationId),
+          eq(dmPhotos.uploaderId, input.uploaderId),
+          isNull(dmPhotos.messageId),
+        ),
+      )
+      .returning({ id: dmPhotos.id });
+
+    if (attached.length === 0) {
+      throw new DmPhotosNotAttachableError();
+    }
+  }
+};
+
+// The photos (size only) of many messages in one query, in display order. A
+// message from before several photos has its one photo too.
+export const loadPhotosOfDmMessages = async (
+  messages: { id: number; photoId: number | null }[],
+) => {
+  if (messages.length === 0) {
+    return new Map<number, { id: number; width: number; height: number }[]>();
+  }
+  const coverIds = messages.flatMap((message) =>
+    message.photoId === null ? [] : [message.photoId],
+  );
+  const rows = await db
+    .select({
+      id: dmPhotos.id,
+      messageId: dmPhotos.messageId,
+      position: dmPhotos.position,
+      width: dmPhotos.width,
+      height: dmPhotos.height,
+    })
+    .from(dmPhotos)
+    .where(
+      or(
+        inArray(
+          dmPhotos.messageId,
+          messages.map((message) => message.id),
+        ),
+        coverIds.length > 0 ? inArray(dmPhotos.id, coverIds) : undefined,
+      ),
+    );
+
+  return groupPhotosByMessage(
+    rows,
+    new Map(messages.map((message) => [message.id, message.photoId])),
+  );
 };
 
 // The bytes, only for a photo of a live message in a conversation the viewer

@@ -4,6 +4,7 @@ import { desc, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { dmConversations, dmMessages, users } from "@/db/schema";
+import { loadPhotosOfDmMessages } from "@/features/social/services/dm-photos";
 import { dmPreview } from "@/features/social/utils/dm-rules";
 import { getFormatTranslator } from "@/i18n/format-translator";
 import { DEFAULT_LOCALE, type Locale } from "@/utils/locale";
@@ -48,6 +49,13 @@ export const listAllDmConversations = async (
   ]);
   const names = new Map(people.map((p) => [p.id, p.name]));
   const lastById = new Map(lasts.map((m) => [m.id, m]));
+  const lastPhotos = await loadPhotosOfDmMessages(
+    lasts.flatMap((m) =>
+      m.photoId === null || m.deletedAt !== null
+        ? []
+        : [{ id: m.id, photoId: m.photoId }],
+    ),
+  );
   const t = getFormatTranslator(locale);
 
   return rows.map((row) => {
@@ -67,6 +75,7 @@ export const listAllDmConversations = async (
               deleted: last.deletedAt !== null,
             },
             locale,
+            lastPhotos.get(last.id)?.length ?? 1,
           )
         : "",
     };

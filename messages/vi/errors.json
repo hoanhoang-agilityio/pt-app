@@ -297,5 +297,9 @@
     "CANNOT_REMOVE_MANAGER": "Không thể xoá quản lý tổng khỏi nhóm",
     "ALERT_NOT_FOUND": "Không tìm thấy cảnh báo này",
     "ALERT_HANDLED": "Cảnh báo này đã được xử lý"
+  },
+  "theme": {
+    "INVALID_COLOR": "Màu không hợp lệ",
+    "INVALID_SCOPE": "Phạm vi không hợp lệ"
   }
 }

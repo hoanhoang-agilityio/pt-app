@@ -18,6 +18,7 @@ import enPush from "@/messages/en/push.json";
 import enPwa from "@/messages/en/pwa.json";
 import enRestrictions from "@/messages/en/restrictions.json";
 import enSocial from "@/messages/en/social.json";
+import enTheme from "@/messages/en/theme.json";
 import enWorkouts from "@/messages/en/workouts.json";
 import viAdminPages from "@/messages/vi/adminPages.json";
 import viAuth from "@/messages/vi/auth.json";
@@ -39,6 +40,7 @@ import viPush from "@/messages/vi/push.json";
 import viPwa from "@/messages/vi/pwa.json";
 import viRestrictions from "@/messages/vi/restrictions.json";
 import viSocial from "@/messages/vi/social.json";
+import viTheme from "@/messages/vi/theme.json";
 import viWorkouts from "@/messages/vi/workouts.json";
 import zhAdminPages from "@/messages/zh/adminPages.json";
 import zhAuth from "@/messages/zh/auth.json";
@@ -60,6 +62,7 @@ import zhPush from "@/messages/zh/push.json";
 import zhPwa from "@/messages/zh/pwa.json";
 import zhRestrictions from "@/messages/zh/restrictions.json";
 import zhSocial from "@/messages/zh/social.json";
+import zhTheme from "@/messages/zh/theme.json";
 import zhWorkouts from "@/messages/zh/workouts.json";
 import type { Locale } from "@/utils/locale";
 
@@ -88,6 +91,7 @@ export const MESSAGES = {
     pwa: viPwa,
     restrictions: viRestrictions,
     social: viSocial,
+    theme: viTheme,
     workouts: viWorkouts,
   },
   en: {
@@ -111,6 +115,7 @@ export const MESSAGES = {
     pwa: enPwa,
     restrictions: enRestrictions,
     social: enSocial,
+    theme: enTheme,
     workouts: enWorkouts,
   },
   zh: {
@@ -134,6 +139,7 @@ export const MESSAGES = {
     pwa: zhPwa,
     restrictions: zhRestrictions,
     social: zhSocial,
+    theme: zhTheme,
     workouts: zhWorkouts,
   },
 } as const satisfies Record<Locale, Record<string, object>>;

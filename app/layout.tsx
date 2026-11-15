@@ -10,6 +10,8 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EMBED_MARKER_SCRIPT } from "@/features/chat-bubbles/constants/embed-script";
 import { ServiceWorkerRegister } from "@/features/pwa/components/ServiceWorkerRegister";
 import { INSTALL_CAPTURE_SCRIPT } from "@/features/pwa/constants/capture-script";
+import { getViewerAccent } from "@/features/theme/services/theme-queries";
+import { buildThemeCss } from "@/features/theme/utils/theme-css";
 import { pickClientMessages } from "@/i18n/client-namespaces";
 import { parseTheme, THEME_COOKIE } from "@/utils/theme";
 
@@ -56,6 +58,8 @@ const RootLayout = async ({ children }: LayoutProps<"/">) => {
   const locale = await getLocale();
   // Only the namespaces browser code reads; the rest stays on the server.
   const messages = await getMessages();
+  // The super admin's primary color for this viewer; null = default orange.
+  const themeCss = buildThemeCss(await getViewerAccent());
 
   return (
     <html lang={locale} data-theme={theme} suppressHydrationWarning>
@@ -64,6 +68,9 @@ const RootLayout = async ({ children }: LayoutProps<"/">) => {
         <script dangerouslySetInnerHTML={{ __html: EMBED_MARKER_SCRIPT }} />
       </head>
       <body className="min-h-dvh antialiased">
+        {/* After globals.css in document order, so the same selectors win; the
+            CSS is built only from a normalized #rrggbb, never raw input. */}
+        {themeCss && <style dangerouslySetInnerHTML={{ __html: themeCss }} />}
         <NextIntlClientProvider
           locale={locale}
           messages={pickClientMessages(messages)}

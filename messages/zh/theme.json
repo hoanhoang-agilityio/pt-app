@@ -1,0 +1,59 @@
+{
+  "eyebrow": "设置",
+  "title": "应用主题色",
+  "description": "选择按钮、选中标签和强调元素的主题色。深色模式的颜色由应用自动计算。",
+  "scope": {
+    "title": "应用范围",
+    "self": "仅我自己",
+    "trainee": "学员",
+    "pt": "教练",
+    "all": "所有人",
+    "default": "默认",
+    "allHint": "保存后会清除学员和教练的专属颜色，你自己的颜色保留。"
+  },
+  "preview": {
+    "title": "预览",
+    "light": "浅色",
+    "dark": "深色",
+    "button": "开始训练",
+    "chip": "今天",
+    "progress": "进度 60%",
+    "tabs": {
+      "workouts": "训练",
+      "nutrition": "饮食",
+      "account": "我的"
+    }
+  },
+  "picker": {
+    "title": "选择颜色",
+    "presets": "推荐颜色",
+    "pickPreset": "选择颜色 {color}",
+    "native": "取色器",
+    "hex": "HEX 代码",
+    "hexInvalid": "请输入 #rgb 或 #rrggbb 格式的颜色。",
+    "rgb": "RGB",
+    "red": "红",
+    "green": "绿",
+    "blue": "蓝",
+    "hsl": "HSL",
+    "hue": "色相",
+    "saturation": "饱和度",
+    "lightness": "亮度"
+  },
+  "contrast": {
+    "ok": "对比度达标",
+    "warning": "此颜色在浅色背景上不易看清",
+    "foreground": "颜色上的文字：{ratio}:1（需要 {min}:1）",
+    "light": "颜色在浅色背景上：{ratio}:1（需要 {min}:1）",
+    "dark": "深色模式（自动调整）：{ratio}:1",
+    "fix": "调整亮度"
+  },
+  "actions": {
+    "save": "保存颜色",
+    "saving": "保存中…",
+    "reset": "恢复默认",
+    "saved": "已保存主题色",
+    "resetDone": "已恢复默认颜色",
+    "failed": "保存失败，请稍后再试。"
+  }
+}

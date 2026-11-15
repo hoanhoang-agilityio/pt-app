@@ -69,7 +69,9 @@ export const GroupInboxSection = ({
               kind === "text"
                 ? `${last?.senderKey === viewerKey ? t("inbox.you") : ""}${last?.preview ?? ""}`
                 : kind === "photo"
-                  ? t("inbox.photo")
+                  ? (last?.photoCount ?? 0) > 1
+                    ? t("inbox.photos", { count: last?.photoCount ?? 0 })
+                    : t("inbox.photo")
                   : kind === "sticker"
                     ? t("inbox.sticker")
                     : kind === "system"

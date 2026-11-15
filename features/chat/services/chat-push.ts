@@ -139,6 +139,8 @@ export interface SendChatPushInput {
   sticker?: boolean;
   // The message carries a photo (KAN-160): the preview becomes a kind label.
   photo?: boolean;
+  // How many photos when it carries several (the preview names the count).
+  photoCount?: number;
 }
 
 const loadTargets = async (
@@ -308,6 +310,7 @@ export const sendChatPush = async (
     body,
     sticker,
     photo,
+    photoCount,
   }: SendChatPushInput,
   sender: PushSender = sendWithWebPush,
 ) => {
@@ -369,6 +372,7 @@ export const sendChatPush = async (
           body,
           sticker,
           photo,
+          photoCount,
           locale,
         }),
       vapid,

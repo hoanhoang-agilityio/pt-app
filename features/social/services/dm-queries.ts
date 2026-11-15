@@ -13,13 +13,7 @@ import {
 } from "drizzle-orm";
 
 import { db } from "@/db";
-import {
-  dmConversations,
-  dmMessages,
-  dmPhotos,
-  dmReads,
-  users,
-} from "@/db/schema";
+import { dmConversations, dmMessages, dmReads, users } from "@/db/schema";
 import { avatarUrl } from "@/features/avatar/utils/avatar-rules";
 import { loadAliases } from "@/features/contact-aliases/services/contact-aliases";
 import {
@@ -27,6 +21,7 @@ import {
   userActorKey,
 } from "@/features/contact-aliases/utils/alias-rules";
 import { DM_PAGE_SIZE } from "@/features/social/constants/dm";
+import { loadPhotosOfDmMessages } from "@/features/social/services/dm-photos";
 import { loadReplyPostViews } from "@/features/social/services/dm-reply-post";
 import { listBlockedBetweenIds } from "@/features/social/services/relationships";
 import type {
@@ -47,38 +42,26 @@ export type { DmMessageView, DmThreadPage };
 
 const toView = (
   row: typeof dmMessages.$inferSelect,
-  photos: Map<number, { width: number; height: number }>,
+  photos: Map<number, { id: number; width: number; height: number }[]>,
   posts: Map<number, DmReplyPostView>,
 ): DmMessageView => {
-  const size = row.photoId === null ? undefined : photos.get(row.photoId);
+  const list = (photos.get(row.id) ?? []).map((photo) => ({
+    url: dmPhotoUrl(photo.id),
+    width: photo.width,
+    height: photo.height,
+  }));
 
   return {
     id: row.id,
     senderId: row.senderId,
     body: row.body,
-    photo:
-      row.photoId !== null && size
-        ? { url: dmPhotoUrl(row.photoId), ...size }
-        : null,
+    photo: list[0] ?? null,
+    photos: list,
     post:
       row.replyPostId === null ? null : (posts.get(row.replyPostId) ?? null),
     clientId: row.clientId,
     createdAt: row.createdAt.toISOString(),
   };
-};
-
-const loadPhotoSizes = async (photoIds: number[]) => {
-  if (photoIds.length === 0) {
-    return new Map<number, { width: number; height: number }>();
-  }
-  const rows = await db
-    .select({ id: dmPhotos.id, width: dmPhotos.width, height: dmPhotos.height })
-    .from(dmPhotos)
-    .where(inArray(dmPhotos.id, photoIds));
-
-  return new Map(
-    rows.map((row) => [row.id, { width: row.width, height: row.height }]),
-  );
 };
 
 // Views as `viewer` may see them: the quoted post is checked per viewer.
@@ -87,8 +70,11 @@ export const toMessageViews = async (
   viewer: SocialActor,
 ) => {
   const [photos, posts] = await Promise.all([
-    loadPhotoSizes(
-      rows.flatMap((row) => (row.photoId === null ? [] : [row.photoId])),
+    // Sizes only, one query for every message of the page.
+    loadPhotosOfDmMessages(
+      rows.flatMap((row) =>
+        row.photoId === null ? [] : [{ id: row.id, photoId: row.photoId }],
+      ),
     ),
     loadReplyPostViews(
       viewer,
@@ -281,6 +267,13 @@ export const listDmInbox = async (
     otherIds.map(userActorKey),
   );
   const lastById = new Map(lasts.map((message) => [message.id, message]));
+  const lastPhotos = await loadPhotosOfDmMessages(
+    lasts.flatMap((message) =>
+      message.photoId === null || message.deletedAt !== null
+        ? []
+        : [{ id: message.id, photoId: message.photoId }],
+    ),
+  );
 
   return conversations
     .flatMap((row) => {
@@ -312,6 +305,7 @@ export const listDmInbox = async (
               deleted: last.deletedAt !== null,
             },
             locale,
+            lastPhotos.get(last.id)?.length ?? 1,
           )}`,
           lastMessageAt: row.lastMessageAt?.toISOString() ?? null,
           unread: unread.get(row.id) ?? 0,

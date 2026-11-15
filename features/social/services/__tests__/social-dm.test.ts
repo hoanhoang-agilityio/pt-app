@@ -176,7 +176,7 @@ const send = (
     conversationId,
     senderId,
     body,
-    photoId: options.photoId ?? null,
+    photoIds: options.photoId ? [options.photoId] : [],
     clientId: options.clientId ?? uuid(),
   });
 
@@ -705,7 +705,7 @@ describe("actions", () => {
       conversationId: id,
       clientId: uuid(),
       body: "hi",
-      photoId: null,
+      photoIds: [],
     };
 
     expect((await actions.sendDmAction(input)).status).toBe("success");
@@ -865,7 +865,7 @@ describe("replying to a post", () => {
       conversationId: id,
       senderId,
       body,
-      photoId: null,
+      photoIds: [],
       postId,
       clientId: uuid(),
     });
@@ -1057,7 +1057,7 @@ describe("replying to a post", () => {
       conversationId: id,
       senderId: alice,
       body: "Nice!",
-      photoId: null,
+      photoIds: [],
       postId,
       clientId,
     };
@@ -1067,5 +1067,183 @@ describe("replying to a post", () => {
     expect(first.ok && first.created).toBe(true);
     expect(second.ok && second.created).toBe(false);
     expect(await db.select().from(dmMessages)).toHaveLength(1);
+  });
+});
+
+describe("several photos in one message", () => {
+  let id: number;
+  const getPhoto = (target: number) =>
+    photoRoute.GET(
+      new NextRequest(`http://localhost/api/dm/photos/${target}`),
+      { params: Promise.resolve({ id: String(target) }) },
+    );
+  const sendMany = (
+    photoIds: number[],
+    options: { sender?: number; conversation?: number; body?: string } = {},
+  ) =>
+    mutations.sendDmMessage({
+      conversationId: options.conversation ?? id,
+      senderId: options.sender ?? alice,
+      body: options.body ?? "",
+      photoIds,
+      clientId: uuid(),
+    });
+  const uploadMany = async (count: number, uploader = alice) => {
+    const ids: number[] = [];
+
+    for (let index = 0; index < count; index += 1) {
+      ids.push(await uploadPhoto(id, uploader));
+    }
+    return ids;
+  };
+
+  beforeEach(async () => {
+    await befriend(alice, bob);
+    id = await openChat(alice, bob);
+  });
+
+  it("sends 3 photos as one message in the given order, the first is the cover", async () => {
+    const [a, b, c] = await uploadMany(3);
+    const sent = await sendMany([b, c, a]);
+
+    expect(sent.ok).toBe(true);
+    if (!sent.ok) {
+      return;
+    }
+    expect(sent.message.photos?.map((photo) => photo.url)).toEqual([
+      `/api/dm/photos/${b}`,
+      `/api/dm/photos/${c}`,
+      `/api/dm/photos/${a}`,
+    ]);
+    expect(sent.message.photo?.url).toBe(`/api/dm/photos/${b}`);
+    const [message] = await db.select().from(dmMessages);
+
+    expect(message.photoId).toBe(b);
+    const rows = (await db.select().from(dmPhotos)).sort((x, y) => x.id - y.id);
+
+    expect(rows.map((row) => [row.id, row.messageId, row.position])).toEqual([
+      [a, message.id, 2],
+      [b, message.id, 0],
+      [c, message.id, 1],
+    ]);
+    // The thread (polling) carries the same list.
+    const thread = await queries.listDmThread(id, {
+      otherId: bob,
+      viewer: member(alice),
+    });
+
+    expect(thread.messages[0].photos?.map((photo) => photo.url)).toEqual([
+      `/api/dm/photos/${b}`,
+      `/api/dm/photos/${c}`,
+      `/api/dm/photos/${a}`,
+    ]);
+  });
+
+  it("accepts 10 photos and rejects 11 without storing anything", async () => {
+    const ids = await uploadMany(11);
+
+    expect(await sendMany(ids)).toMatchObject({ error: "photo_not_found" });
+    expect(await db.select().from(dmMessages)).toHaveLength(0);
+    expect((await sendMany(ids.slice(0, 10))).ok).toBe(true);
+    const [message] = await db.select().from(dmMessages);
+
+    expect(
+      (await db.select().from(dmPhotos)).filter(
+        (row) => row.messageId === message.id,
+      ),
+    ).toHaveLength(10);
+  });
+
+  it("rejects the same photo twice, another member's photo and another conversation's photo", async () => {
+    const [mine] = await uploadMany(1);
+    const [theirs] = await uploadMany(1, bob);
+    const other = await openChat(alice, carol);
+    const elsewhere = await uploadPhoto(other, alice);
+
+    expect(await sendMany([mine, mine])).toMatchObject({
+      error: "photo_not_found",
+    });
+    expect(await sendMany([mine, theirs])).toMatchObject({
+      error: "photo_not_found",
+    });
+    expect(await sendMany([mine, elsewhere])).toMatchObject({
+      error: "photo_not_found",
+    });
+    expect(await db.select().from(dmMessages)).toHaveLength(0);
+    expect(
+      (await db.select().from(dmPhotos)).every((row) => row.messageId === null),
+    ).toBe(true);
+  });
+
+  it("rejects a photo that is already attached, leaving the rest pending", async () => {
+    const [a, b] = await uploadMany(2);
+
+    expect((await sendMany([a])).ok).toBe(true);
+    expect(await sendMany([b, a])).toMatchObject({ error: "photo_not_found" });
+    expect(await db.select().from(dmMessages)).toHaveLength(1);
+    expect(
+      (await db.select().from(dmPhotos)).find((row) => row.id === b)?.messageId,
+    ).toBeNull();
+  });
+
+  it("serves every photo of the message to the members and hides them all after an unsend", async () => {
+    const ids = await uploadMany(3);
+    const sent = await sendMany(ids);
+
+    for (const photoId of ids) {
+      signInAs(bob);
+      expect((await getPhoto(photoId)).status).toBe(200);
+      signInAs(carol);
+      expect((await getPhoto(photoId)).status).toBe(404);
+    }
+    signInAs(alice);
+    expect(
+      (
+        await mutations.unsendDmMessage(
+          id,
+          sent.ok ? sent.message.id : -1,
+          alice,
+        )
+      ).ok,
+    ).toBe(true);
+    expect(await db.select().from(dmPhotos)).toHaveLength(0);
+    for (const photoId of ids) {
+      expect((await getPhoto(photoId)).status).toBe(404);
+    }
+  });
+
+  it("returns a legacy message with only photo_id as one photo and words the inbox by count", async () => {
+    const legacy = await uploadPhoto(id, alice);
+    const [message] = await db
+      .insert(dmMessages)
+      .values({
+        conversationId: id,
+        senderId: alice,
+        body: null,
+        photoId: legacy,
+        clientId: uuid(),
+        createdAt: new Date(),
+      })
+      .returning();
+
+    await db
+      .update(dmPhotos)
+      .set({ messageId: message.id })
+      .where(eq(dmPhotos.id, legacy));
+    await db
+      .update(dmConversations)
+      .set({ lastMessageId: message.id, lastMessageAt: new Date() })
+      .where(eq(dmConversations.id, id));
+    const thread = await queries.listDmThread(id, {
+      otherId: bob,
+      viewer: member(alice),
+    });
+
+    expect(thread.messages[0].photos).toEqual([
+      { url: `/api/dm/photos/${legacy}`, width: 800, height: 600 },
+    ]);
+    expect((await queries.listDmInbox(alice))[0].preview).toBe("Bạn: 📷 Ảnh");
+    await sendMany(await uploadMany(3));
+    expect((await queries.listDmInbox(alice))[0].preview).toBe("Bạn: 📷 3 ảnh");
   });
 });

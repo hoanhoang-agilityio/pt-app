@@ -95,7 +95,7 @@ export const sendDmAction = withResultErrorHandling(
       senderId: actor.id,
       clientId: parsed.data.clientId,
       body: parsed.data.body,
-      photoId: parsed.data.photoId,
+      photoIds: parsed.data.photoIds,
       postId: parsed.data.postId,
     });
 
@@ -115,6 +115,7 @@ export const sendDmAction = withResultErrorHandling(
         conversationId: parsed.data.conversationId,
         body: result.message.body,
         photo: result.message.photo !== null,
+        photoCount: result.message.photos?.length,
       });
       revalidatePath(ROUTES.MESSAGES);
     }

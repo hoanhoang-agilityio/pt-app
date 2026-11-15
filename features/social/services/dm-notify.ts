@@ -50,13 +50,22 @@ export interface SendDmPushInput {
   conversationId: number;
   body: string | null;
   photo: boolean;
+  // Photos in the message when there are several.
+  photoCount?: number;
 }
 
 // The other member's devices; the title is the sender's name and the body a
 // preview of the text (a kind label for a photo or link). Never logged.
 // Skipped without VAPID keys.
 export const sendDmPush = async (
-  { senderId, recipientId, conversationId, body, photo }: SendDmPushInput,
+  {
+    senderId,
+    recipientId,
+    conversationId,
+    body,
+    photo,
+    photoCount,
+  }: SendDmPushInput,
   sender: PushSender = sendWithWebPush,
 ) => {
   try {
@@ -97,6 +106,7 @@ export const sendDmPush = async (
           conversationId,
           body,
           photo,
+          photoCount,
           locale,
         }),
       vapid,

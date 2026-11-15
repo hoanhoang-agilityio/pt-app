@@ -12,21 +12,20 @@ import { toast } from "sonner";
 import { Avatar } from "@/components/common/Avatar";
 import { LoadOlderControl } from "@/components/common/LoadOlderControl";
 import { ScrollJumpButton } from "@/components/common/ScrollJumpButton";
-import { Spinner } from "@/components/common/Spinner";
 import { ROUTES } from "@/constants/routes";
 import { ICON_BUTTON, PAGE_CONTAINER } from "@/constants/styles";
+import { PhotoTray } from "@/features/chat/components/PhotoTray";
+import { uploadPhotoToUrl } from "@/features/chat/hooks/use-chat-adapter";
 import { useClearNotifications } from "@/features/chat/hooks/use-clear-notifications";
+import { useMessagePhotos } from "@/features/chat/hooks/use-message-photos";
 import { dmNotificationTags } from "@/features/chat/utils/clear-notifications";
-import {
-  encodePhoto,
-  PhotoImageError,
-} from "@/features/chat/utils/encode-photo";
-import { PHOTO_ERRORS } from "@/features/chat/utils/photo-rules";
+import { MAX_MESSAGE_PHOTOS } from "@/features/chat/utils/photo-rules";
 import { DmBubbleList } from "@/features/social/components/DmBubbleList";
 import { DmPostQuote } from "@/features/social/components/DmPostQuote";
 import { DM_BODY_MAX_LENGTH } from "@/features/social/constants/dm";
 import { useDmThread } from "@/features/social/hooks/use-dm-thread";
 import type { DmReplyPostView, DmThreadPage } from "@/features/social/types/dm";
+import { dmPhotoUrl } from "@/features/social/utils/dm-rules";
 import { lastSeenOwnId } from "@/features/social/utils/dm-thread-rules";
 import { profilePath } from "@/features/social/utils/post-rules";
 import { useLoadOlderOnScroll } from "@/hooks/use-load-older-on-scroll";
@@ -45,14 +44,7 @@ interface DmThreadProps {
   };
 }
 
-interface PendingPhoto {
-  id: number;
-  url: string;
-  width: number;
-  height: number;
-}
-
-// A friend chat (v1): text and one photo per message, unsend, "Đã xem", 5 s
+// A friend chat (v1): text and up to 10 photos per message, unsend, "Đã xem", 5 s
 // polling. When the chat is read-only the composer gives way to the reason.
 export const DmThread = ({
   conversationId,
@@ -66,8 +58,11 @@ export const DmThread = ({
   const localize = useLocalizeMessage();
   const thread = useDmThread({ conversationId, meId, initial });
   const [text, setText] = useState("");
-  const [photo, setPhoto] = useState<PendingPhoto | null>(null);
-  const [isUploading, setUploading] = useState(false);
+  // Up to 10 photos: each is resized and uploaded as soon as it is picked.
+  const photos = useMessagePhotos((blob) =>
+    uploadPhotoToUrl(blob, `/api/dm/photos?conversationId=${conversationId}`),
+  );
+  const tTray = useTranslations("chat.photoTray");
   const [quote, setQuote] = useState(replyPost);
   const endRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
@@ -91,54 +86,10 @@ export const DmThread = ({
     endRef.current?.scrollIntoView({ block: "end" });
   }, [lastKey]);
 
-  const handleFile = async (file: File | undefined) => {
-    if (!file) {
-      return;
-    }
-    setUploading(true);
-    try {
-      const prepared = await encodePhoto(file);
-      const response = await fetch(
-        `/api/dm/photos?conversationId=${conversationId}`,
-        { method: "POST", body: prepared.blob },
-      );
-
-      if (!response.ok) {
-        const data: { message?: string } = await response
-          .json()
-          .catch(() => ({}));
-
-        toast.error(localize(data.message ?? PHOTO_ERRORS.GENERIC));
-        return;
-      }
-      const data: { photo: { id: number } } = await response.json();
-
-      setPhoto({
-        id: data.photo.id,
-        url: `/api/dm/photos/${data.photo.id}`,
-        width: prepared.width,
-        height: prepared.height,
-      });
-    } catch (error) {
-      toast.error(
-        localize(
-          error instanceof PhotoImageError
-            ? error.message
-            : PHOTO_ERRORS.GENERIC,
-        ),
-      );
-    } finally {
-      setUploading(false);
-      if (fileRef.current) {
-        fileRef.current.value = "";
-      }
-    }
-  };
-
-  // A post reply needs a text; otherwise a text or a photo.
-  const canSend =
-    (quote ? text.trim() !== "" : text.trim() !== "" || photo !== null) &&
-    !isUploading;
+  // A post reply needs a text; otherwise a text or at least one photo. Sending
+  // waits while photos upload or when one failed (the button says why).
+  const hasPhotos = photos.items.length > 0;
+  const canSend = quote ? text.trim() !== "" : text.trim() !== "" || hasPhotos;
 
   // Drop "?replyPost=" so a refresh does not attach the post again.
   const clearQuote = () => {
@@ -154,9 +105,22 @@ export const DmThread = ({
     if (!canSend) {
       return;
     }
-    thread.send(text, photo, quote);
+    if (photos.isBlocked) {
+      toast.error(tTray("pending"));
+      return;
+    }
+    thread.send(
+      text,
+      photos.ready().map((photo) => ({
+        id: photo.photoId,
+        url: dmPhotoUrl(photo.photoId),
+        width: photo.width,
+        height: photo.height,
+      })),
+      quote,
+    );
     setText("");
-    setPhoto(null);
+    photos.reset();
     if (quote) {
       clearQuote();
     }
@@ -271,54 +235,33 @@ export const DmThread = ({
                 </button>
               </div>
             )}
-            {(photo || isUploading) && (
-              <div className="flex items-center gap-2">
-                {photo ? (
-                  <div className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={photo.url}
-                      alt={t("photoAlt")}
-                      className="size-16 rounded-xl border border-line object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPhoto(null)}
-                      aria-label={t("removePhoto")}
-                      className="absolute -top-2 -right-2 inline-flex size-6 items-center justify-center rounded-full bg-fg text-bg shadow"
-                    >
-                      <X className="size-4" aria-hidden />
-                    </button>
-                  </div>
-                ) : (
-                  <span className="inline-flex items-center gap-2 text-sm text-muted">
-                    <Spinner size="sm" />
-                    {t("uploading")}
-                  </span>
-                )}
-              </div>
-            )}
+            <PhotoTray photos={photos} onAdd={() => fileRef.current?.click()} />
             <div className="flex items-end gap-2">
               <input
                 ref={fileRef}
                 type="file"
                 accept="image/*"
+                multiple
                 hidden
-                onChange={(event) => void handleFile(event.target.files?.[0])}
+                onChange={(event) => {
+                  photos.pick(event.target.files);
+                  // Picking the same file again must fire a change.
+                  event.target.value = "";
+                }}
               />
               <button
                 type="button"
-                disabled={isUploading}
-                aria-busy={isUploading}
-                onClick={() => fileRef.current?.click()}
+                onClick={() =>
+                  photos.isFull
+                    ? toast.error(
+                        tTray("slotsFull", { max: MAX_MESSAGE_PHOTOS }),
+                      )
+                    : fileRef.current?.click()
+                }
                 aria-label={t("attachPhoto")}
                 className={ICON_BUTTON}
               >
-                {isUploading ? (
-                  <Spinner size="lg" />
-                ) : (
-                  <ImagePlus className="size-6" aria-hidden />
-                )}
+                <ImagePlus className="size-6" aria-hidden />
               </button>
               <textarea
                 value={text}

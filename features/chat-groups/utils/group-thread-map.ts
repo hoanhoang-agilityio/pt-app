@@ -65,6 +65,16 @@ const expandReactions = (view: GroupMessageWire, viewerKey: string) =>
     ];
   });
 
+const toPhoto = (
+  groupId: number,
+  photo: { id: number; width: number; height: number },
+) => ({
+  url: groupPhotoUrl(groupId, photo.id),
+  width: photo.width,
+  height: photo.height,
+  alt: PHOTO_ALT,
+});
+
 export const toChatMessage = (
   view: GroupMessageWire,
   viewerKey: string,
@@ -81,14 +91,8 @@ export const toChatMessage = (
     sticker: view.sticker
       ? toChatSticker(view.sticker.ref, view.sticker.url)
       : null,
-    photo: view.photo
-      ? {
-          url: groupPhotoUrl(view.groupId, view.photo.id),
-          width: view.photo.width,
-          height: view.photo.height,
-          alt: PHOTO_ALT,
-        }
-      : null,
+    photo: view.photo ? toPhoto(view.groupId, view.photo) : null,
+    photos: (view.photos ?? []).map((photo) => toPhoto(view.groupId, photo)),
     // System lines have no client id; the row id keeps the key unique.
     clientId: view.clientId ?? `system-${view.id}`,
     createdAt: view.createdAt,
@@ -102,6 +106,9 @@ export const toChatMessage = (
           senderName: view.replyTo.senderName,
           ...(view.replyTo.isSticker ? { isSticker: true } : {}),
           ...(view.replyTo.isPhoto ? { isPhoto: true } : {}),
+          ...((view.replyTo.photoCount ?? 0) > 1
+            ? { photoCount: view.replyTo.photoCount }
+            : {}),
         }
       : null,
     editedAt: view.edited ? (view.updatedAt ?? view.createdAt) : null,

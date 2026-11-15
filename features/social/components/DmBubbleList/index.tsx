@@ -3,12 +3,46 @@
 import clsx from "clsx";
 import { RotateCcw } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useState } from "react";
 
+import { ChatPhotoGrid } from "@/features/chat/components/ChatPhotoGrid";
 import { ChatPhotoImage } from "@/features/chat/components/ChatPhotoImage";
+import { ChatPhotoViewer } from "@/features/chat/components/ChatPhotoViewer";
 import { PHOTO_ALT } from "@/features/chat/utils/photo-rules";
 import { DmPostQuote } from "@/features/social/components/DmPostQuote";
 import type { DmThreadItem } from "@/features/social/utils/dm-thread-rules";
 import { type Locale, toIntlLocale } from "@/utils/locale";
+
+// The photos of one message: a single image, or a grid with a viewer.
+const DmPhotos = ({
+  photos,
+  isDimmed,
+}: {
+  photos: { url: string; width: number; height: number }[];
+  isDimmed: boolean;
+}) => {
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const shown = photos.map((photo) => ({ ...photo, alt: PHOTO_ALT }));
+
+  if (shown.length === 1) {
+    return <ChatPhotoImage photo={shown[0]} isDimmed={isDimmed} />;
+  }
+  return (
+    <>
+      <ChatPhotoGrid
+        photos={shown}
+        isDimmed={isDimmed}
+        onOpen={setViewerIndex}
+      />
+      <ChatPhotoViewer
+        photos={shown}
+        index={viewerIndex}
+        onIndexChange={setViewerIndex}
+        onClose={() => setViewerIndex(null)}
+      />
+    </>
+  );
+};
 
 interface DmBubbleListProps {
   items: DmThreadItem[];
@@ -71,8 +105,12 @@ export const DmBubbleList = ({
             >
               {item.post && <DmPostQuote post={item.post} />}
               {item.photo && (
-                <ChatPhotoImage
-                  photo={{ ...item.photo, alt: PHOTO_ALT }}
+                <DmPhotos
+                  photos={
+                    item.photos && item.photos.length > 0
+                      ? item.photos
+                      : [item.photo]
+                  }
                   isDimmed={item.pending === "sending"}
                 />
               )}

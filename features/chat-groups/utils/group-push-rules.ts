@@ -24,6 +24,7 @@ export const buildGroupPushPayload = ({
   body,
   sticker = false,
   photo = false,
+  photoCount = 1,
   locale = DEFAULT_LOCALE,
 }: {
   recipient: "user" | "admin";
@@ -33,9 +34,16 @@ export const buildGroupPushPayload = ({
   body?: string | null;
   sticker?: boolean;
   photo?: boolean;
+  photoCount?: number;
   locale?: Locale;
 }): ChatPushPayload => {
-  const preview = buildPushPreview({ body, sticker, photo, locale });
+  const preview = buildPushPreview({
+    body,
+    sticker,
+    photo,
+    photoCount,
+    locale,
+  });
 
   return {
     title: groupName,

@@ -298,7 +298,8 @@ describe("input schemas", () => {
       sendGroupSchema.safeParse({ groupId: 1, clientId, body: "hi" }).success,
     ).toBe(true);
     expect(
-      sendGroupSchema.safeParse({ groupId: 1, clientId, photoId: 3 }).success,
+      sendGroupSchema.safeParse({ groupId: 1, clientId, photoIds: [3] })
+        .success,
     ).toBe(true);
     expect(
       sendGroupSchema.safeParse({ groupId: 0, clientId, body: "hi" }).success,

@@ -693,6 +693,7 @@ describe("reply", () => {
       body: "chào An",
       isSticker: false,
       isPhoto: false,
+      photoCount: 0,
       senderRole: "admin",
       deleted: false,
     });
@@ -802,6 +803,7 @@ describe("payload shape", () => {
       body: "",
       isSticker: false,
       isPhoto: false,
+      photoCount: 0,
       senderRole: "admin",
       deleted: true,
     });

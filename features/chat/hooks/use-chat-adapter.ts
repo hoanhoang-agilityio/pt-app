@@ -25,13 +25,16 @@ import { PHOTO_ERRORS } from "@/features/chat/utils/photo-rules";
 
 const USER_MESSAGES_URL = "/api/chat/messages";
 
-// The action input for a text, a sticker or a photo send.
+// The action input for a text, a sticker or a photos send.
 export const contentInput = (content: SendContent) => {
   if ("sticker" in content) {
     return { sticker: content.sticker.input };
   }
-  if ("photo" in content) {
-    return { photoId: content.photo.photoId, body: content.body };
+  if ("photos" in content) {
+    return {
+      photoIds: content.photos.map((photo) => photo.photoId),
+      body: content.body,
+    };
   }
   return content;
 };

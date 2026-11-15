@@ -19,6 +19,8 @@ export interface DmMessageView {
   senderId: number;
   body: string | null;
   photo: { url: string; width: number; height: number } | null;
+  // Every photo of the message in display order (`photo` is the first).
+  photos?: { url: string; width: number; height: number }[];
   post: DmReplyPostView | null;
   clientId: string;
   createdAt: string;

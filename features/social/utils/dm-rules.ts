@@ -1,7 +1,10 @@
 import { z } from "zod";
 
 import { ROUTES } from "@/constants/routes";
-import { photoPreview } from "@/features/chat/utils/photo-rules";
+import {
+  messagePhotoIdsSchema,
+  photoPreview,
+} from "@/features/chat/utils/photo-rules";
 import {
   buildPushPreview,
   type ChatPushPayload,
@@ -37,14 +40,16 @@ export const dmSendSchema = z.object({
     .max(DM_BODY_MAX_LENGTH * 2)
     .optional()
     .default(""),
-  photoId: dmIdSchema.nullable().optional().default(null),
+  // Up to 10 uploaded photos in display order (the first is the cover).
+  photoIds: messagePhotoIdsSchema.optional().default([]),
   // The post being replied to (a text is required then).
   postId: dmIdSchema.nullable().optional().default(null),
 });
 
 export type DmSendInput = z.infer<typeof dmSendSchema>;
 
-// Text and/or one photo; the text is trimmed and capped.
+// Text and/or photos (`photoId` is the cover, null without photos); the text
+// is trimmed and capped.
 export const checkDmContent = (
   body: string,
   photoId: number | null,
@@ -93,17 +98,20 @@ export const buildDmPushPayload = ({
   conversationId,
   body,
   photo,
+  photoCount = 1,
   locale = DEFAULT_LOCALE,
 }: {
   senderName: string;
   conversationId: number;
   body?: string | null;
   photo: boolean;
+  // Photos in the message (the preview names the count when several).
+  photoCount?: number;
   // The recipient's language.
   locale?: Locale;
 }): ChatPushPayload => ({
   title: senderName.trim() === "" ? PUSH_TITLE : senderName,
-  body: buildPushPreview({ body, photo, locale }),
+  body: buildPushPreview({ body, photo, photoCount, locale }),
   url: dmPath(conversationId),
   tag: `dm-${conversationId}`,
 });
@@ -116,12 +124,13 @@ export const dmPreview = (
     deleted: boolean;
   },
   locale: Locale = DEFAULT_LOCALE,
+  photoCount = 1,
 ) => {
   if (message.deleted) {
     return localizeMessageFor(locale, DM_MESSAGES.UNSENT);
   }
   if (message.photoId !== null) {
-    const label = photoPreview("", locale);
+    const label = photoPreview("", locale, photoCount);
 
     return message.body ? `${label} ${message.body}` : label;
   }

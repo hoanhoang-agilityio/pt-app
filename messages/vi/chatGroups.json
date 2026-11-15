@@ -12,7 +12,8 @@
     "unsent": "Tin nhắn đã bị thu hồi",
     "hidden": "Quản lý đã ẩn tin nhắn",
     "noMessages": "Chưa có tin nhắn",
-    "membersLine": "{count} thành viên"
+    "membersLine": "{count} thành viên",
+    "photos": "{count} ảnh"
   },
   "pages": {
     "createTitle": "Tạo nhóm chat",

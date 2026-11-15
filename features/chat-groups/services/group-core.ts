@@ -34,8 +34,9 @@ import {
 } from "@/features/chat-groups/services/group-membership";
 import { isGroupReplyTargetValid } from "@/features/chat-groups/services/group-mutations";
 import {
-  attachGroupPhotoToMessage,
-  isGroupPhotoAttachable,
+  areGroupPhotosAttachable,
+  attachGroupPhotosToMessage,
+  GroupPhotosNotAttachableError,
 } from "@/features/chat-groups/services/group-photos";
 import { scheduleGroupPush } from "@/features/chat-groups/services/group-push";
 import { findGroupMessageByClientId } from "@/features/chat-groups/services/group-queries";
@@ -423,7 +424,7 @@ export const markGroupRead = async (ctx: ActionContext, input: unknown) => {
 const resolveContent = (parsed: {
   body?: string;
   sticker?: StickerInput;
-  photoId?: number;
+  photoIds?: number[];
 }) => {
   if (parsed.sticker) {
     return {
@@ -433,7 +434,7 @@ const resolveContent = (parsed: {
   }
   const { body, effects } = parseChatCommand(parsed.body ?? "");
 
-  if (!body && parsed.photoId === undefined) {
+  if (!body && !parsed.photoIds?.length) {
     return null;
   }
   return {
@@ -457,7 +458,8 @@ export const sendGroupMessage = async (
   if (!parsed.success) {
     return fail(CHAT_MESSAGES.INVALID_INPUT);
   }
-  const { groupId, clientId, replyToMessageId, photoId } = parsed.data;
+  const { groupId, clientId, replyToMessageId } = parsed.data;
+  const photoIds = parsed.data.photoIds ?? [];
   const context = await loadGroupActor(groupId, ctx.session);
 
   if (!context) {
@@ -488,47 +490,62 @@ export const sendGroupMessage = async (
   if (!resolved) {
     return fail(CHAT_MESSAGES.INVALID_INPUT);
   }
-  if (
-    photoId !== undefined &&
-    !(await isGroupPhotoAttachable(photoId, group.id, actor.key))
-  ) {
+  if (!(await areGroupPhotosAttachable(photoIds, group.id, actor.key))) {
     return fail(CHAT_MESSAGES.INVALID_INPUT);
   }
   if (!(await isGroupReplyTargetValid(context, replyToMessageId))) {
     return fail(CHAT_MESSAGES.INVALID_INPUT);
   }
   const now = new Date();
-  const inserted = await db
-    .insert(chatGroupMessages)
-    .values({
-      groupId: group.id,
-      kind: "message",
-      senderKey: actor.key,
-      ...resolved.content,
-      photoId: photoId ?? null,
-      clientId,
-      replyToMessageId: replyToMessageId ?? null,
-      silent: resolved.silent ? true : null,
-      createdAt: now,
-    })
-    .onConflictDoNothing({
-      target: [chatGroupMessages.groupId, chatGroupMessages.clientId],
-    })
-    .returning({ id: chatGroupMessages.id });
+  // The message, the group pointer and every photo go in together: a photo
+  // that cannot be attached (used by a parallel send) undoes the whole send.
+  let inserted: { id: number }[];
+
+  try {
+    inserted = await db.transaction(async (tx) => {
+      const rows = await tx
+        .insert(chatGroupMessages)
+        .values({
+          groupId: group.id,
+          kind: "message",
+          senderKey: actor.key,
+          ...resolved.content,
+          photoId: photoIds[0] ?? null,
+          clientId,
+          replyToMessageId: replyToMessageId ?? null,
+          silent: resolved.silent ? true : null,
+          createdAt: now,
+        })
+        .onConflictDoNothing({
+          target: [chatGroupMessages.groupId, chatGroupMessages.clientId],
+        })
+        .returning({ id: chatGroupMessages.id });
+
+      if (rows.length > 0) {
+        await tx
+          .update(chatGroups)
+          .set({ lastMessageId: rows[0].id, lastMessageAt: now })
+          // Two parallel sends must not move the pointer back to the older one.
+          .where(
+            sql`${chatGroups.id} = ${group.id} and coalesce(${chatGroups.lastMessageId}, 0) < ${rows[0].id}`,
+          );
+        await attachGroupPhotosToMessage(tx, {
+          photoIds,
+          messageId: rows[0].id,
+          groupId: group.id,
+          uploaderKey: actor.key,
+        });
+      }
+      return rows;
+    });
+  } catch (error) {
+    if (error instanceof GroupPhotosNotAttachableError) {
+      return fail(CHAT_MESSAGES.INVALID_INPUT);
+    }
+    throw error;
+  }
   const created = inserted.length > 0;
 
-  if (created) {
-    await db
-      .update(chatGroups)
-      .set({ lastMessageId: inserted[0].id, lastMessageAt: now })
-      // Two parallel sends must not move the pointer back to the older one.
-      .where(
-        sql`${chatGroups.id} = ${group.id} and coalesce(${chatGroups.lastMessageId}, 0) < ${inserted[0].id}`,
-      );
-    if (photoId !== undefined) {
-      await attachGroupPhotoToMessage(photoId, inserted[0].id);
-    }
-  }
   const message = await findGroupMessageByClientId(group.id, clientId, actor);
 
   if (!message) {
@@ -547,7 +564,8 @@ export const sendGroupMessage = async (
       senderKey: actor.key,
       body: resolved.content.body,
       ...(sticker ? { sticker: true } : {}),
-      ...(photoId === undefined ? {} : { photo: true }),
+      ...(photoIds.length === 0 ? {} : { photo: true }),
+      ...(photoIds.length > 1 ? { photoCount: photoIds.length } : {}),
     });
   }
   return { status: "success", message, created };

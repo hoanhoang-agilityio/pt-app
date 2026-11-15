@@ -248,6 +248,7 @@ describe("the thread and the alert audience", () => {
       unavailable: false,
       isSticker: false,
       isPhoto: false,
+      photoCount: 0,
     });
     await db
       .update(chatGroupMessages)
@@ -492,6 +493,56 @@ describe("the inbox list", () => {
     const [photo] = await queries.listGroupsForSession(asBinh());
 
     expect(photo.lastMessage).toMatchObject({ preview: "", media: "photo" });
+  });
+
+  it("counts the photos of a last photo message, and quotes the count", async () => {
+    const message = await seedMessage(db, groupId, `user:${anId}`, "");
+    const ids: number[] = [];
+
+    for (const position of [0, 1, 2]) {
+      const [row] = await db
+        .insert(chatGroupPhotos)
+        .values({
+          groupId,
+          messageId: message,
+          position,
+          uploaderKey: `user:${anId}`,
+          mime: "image/webp",
+          width: 800,
+          height: 600,
+          data: Buffer.from("x"),
+          size: 1,
+          createdAt: new Date(),
+        })
+        .returning({ id: chatGroupPhotos.id });
+
+      ids.push(row.id);
+    }
+    await db
+      .update(chatGroupMessages)
+      .set({ photoId: ids[0] })
+      .where(eq(chatGroupMessages.id, message));
+    const [group] = await queries.listGroupsForSession(asBinh());
+
+    expect(group.lastMessage).toMatchObject({ media: "photo", photoCount: 3 });
+    const reply = await seedMessage(db, groupId, `user:${binhId}`, "ảnh đẹp", {
+      replyToMessageId: message,
+    });
+    const view = await queries.findGroupMessageView(
+      groupId,
+      reply,
+      await actorOf(asBinh()),
+    );
+
+    expect(view?.replyTo).toMatchObject({ isPhoto: true, photoCount: 3 });
+    const listed = await queries.listGroupMessages(
+      groupId,
+      await actorOf(asBinh()),
+    );
+
+    expect(
+      listed.messages.find((m) => m.id === message)?.photos?.map((p) => p.id),
+    ).toEqual(ids);
   });
 });
 

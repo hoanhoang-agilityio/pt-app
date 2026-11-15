@@ -581,7 +581,8 @@ export const chatCustomStickers = sqliteTable(
 // Photos sent in chat (KAN-160): the browser resized and re-encoded the image
 // (WebP, long side <= 1600 px); the bytes live here like avatars. A row is
 // pending (messageId null) from the upload until the message that carries it
-// is stored. Unsending the message deletes the row, bytes included.
+// is stored. Unsending the message deletes the row, bytes included. A message
+// carries up to 10 photos (position 0 is the cover, also chat_messages.photo_id).
 export const chatPhotos = sqliteTable(
   "chat_photos",
   {
@@ -590,6 +591,9 @@ export const chatPhotos = sqliteTable(
     messageId: integer("message_id"),
     // Who uploaded it: "user" or "admin:<id>" (same format as reader keys).
     uploaderKey: text("uploader_key").notNull(),
+    // Order inside the message (0 = cover); null (a message from before
+    // several photos) counts as 0.
+    position: integer("position"),
     mime: text("mime", {
       enum: ["image/webp", "image/jpeg", "image/png"],
     }).notNull(),
@@ -972,6 +976,9 @@ export const dmPhotos = sqliteTable(
     conversationId: integer("conversation_id").notNull(),
     messageId: integer("message_id"),
     uploaderId: integer("uploader_id").notNull(),
+    // Order inside the message (0 = cover); null (a message from before
+    // several photos) counts as 0.
+    position: integer("position"),
     mime: text("mime", {
       enum: ["image/webp", "image/jpeg", "image/png"],
     }).notNull(),
@@ -1151,6 +1158,9 @@ export const chatGroupPhotos = sqliteTable(
     groupId: integer("group_id").notNull(),
     messageId: integer("message_id"),
     uploaderKey: text("uploader_key").notNull(),
+    // Order inside the message (0 = cover); null (a message from before
+    // several photos) counts as 0.
+    position: integer("position"),
     mime: text("mime", {
       enum: ["image/webp", "image/jpeg", "image/png"],
     }).notNull(),

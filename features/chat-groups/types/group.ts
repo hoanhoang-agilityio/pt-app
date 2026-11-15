@@ -52,11 +52,15 @@ export interface GroupMessageView {
     unavailable: boolean;
     isSticker: boolean;
     isPhoto: boolean;
+    // How many photos the quoted message has (0 without photos).
+    photoCount?: number;
   } | null;
   sticker: { ref: string; url: string } | null;
   photoId: number | null;
   // Size of the photo, for the bubble box (the bytes come from the photo route).
   photo: { id: number; width: number; height: number } | null;
+  // Every photo of the message in display order (`photo` is the first).
+  photos?: { id: number; width: number; height: number }[];
   // Shown names for the member keys a system line names (alias first, null =
   // deleted account); empty for normal messages.
   eventNames: Record<string, string | null>;
@@ -79,6 +83,8 @@ export interface GroupLastMessage {
   preview: string;
   // A message without text that shows a picture or a sticker.
   media: "photo" | "sticker" | null;
+  // Photos of the message (0 without photos); the inbox names the count.
+  photoCount?: number;
   systemEvent: SystemEvent | null;
   createdAt: Date;
 }

@@ -778,13 +778,15 @@ describe("sending", () => {
     const theirs = await photo(groupId, `admin:${ptId}`);
     const elsewhere = await photo(groupId + 1, `user:${anId}`);
 
-    expect(await send({ body: undefined, photoId: theirs })).toMatchObject({
+    expect(await send({ body: undefined, photoIds: [theirs] })).toMatchObject({
       status: "error",
     });
-    expect(await send({ body: undefined, photoId: elsewhere })).toMatchObject({
+    expect(
+      await send({ body: undefined, photoIds: [elsewhere] }),
+    ).toMatchObject({
       status: "error",
     });
-    const result = await send({ body: "caption", photoId: mine });
+    const result = await send({ body: "caption", photoIds: [mine] });
 
     expect(result).toMatchObject({
       status: "success",
@@ -798,7 +800,7 @@ describe("sending", () => {
       expect.objectContaining({ photo: true }),
     );
     // Already attached: a second message cannot reuse it.
-    expect(await send({ photoId: mine })).toMatchObject({ status: "error" });
+    expect(await send({ photoIds: [mine] })).toMatchObject({ status: "error" });
   });
 
   it("rejects bad input without storing anything", async () => {
@@ -827,5 +829,165 @@ describe("sending", () => {
         body: "mine",
       }),
     ).toMatchObject({ status: "error" });
+  });
+});
+
+describe("sending several photos", () => {
+  let groupId: number;
+
+  beforeEach(async () => {
+    groupId = await seedGroup(db, {
+      createdByKey: `admin:${ptId}`,
+      members: [`admin:${ptId}`, `user:${anId}`],
+    });
+    asUser(anId);
+  });
+
+  const pending = async (uploaderKey: string, forGroup = groupId) =>
+    (
+      await db
+        .insert(chatGroupPhotos)
+        .values({
+          groupId: forGroup,
+          uploaderKey,
+          mime: "image/webp",
+          width: 700,
+          height: 500,
+          data: Buffer.from([1]),
+          size: 1,
+          createdAt: new Date(),
+        })
+        .returning({ id: chatGroupPhotos.id })
+    )[0].id;
+  const pendingMany = async (count: number, uploaderKey = `user:${anId}`) => {
+    const ids: number[] = [];
+
+    for (let index = 0; index < count; index += 1) {
+      ids.push(await pending(uploaderKey));
+    }
+    return ids;
+  };
+  const send = (photoIds: number[], extra: Record<string, unknown> = {}) =>
+    actions.sendGroupMessageAction({
+      groupId,
+      clientId: crypto.randomUUID(),
+      photoIds,
+      ...extra,
+    });
+  const unattached = async () =>
+    (await db.select().from(chatGroupPhotos)).every(
+      (row) => row.messageId === null,
+    );
+
+  it("sends 3 photos as one message in the given order, the first is the cover", async () => {
+    const [a, b, c] = await pendingMany(3);
+    const result = await send([c, a, b], { body: "caption" });
+
+    expect(result).toMatchObject({
+      status: "success",
+      message: {
+        photoId: c,
+        body: "caption",
+        photo: { id: c, width: 700, height: 500 },
+        photos: [
+          { id: c, width: 700, height: 500 },
+          { id: a, width: 700, height: 500 },
+          { id: b, width: 700, height: 500 },
+        ],
+      },
+    });
+    const [message] = await db.select().from(chatGroupMessages);
+
+    expect(message.photoId).toBe(c);
+    const rows = (await db.select().from(chatGroupPhotos)).sort(
+      (x, y) => x.id - y.id,
+    );
+
+    expect(rows.map((row) => [row.id, row.messageId, row.position])).toEqual([
+      [a, message.id, 1],
+      [b, message.id, 2],
+      [c, message.id, 0],
+    ]);
+    expect(state.push).toHaveBeenCalledWith(
+      expect.objectContaining({ photo: true, photoCount: 3 }),
+    );
+  });
+
+  it("accepts 10 photos and rejects 11 without storing anything", async () => {
+    const ids = await pendingMany(11);
+
+    expect(await send(ids)).toMatchObject({ status: "error" });
+    expect(await db.select().from(chatGroupMessages)).toHaveLength(0);
+    expect(await unattached()).toBe(true);
+    const ten = (await send(ids.slice(0, 10))) as {
+      status: string;
+      message: { photos: unknown[] };
+    };
+
+    expect(ten.status).toBe("success");
+    expect(ten.message.photos).toHaveLength(10);
+  });
+
+  it("rejects a repeated id, another member's photo and another group's photo", async () => {
+    const [mine] = await pendingMany(1);
+    const theirs = await pending(`admin:${ptId}`);
+    const otherGroup = await seedGroup(db, {
+      createdByKey: `admin:${ptId}`,
+      members: [`user:${anId}`],
+    });
+    const elsewhere = await pending(`user:${anId}`, otherGroup);
+
+    expect(await send([mine, mine])).toMatchObject({ status: "error" });
+    expect(await send([mine, theirs])).toMatchObject({ status: "error" });
+    expect(await send([mine, elsewhere])).toMatchObject({ status: "error" });
+    expect(await db.select().from(chatGroupMessages)).toHaveLength(0);
+    expect(await unattached()).toBe(true);
+  });
+
+  it("rejects a photo that is already attached and keeps the others pending", async () => {
+    const [a, b] = await pendingMany(2);
+
+    expect(await send([a])).toMatchObject({ status: "success" });
+    expect(await send([b, a])).toMatchObject({ status: "error" });
+    expect(await db.select().from(chatGroupMessages)).toHaveLength(1);
+    expect(
+      (await db.select().from(chatGroupPhotos)).find((row) => row.id === b)
+        ?.messageId,
+    ).toBeNull();
+  });
+
+  it("returns a legacy message with only photo_id as one photo", async () => {
+    const [legacy] = await pendingMany(1);
+    const message = await seedMessage(db, groupId, `user:${anId}`, "", {
+      photoId: legacy,
+    });
+    const result = await (
+      await import("@/features/chat-groups/services/group-queries")
+    ).findGroupMessageView(groupId, message, {
+      key: `user:${anId}`,
+      kind: "user",
+      id: anId,
+      isSuperAdmin: false,
+    } as never);
+
+    expect(result?.photos).toEqual([{ id: legacy, width: 700, height: 500 }]);
+    expect(result?.photo).toEqual({ id: legacy, width: 700, height: 500 });
+  });
+
+  it("unsending removes every photo of the message and leaves other messages' photos", async () => {
+    const [keep] = await pendingMany(1);
+
+    await send([keep]);
+    const ids = await pendingMany(3);
+    const sent = (await send(ids)) as { message: { id: number } };
+    const result = await actions.unsendGroupMessageAction({
+      groupId,
+      messageId: sent.message.id,
+    });
+
+    expect(result).toMatchObject({ status: "success" });
+    expect(
+      (await db.select().from(chatGroupPhotos)).map((row) => row.id),
+    ).toEqual([keep]);
   });
 });

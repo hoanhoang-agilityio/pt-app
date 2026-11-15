@@ -423,6 +423,37 @@ describe("photo routes", () => {
     state.user = null;
     expect((await download(groupId, sent.id)).status).toBe(401);
   });
+
+  it("serves every photo of a message with several photos, not only the cover", async () => {
+    const ids: number[] = [];
+
+    for (const position of [0, 1, 2]) {
+      const [row] = await db
+        .insert(chatGroupPhotos)
+        .values({
+          groupId,
+          messageId: firstId,
+          position,
+          uploaderKey: `admin:${ptId}`,
+          mime: "image/webp",
+          width: 1,
+          height: 1,
+          data: Buffer.from([position]),
+          size: 1,
+          createdAt: new Date(),
+        })
+        .returning({ id: chatGroupPhotos.id });
+
+      ids.push(row.id);
+    }
+    for (const id of ids) {
+      expect((await download(groupId, id)).status).toBe(200);
+    }
+    asTrainee(outsiderId);
+    for (const id of ids) {
+      expect((await download(groupId, id)).status).toBe(404);
+    }
+  });
 });
 
 describe("GET /api/chat/groups/[groupId]/avatar", () => {

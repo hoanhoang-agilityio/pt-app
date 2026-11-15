@@ -23,12 +23,16 @@ import {
   chatMessageEdits,
   chatMessages,
   chatNicknames,
-  chatPhotos,
   chatReactions,
   chatReads,
   users,
 } from "@/db/schema";
 import { avatarUrl } from "@/features/avatar/utils/avatar-rules";
+import {
+  attachPhotosToMessage,
+  countPhotosOfMessages,
+  loadPhotosOfMessages,
+} from "@/features/chat/services/chat-photos";
 import {
   adminReaderKey,
   CHANGES_PAGE_SIZE,
@@ -42,7 +46,7 @@ import { resolveDisplayName } from "@/features/chat/utils/display-name";
 import {
   type ChatPhoto,
   photoPreview,
-  toChatPhoto,
+  toChatPhotos,
 } from "@/features/chat/utils/photo-rules";
 import {
   type ChatSticker,
@@ -78,6 +82,8 @@ export interface ChatReplyTo {
   isSticker: boolean;
   // The quoted message is a photo: the UI shows "Ảnh" when there is no text.
   isPhoto: boolean;
+  // How many photos the quoted message has (0 without photos).
+  photoCount: number;
   senderRole: "user" | "admin";
   deleted: boolean;
 }
@@ -95,6 +101,9 @@ export interface ChatMessage {
   // KAN-160: set for a photo message (body is the optional caption); null
   // once unsent.
   photo: ChatPhoto | null;
+  // Every photo of the message in display order (`photo` is the first); empty
+  // without photos and once unsent.
+  photos: ChatPhoto[];
   clientId: string;
   createdAt: Date;
   replyTo: ChatReplyTo | null;
@@ -186,13 +195,11 @@ const hydrateMessages = async (
   ];
   const liveIds = rows.filter((row) => !row.deletedAt).map((row) => row.id);
   const conversationIds = [...new Set(rows.map((row) => row.conversationId))];
-  const photoIds = [
-    ...new Set(
-      rows.flatMap((row) =>
-        row.photoId !== null && row.deletedAt === null ? [row.photoId] : [],
-      ),
-    ),
-  ];
+  const photoMessages = rows.flatMap((row) =>
+    row.deletedAt === null && row.photoId !== null
+      ? [{ id: row.id, photoId: row.photoId }]
+      : [],
+  );
   const postIds = [
     ...new Set(
       rows.flatMap((row) =>
@@ -202,7 +209,7 @@ const hydrateMessages = async (
       ),
     ),
   ];
-  const [targets, reactionRows, traineeRows, photoRows, posts] =
+  const [targets, reactionRows, traineeRows, photosByMessage, posts] =
     await Promise.all([
       replyIds.length === 0
         ? []
@@ -240,22 +247,22 @@ const hydrateMessages = async (
         .from(chatConversations)
         .innerJoin(users, eq(users.id, chatConversations.userId))
         .where(inArray(chatConversations.id, conversationIds)),
-      // Size only: the bytes are served by /api/chat/photos/<id>.
-      photoIds.length === 0
-        ? []
-        : db
-            .select({
-              id: chatPhotos.id,
-              width: chatPhotos.width,
-              height: chatPhotos.height,
-            })
-            .from(chatPhotos)
-            .where(inArray(chatPhotos.id, photoIds)),
+      // Size only: the bytes are served by /api/chat/photos/<id>. One query
+      // for the whole page, however many photos each message has.
+      loadPhotosOfMessages(photoMessages),
       viewer && postIds.length > 0
         ? loadReplyPostViews(viewer, postIds)
         : new Map<number, DmReplyPostView>(),
     ]);
-  const photoSizeById = new Map(photoRows.map((row) => [row.id, row]));
+  const quotedPhotoCounts = await countPhotosOfMessages(
+    targets.flatMap((target) =>
+      target.deletedAt === null &&
+      target.hiddenByAdminId === null &&
+      target.photoId !== null
+        ? [{ id: target.id, photoId: target.photoId }]
+        : [],
+    ),
+  );
   const targetById = new Map(
     targets.map((row) => [row.id, asUnsentWhenHidden(row, new Date(0))]),
   );
@@ -297,10 +304,18 @@ const hydrateMessages = async (
             body: target.deletedAt ? "" : toReplySnippet(target.body),
             isSticker: target.deletedAt === null && target.stickerRef !== null,
             isPhoto: target.deletedAt === null && target.photoId !== null,
+            photoCount:
+              target.deletedAt === null
+                ? (quotedPhotoCounts.get(target.id) ?? 0)
+                : 0,
             senderRole: target.senderRole,
             deleted: target.deletedAt !== null,
           }
         : null;
+
+    const photos = deleted
+      ? []
+      : toChatPhotos(photosByMessage.get(row.id) ?? []);
 
     return {
       id: row.id,
@@ -309,9 +324,8 @@ const hydrateMessages = async (
       senderAdminName: row.senderAdminName,
       body: deleted ? "" : row.body,
       sticker: deleted ? null : toChatSticker(row.stickerRef, row.stickerUrl),
-      photo: deleted
-        ? null
-        : toChatPhoto(row.photoId, photoSizeById.get(row.photoId ?? 0)),
+      photo: photos[0] ?? null,
+      photos,
       clientId: row.clientId,
       createdAt: row.createdAt,
       replyTo,
@@ -389,12 +403,14 @@ interface NewMessage {
   body: string;
   stickerRef?: string | null;
   stickerUrl?: string | null;
-  photoId?: number | null;
   clientId: string;
   replyToMessageId?: number | null;
   replyPostId?: number | null;
   // /imlang: stored so unread polls can tell loud from silent messages.
   silent?: boolean | null;
+  // Uploaded photos to attach, in display order, and who uploaded them. The
+  // message's photo_id is the first one.
+  photos?: { ids: number[]; uploaderKey: string };
 }
 
 // Idempotent insert: a retried send (same clientId) stores nothing and returns
@@ -406,26 +422,42 @@ export const insertMessageOnce = async (
   viewer?: SocialActor,
 ) => {
   const now = new Date();
-  const inserted = await db
-    .insert(chatMessages)
-    .values({ ...input, createdAt: now })
-    .onConflictDoNothing({
-      target: [chatMessages.conversationId, chatMessages.clientId],
-    })
-    .returning({ id: chatMessages.id });
+  const { photos, ...values } = input;
+  const photoIds = photos?.ids ?? [];
+  // The message, the conversation pointer and every photo go in together: a
+  // photo that cannot be attached (already used, someone else's) undoes the
+  // whole send.
+  const inserted = await db.transaction(async (tx) => {
+    const rows = await tx
+      .insert(chatMessages)
+      .values({ ...values, photoId: photoIds[0] ?? null, createdAt: now })
+      .onConflictDoNothing({
+        target: [chatMessages.conversationId, chatMessages.clientId],
+      })
+      .returning({ id: chatMessages.id });
 
-  if (inserted.length > 0) {
-    await db
-      .update(chatConversations)
-      .set({ lastMessageId: inserted[0].id, lastMessageAt: now })
-      // Two parallel sends must not move the pointer back to the older one.
-      .where(
-        and(
-          eq(chatConversations.id, input.conversationId),
-          sql`coalesce(${chatConversations.lastMessageId}, 0) < ${inserted[0].id}`,
-        ),
-      );
-  }
+    if (rows.length > 0) {
+      await tx
+        .update(chatConversations)
+        .set({ lastMessageId: rows[0].id, lastMessageAt: now })
+        // Two parallel sends must not move the pointer back to the older one.
+        .where(
+          and(
+            eq(chatConversations.id, input.conversationId),
+            sql`coalesce(${chatConversations.lastMessageId}, 0) < ${rows[0].id}`,
+          ),
+        );
+      if (photos) {
+        await attachPhotosToMessage(tx, {
+          photoIds,
+          messageId: rows[0].id,
+          conversationId: input.conversationId,
+          uploaderKey: photos.uploaderKey,
+        });
+      }
+    }
+    return rows;
+  });
 
   const message = await findMessageByClientId(
     input.conversationId,
@@ -966,6 +998,7 @@ const loadInbox = async (
         avatarUpdatedAt: users.avatarUpdatedAt,
         lastBody: chatMessages.body,
         lastStickerRef: chatMessages.stickerRef,
+        lastMessageId: chatMessages.id,
         lastPhotoId: chatMessages.photoId,
         lastDeletedAt: chatMessages.deletedAt,
         lastHiddenByAdminId: chatMessages.hiddenByAdminId,
@@ -1022,6 +1055,16 @@ const loadInbox = async (
   const unreadById = new Map(
     unreadRows.map((row) => [row.conversationId, row.unread]),
   );
+  const photoCounts = await countPhotosOfMessages(
+    rows.flatMap((row) =>
+      row.lastMessageId !== null &&
+      row.lastPhotoId !== null &&
+      !row.lastDeletedAt &&
+      row.lastHiddenByAdminId === null
+        ? [{ id: row.lastMessageId, photoId: row.lastPhotoId }]
+        : [],
+    ),
+  );
   const conversations: InboxItem[] = rows.map((row) => ({
     conversationId: row.conversationId,
     userId: row.userId,
@@ -1037,7 +1080,11 @@ const loadInbox = async (
         : row.lastStickerRef
           ? stickerPreview(locale)
           : row.lastPhotoId
-            ? photoPreview(toPreview(row.lastBody ?? ""), locale)
+            ? photoPreview(
+                toPreview(row.lastBody ?? ""),
+                locale,
+                photoCounts.get(row.lastMessageId ?? 0) ?? 1,
+              )
             : toPreview(row.lastBody ?? ""),
     lastFromAdmin: row.lastSenderRole === "admin",
     lastSenderAdminId: row.lastSenderAdminId,

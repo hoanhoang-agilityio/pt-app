@@ -34,6 +34,9 @@ export interface SerializedChatMessage {
   sticker?: ChatSticker | null;
   // KAN-160: set for a photo message (body is the optional caption).
   photo?: ChatPhoto | null;
+  // Every photo of the message in display order (`photo` is the first). Absent
+  // on older payloads: the single `photo` is then the only one.
+  photos?: ChatPhoto[];
   clientId: string;
   createdAt: string;
   replyTo: SerializedReplyTo | null;
@@ -80,6 +83,8 @@ export interface SerializedReplyTo {
   isSticker?: boolean;
   // The quoted message is a photo: the UI shows "Ảnh" when it has no text.
   isPhoto?: boolean;
+  // Photos of the quoted message when it has several.
+  photoCount?: number;
   senderRole: "user" | "admin";
   deleted: boolean;
   // Group chat: who wrote the quoted message.
@@ -739,6 +744,17 @@ export const groupReactions = (
   return groups;
 };
 
+// The photos of a message, in display order: `photos`, else the one `photo`.
+export const photosOf = (message: {
+  photo?: ChatPhoto | null;
+  photos?: ChatPhoto[];
+}): ChatPhoto[] =>
+  message.photos && message.photos.length > 0
+    ? message.photos
+    : message.photo
+      ? [message.photo]
+      : [];
+
 // What a reply carries about its original (null while it is not stored yet).
 export const toReplyTo = (message: ThreadMessage): SerializedReplyTo | null =>
   message.id === null
@@ -748,6 +764,9 @@ export const toReplyTo = (message: ThreadMessage): SerializedReplyTo | null =>
         body: message.deleted ? "" : toReplySnippet(message.body),
         ...(!message.deleted && message.sticker ? { isSticker: true } : {}),
         ...(!message.deleted && message.photo ? { isPhoto: true } : {}),
+        ...(!message.deleted && photosOf(message).length > 1
+          ? { photoCount: photosOf(message).length }
+          : {}),
         senderRole: message.senderRole,
         deleted: message.deleted,
         ...(message.senderKey === undefined
@@ -789,6 +808,7 @@ export const quoteText = (
     deleted: boolean;
     isSticker?: boolean;
     isPhoto?: boolean;
+    photoCount?: number;
     body: string;
   },
   locale: Locale = DEFAULT_LOCALE,
@@ -799,7 +819,9 @@ export const quoteText = (
     return t("thread.unsent");
   }
   if (quote.isPhoto && quote.body === "") {
-    return t("thread.photo");
+    const count = quote.photoCount ?? 1;
+
+    return count > 1 ? t("thread.photos", { count }) : t("thread.photo");
   }
   return quote.isSticker ? t("thread.sticker") : quote.body;
 };

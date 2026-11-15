@@ -21,7 +21,6 @@ import {
   chatGroupMembers,
   chatGroupMessageEdits,
   chatGroupMessages,
-  chatGroupPhotos,
   chatGroupReactions,
   chatGroups,
 } from "@/db/schema";
@@ -33,6 +32,7 @@ import {
 import { GROUP_PAGE_SIZE } from "@/features/chat-groups/constants/limits";
 import type { GroupRow } from "@/features/chat-groups/services/group-access";
 import { loadShownNames } from "@/features/chat-groups/services/group-names";
+import { loadPhotosOfGroupMessages } from "@/features/chat-groups/services/group-photos";
 import type {
   GroupActor,
   GroupLastMessage,
@@ -161,9 +161,9 @@ const hydrateMessages = async (
       ),
     ),
   ];
-  const photoIds = visible.flatMap((row) =>
+  const photoMessages = visible.flatMap((row) =>
     row.photoId !== null && row.deletedAt === null && row.hiddenAt === null
-      ? [row.photoId]
+      ? [{ id: row.id, photoId: row.photoId }]
       : [],
   );
   const events = new Map(
@@ -174,54 +174,62 @@ const hydrateMessages = async (
       return event ? [[row.id, event] as const] : [];
     }),
   );
-  const [reactionRows, replyRows, cursors, photoRows] = await Promise.all([
-    db
-      .select()
-      .from(chatGroupReactions)
-      .where(inArray(chatGroupReactions.messageId, ids)),
-    replyIds.length
-      ? db
-          .select({
-            id: messages.id,
-            senderKey: messages.senderKey,
-            body: messages.body,
-            kind: messages.kind,
-            audience: messages.audience,
-            deletedAt: messages.deletedAt,
-            hiddenAt: messages.hiddenAt,
-            stickerRef: messages.stickerRef,
-            photoId: messages.photoId,
-          })
-          .from(messages)
-          .where(
-            and(
-              inArray(messages.id, replyIds),
-              eq(messages.groupId, groupId),
-              audienceFilter(actor),
-            ),
-          )
-      : [],
-    visible.some((row) => row.senderKey === actor.key)
-      ? listReaderCursors(groupId)
-      : [],
-    photoIds.length
-      ? db
-          .select({
-            id: chatGroupPhotos.id,
-            width: chatGroupPhotos.width,
-            height: chatGroupPhotos.height,
-          })
-          .from(chatGroupPhotos)
-          .where(inArray(chatGroupPhotos.id, photoIds))
-      : [],
-  ]);
+  const [reactionRows, replyRows, cursors, photosByMessage] = await Promise.all(
+    [
+      db
+        .select()
+        .from(chatGroupReactions)
+        .where(inArray(chatGroupReactions.messageId, ids)),
+      replyIds.length
+        ? db
+            .select({
+              id: messages.id,
+              senderKey: messages.senderKey,
+              body: messages.body,
+              kind: messages.kind,
+              audience: messages.audience,
+              deletedAt: messages.deletedAt,
+              hiddenAt: messages.hiddenAt,
+              stickerRef: messages.stickerRef,
+              photoId: messages.photoId,
+            })
+            .from(messages)
+            .where(
+              and(
+                inArray(messages.id, replyIds),
+                eq(messages.groupId, groupId),
+                audienceFilter(actor),
+              ),
+            )
+        : [],
+      visible.some((row) => row.senderKey === actor.key)
+        ? listReaderCursors(groupId)
+        : [],
+      // Sizes only, one query for the whole page.
+      loadPhotosOfGroupMessages(photoMessages),
+    ],
+  );
   const { nameOf, identities } = await loadShownNames(actor.key, [
     ...[...events.values()].flatMap(systemEventKeys),
     ...visible.flatMap((row) => (row.senderKey ? [row.senderKey] : [])),
     ...replyRows.flatMap((row) => (row.senderKey ? [row.senderKey] : [])),
   ]);
   const replies = new Map(replyRows.map((row) => [row.id, row]));
-  const photoSizes = new Map(photoRows.map((row) => [row.id, row]));
+  const quotedPhotoCounts = new Map(
+    [
+      ...(
+        await loadPhotosOfGroupMessages(
+          replyRows.flatMap((row) =>
+            row.photoId !== null &&
+            row.deletedAt === null &&
+            row.hiddenAt === null
+              ? [{ id: row.id, photoId: row.photoId }]
+              : [],
+          ),
+        )
+      ).entries(),
+    ].map(([id, list]) => [id, list.length]),
+  );
 
   return visible.map((row): GroupMessageView => {
     const deleted = row.deletedAt !== null;
@@ -231,6 +239,9 @@ const hydrateMessages = async (
       row.replyToMessageId === null
         ? null
         : (replies.get(row.replyToMessageId) ?? null);
+    const photos = (photosByMessage.get(row.id) ?? []).map(
+      ({ id, width, height }) => ({ id, width, height }),
+    );
     const mine = reactionRows.filter((r) => r.messageId === row.id);
     // Most used first, ties in a stable (alphabetical) order.
     const counts = new Map<string, number>();
@@ -275,6 +286,7 @@ const hydrateMessages = async (
               reply.deletedAt === null &&
               reply.hiddenAt === null &&
               reply.photoId !== null,
+            photoCount: quotedPhotoCounts.get(reply.id) ?? 0,
           }
         : null,
       sticker:
@@ -282,14 +294,8 @@ const hydrateMessages = async (
           ? { ref: row.stickerRef, url: row.stickerUrl }
           : null,
       photoId: showContent ? row.photoId : null,
-      photo:
-        showContent && row.photoId !== null && photoSizes.has(row.photoId)
-          ? {
-              id: row.photoId,
-              width: photoSizes.get(row.photoId)!.width,
-              height: photoSizes.get(row.photoId)!.height,
-            }
-          : null,
+      photo: showContent ? (photos[0] ?? null) : null,
+      photos: showContent ? photos : [],
       eventNames: Object.fromEntries(
         (events.has(row.id) ? systemEventKeys(events.get(row.id)!) : []).map(
           (key) => [key, nameOf(key)],
@@ -706,18 +712,21 @@ export const countGroupUnread = async (session: GroupSession) => {
   };
 };
 
-const toLastMessage = (row: {
-  id: number;
-  kind: "message" | "system";
-  senderKey: string | null;
-  body: string;
-  systemEvent: string | null;
-  deletedAt: Date | null;
-  hiddenAt: Date | null;
-  stickerRef: string | null;
-  photoId: number | null;
-  createdAt: Date;
-}): GroupLastMessage => ({
+const toLastMessage = (
+  row: {
+    id: number;
+    kind: "message" | "system";
+    senderKey: string | null;
+    body: string;
+    systemEvent: string | null;
+    deletedAt: Date | null;
+    hiddenAt: Date | null;
+    stickerRef: string | null;
+    photoId: number | null;
+    createdAt: Date;
+  },
+  photoCount = 1,
+): GroupLastMessage => ({
   id: row.id,
   kind: row.kind,
   senderKey: row.senderKey,
@@ -735,9 +744,29 @@ const toLastMessage = (row: {
           ? "sticker"
           : null
       : null,
+  photoCount:
+    row.kind === "message" &&
+    row.deletedAt === null &&
+    row.hiddenAt === null &&
+    row.photoId !== null
+      ? photoCount
+      : 0,
   systemEvent: row.kind === "system" ? parseSystemEvent(row.systemEvent) : null,
   createdAt: row.createdAt,
 });
+
+// How many photos each live message has; messages without photos are absent.
+const countGroupPhotos = async (
+  rows: { id: number; photoId: number | null }[],
+) => {
+  const photos = await loadPhotosOfGroupMessages(
+    rows.flatMap((row) =>
+      row.photoId === null ? [] : [{ id: row.id, photoId: row.photoId }],
+    ),
+  );
+
+  return new Map([...photos].map(([id, list]) => [id, list.length]));
+};
 
 export const listGroupsForSession = async (
   session: GroupSession,
@@ -791,7 +820,13 @@ export const listGroupsForSession = async (
       : [],
   ]);
   const muted = new Map(states.map((row) => [row.groupId, row.mutedAt]));
-  const last = new Map(lastRows.map((row) => [row.id, toLastMessage(row)]));
+  const lastPhotoCounts = await countGroupPhotos(lastRows);
+  const last = new Map(
+    lastRows.map((row) => [
+      row.id,
+      toLastMessage(row, lastPhotoCounts.get(row.id) ?? 1),
+    ]),
+  );
   const summaries = groups.map((group): GroupSummary => ({
     id: group.id,
     name: group.name,

@@ -123,6 +123,7 @@ describe("listMessages", () => {
       "editedAt",
       "id",
       "photo",
+      "photos",
       "post",
       "reactions",
       "replyTo",

@@ -55,5 +55,17 @@
     "saved": "Đã lưu màu chủ đạo",
     "resetDone": "Đã khôi phục màu mặc định",
     "failed": "Không lưu được. Thử lại sau."
+  },
+  "locks": {
+    "title": "Cho phép đổi màu",
+    "trainee": "Khoá đổi màu cho học viên",
+    "traineeHint": "Học viên không tự đổi màu chủ đạo của app được nữa; họ dùng màu của học viên hoặc của tất cả.",
+    "pt": "Khoá đổi màu cho PT",
+    "ptHint": "PT không tự đổi màu chủ đạo của app được nữa; họ dùng màu của PT hoặc của tất cả.",
+    "lockedDone": "Đã khoá đổi màu",
+    "unlockedDone": "Đã mở khoá đổi màu"
+  },
+  "personal": {
+    "description": "Chọn màu chủ đạo của app cho riêng bạn: nút, tab đang chọn và các điểm nhấn. Chỉ bạn thấy màu này. App tự tính màu cho giao diện tối."
   }
 }

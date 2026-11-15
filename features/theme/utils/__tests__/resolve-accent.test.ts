@@ -36,6 +36,46 @@ describe("resolveAccent", () => {
   });
 });
 
+describe("resolveAccent with locks", () => {
+  const layers = { self: "#111111", role: "#222222", all: "#333333" };
+
+  it("unlocked: personal wins over role and all", () => {
+    expect(resolveAccent({ ...layers, locked: false })).toBe("#111111");
+  });
+
+  it("locked: personal is ignored, role wins", () => {
+    expect(resolveAccent({ ...layers, locked: true })).toBe("#222222");
+  });
+
+  it("locked without a role color: falls to all, then the default", () => {
+    expect(resolveAccent({ ...layers, role: null, locked: true })).toBe(
+      "#333333",
+    );
+    expect(
+      resolveAccent({ self: "#111111", role: null, all: null, locked: true }),
+    ).toBeNull();
+  });
+
+  it("unlocked without a personal color: role, all, default as before", () => {
+    expect(resolveAccent({ ...layers, self: null, locked: false })).toBe(
+      "#222222",
+    );
+    expect(
+      resolveAccent({ self: null, role: null, all: null, locked: false }),
+    ).toBeNull();
+  });
+
+  it("an invalid personal color falls through when unlocked", () => {
+    expect(resolveAccent({ ...layers, self: "bad", locked: false })).toBe(
+      "#222222",
+    );
+  });
+
+  it("treats a missing locked flag as unlocked", () => {
+    expect(resolveAccent(layers)).toBe("#111111");
+  });
+});
+
 describe("buildThemeCss", () => {
   it("writes the light block and both dark selectors for a blue", () => {
     const css = buildThemeCss("#2563EB");

@@ -18,11 +18,16 @@ import { ContrastNotice } from "@/features/theme/components/ContrastNotice";
 import { ThemePreview } from "@/features/theme/components/ThemePreview";
 import {
   DEFAULT_ACCENT,
+  LOCK_SCOPES,
+  type LockScope,
   THEME_SCOPES,
   type ThemeScope,
 } from "@/features/theme/constants/theme";
 import { useColorDraft } from "@/features/theme/hooks/use-color-draft";
-import { setAccentColorAction } from "@/features/theme/services/theme-actions";
+import {
+  setAccentColorAction,
+  setThemeLockAction,
+} from "@/features/theme/services/theme-actions";
 import {
   fixForLightMode,
   getContrastReport,
@@ -33,15 +38,21 @@ type Saved = Record<ThemeScope, string | null>;
 interface ThemeSettingsProps {
   // Each scope's saved color, "#rrggbb"; null = default orange.
   saved: Saved;
+  // Whether each role is locked out of picking a personal color.
+  locks: Record<LockScope, boolean>;
 }
 
 // Super admin screen: pick a scope, edit one color with live light and dark
 // preview and a contrast check, save or reset to the default.
-export const ThemeSettings = ({ saved: initialSaved }: ThemeSettingsProps) => {
+export const ThemeSettings = ({
+  saved: initialSaved,
+  locks: initialLocks,
+}: ThemeSettingsProps) => {
   const t = useTranslations("theme");
   const router = useRouter();
   const [scope, setScope] = useState<ThemeScope>("self");
   const [saved, setSaved] = useState(initialSaved);
+  const [locks, setLocks] = useState(initialLocks);
   const [isPending, startTransition] = useTransition();
   const draft = useColorDraft(initialSaved.self ?? DEFAULT_ACCENT);
   const report = getContrastReport(draft.hex);
@@ -75,6 +86,26 @@ export const ThemeSettings = ({ saved: initialSaved }: ThemeSettingsProps) => {
         toast.success(
           color === null ? t("actions.resetDone") : t("actions.saved"),
         );
+        router.refresh();
+      } catch {
+        toast.error(t("actions.failed"));
+      }
+    });
+  };
+
+  const toggleLock = (lockScope: LockScope) => {
+    const locked = !locks[lockScope];
+
+    startTransition(async () => {
+      try {
+        const result = await setThemeLockAction({ scope: lockScope, locked });
+
+        if (result.status !== "success") {
+          toast.error(result.message ?? t("actions.failed"));
+          return;
+        }
+        setLocks((current) => ({ ...current, [lockScope]: locked }));
+        toast.success(locked ? t("locks.lockedDone") : t("locks.unlockedDone"));
         router.refresh();
       } catch {
         toast.error(t("actions.failed"));
@@ -127,6 +158,48 @@ export const ThemeSettings = ({ saved: initialSaved }: ThemeSettingsProps) => {
           <p className="text-xs text-muted">{t("scope.allHint")}</p>
         )}
       </fieldset>
+
+      <section className="space-y-2" aria-labelledby="theme-locks-title">
+        <h2 id="theme-locks-title" className={SECTION_TITLE}>
+          {t("locks.title")}
+        </h2>
+        <div className={`${CARD} divide-y divide-line`}>
+          {LOCK_SCOPES.map((lockScope) => (
+            <button
+              key={lockScope}
+              type="button"
+              role="switch"
+              aria-checked={locks[lockScope]}
+              onClick={() => toggleLock(lockScope)}
+              disabled={isPending}
+              className="flex min-h-14 w-full items-center gap-3 p-3 text-left"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-fg">
+                  {t(`locks.${lockScope}`)}
+                </span>
+                <span className="block text-xs text-muted">
+                  {t(`locks.${lockScope}Hint`)}
+                </span>
+              </span>
+              <span
+                aria-hidden
+                className={clsx(
+                  "flex h-6 w-10 shrink-0 items-center rounded-full p-0.5 transition",
+                  locks[lockScope] ? "bg-accent" : "bg-line",
+                )}
+              >
+                <span
+                  className={clsx(
+                    "size-5 rounded-full bg-white shadow-sm transition-transform",
+                    locks[lockScope] && "translate-x-4",
+                  )}
+                />
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
 
       <section className="space-y-2" aria-labelledby="theme-preview-title">
         <h2 id="theme-preview-title" className={SECTION_TITLE}>

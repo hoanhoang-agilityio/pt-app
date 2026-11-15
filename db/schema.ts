@@ -70,6 +70,9 @@ export const users = sqliteTable(
     // Preferred UI language (i18n): "vi" or "en", validated on write. Nullable
     // on purpose (null = not chosen, use the device cookie or the default).
     locale: text("locale"),
+    // The trainee's own app primary color, normalized "#rrggbb" (accent-color
+    // spec). Null = none picked. Kept while the trainee lock is on.
+    accentColor: text("accent_color"),
     // Lower-cased, whitespace-collapsed name used for login lookups.
     nameKey: text("name_key").notNull().unique(),
     // The trainee's meal plan request (KAN-69, Q1): meals per day (2-6) and
@@ -1165,6 +1168,20 @@ export const themeSettings = sqliteTable("theme_settings", {
   scope: text("scope", { enum: ["all", "trainee", "pt"] }).primaryKey(),
   // Normalized "#rrggbb".
   accent: text("accent").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedByAdminId: integer("updated_by_admin_id").references(() => admins.id, {
+    onDelete: "set null",
+  }),
+});
+
+// Super admin switches that stop a role from picking a personal app color
+// (accent-color spec, D12). One row per role; no row = unlocked. A lock hides
+// the picker and ignores the stored personal colors (they are kept).
+export const themeLocks = sqliteTable("theme_locks", {
+  scope: text("scope", { enum: ["trainee", "pt"] }).primaryKey(),
+  locked: integer("locked", { mode: "boolean" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

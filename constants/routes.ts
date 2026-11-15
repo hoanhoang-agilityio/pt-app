@@ -15,6 +15,8 @@ export const ROUTES = {
   POST: "/post",
   NOTIFICATIONS: "/notifications",
   ACCOUNT_PASSWORD: "/account/password",
+  // Trainee's personal app primary color (accent-color spec).
+  SETTINGS_THEME: "/settings/theme",
   // Static fallback the service worker shows when the network is down.
   OFFLINE: "/offline",
   ADMIN: "/admin",

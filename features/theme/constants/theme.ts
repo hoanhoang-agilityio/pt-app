@@ -19,6 +19,10 @@ export type ThemeScope = (typeof THEME_SCOPES)[number];
 // Scopes stored in theme_settings; "self" lives on admins.accent_color.
 export type StoredScope = Exclude<ThemeScope, "self">;
 
+// Roles whose personal color the super admin can lock (theme_locks).
+export const LOCK_SCOPES = ["trainee", "pt"] as const;
+export type LockScope = (typeof LOCK_SCOPES)[number];
+
 export const THEME_CACHE_TAG = "theme-settings";
 
 export const DEFAULT_ACCENT = "#e8590c";
@@ -37,4 +41,5 @@ export const PRESET_COLORS = [
 export const THEME_MESSAGES = {
   INVALID_COLOR: "Màu không hợp lệ",
   INVALID_SCOPE: "Phạm vi không hợp lệ",
+  LOCKED: "Quản trị viên đã khoá việc đổi màu chủ đạo",
 } as const;

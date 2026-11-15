@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, isNull, lt } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { socialPostPhotos, socialPosts } from "@/db/schema";
@@ -8,8 +8,10 @@ import { PHOTO_PENDING_TTL_MS } from "@/features/chat/utils/photo-rules";
 import { loadVisibilityContext } from "@/features/social/services/post-context";
 import type {
   PostAuthorRef,
+  PostPhotoView,
   SocialActor,
 } from "@/features/social/types/social";
+import { socialPhotoUrl } from "@/features/social/utils/post-rules";
 import { canSeePost } from "@/features/social/utils/visibility";
 import { canAdminAccessUser } from "@/services/hidden-users";
 
@@ -103,4 +105,64 @@ export const findPostPhotoForViewer = async (
     return null;
   }
   return { mime: row.mime, data: row.data };
+};
+
+// The photos of many posts in one query, in display order (position, then id;
+// a null position counts as 0). A post from before several photos has its one
+// photo here too, even if only `photoId` points at it. No bytes are read.
+export const loadPhotosOfPosts = async (
+  posts: { id: number; photoId: number | null }[],
+): Promise<Map<number, PostPhotoView[]>> => {
+  const result = new Map<number, PostPhotoView[]>();
+
+  if (posts.length === 0) {
+    return result;
+  }
+  const coverIds = posts.flatMap((post) =>
+    post.photoId === null ? [] : [post.photoId],
+  );
+  const rows = await db
+    .select({
+      id: socialPostPhotos.id,
+      postId: socialPostPhotos.postId,
+      width: socialPostPhotos.width,
+      height: socialPostPhotos.height,
+    })
+    .from(socialPostPhotos)
+    .where(
+      or(
+        inArray(
+          socialPostPhotos.postId,
+          posts.map((post) => post.id),
+        ),
+        coverIds.length > 0
+          ? inArray(socialPostPhotos.id, coverIds)
+          : undefined,
+      ),
+    )
+    .orderBy(
+      asc(sql`coalesce(${socialPostPhotos.position}, 0)`),
+      asc(socialPostPhotos.id),
+    );
+  const coverOf = new Map(posts.map((post) => [post.photoId, post.id]));
+  const seen = new Set<number>();
+
+  for (const row of rows) {
+    const postId = row.postId ?? coverOf.get(row.id);
+
+    if (postId === undefined || seen.has(row.id) || !row.width) {
+      continue;
+    }
+    seen.add(row.id);
+    const list = result.get(postId) ?? [];
+
+    list.push({
+      id: row.id,
+      url: socialPhotoUrl(row.id),
+      width: row.width,
+      height: row.height,
+    });
+    result.set(postId, list);
+  }
+  return result;
 };

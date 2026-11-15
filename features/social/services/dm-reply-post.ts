@@ -1,6 +1,6 @@
 import "server-only";
 
-import { inArray } from "drizzle-orm";
+import { count, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { admins, socialPostPhotos, users } from "@/db/schema";
@@ -35,7 +35,7 @@ export const loadReplyPostViews = async (
   const photoIds = posts.flatMap((post) =>
     post?.photoId == null ? [] : [post.photoId],
   );
-  const [people, adminPeople, photoRows] = await Promise.all([
+  const [people, adminPeople, photoRows, countRows] = await Promise.all([
     authorIds.length === 0
       ? []
       : db
@@ -66,7 +66,16 @@ export const loadReplyPostViews = async (
           })
           .from(socialPostPhotos)
           .where(inArray(socialPostPhotos.id, photoIds)),
+    // How many photos each quoted post has (the quote shows the first one).
+    photoIds.length === 0
+      ? []
+      : db
+          .select({ postId: socialPostPhotos.postId, total: count() })
+          .from(socialPostPhotos)
+          .where(inArray(socialPostPhotos.postId, ids))
+          .groupBy(socialPostPhotos.postId),
   ]);
+  const photoCounts = new Map(countRows.map((row) => [row.postId, row.total]));
   const names = new Map(people.map((row) => [row.id, row]));
   const adminNames = new Map(adminPeople.map((row) => [row.id, row]));
   const photos = new Map(photoRows.map((row) => [row.id, row]));
@@ -114,6 +123,7 @@ export const loadReplyPostViews = async (
                     height: photo.height,
                   }
                 : null,
+            photoCount: photo ? Math.max(1, photoCounts.get(id) ?? 0) : 0,
           }
         : { id, available: false },
     );

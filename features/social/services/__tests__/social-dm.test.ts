@@ -624,7 +624,9 @@ describe("photo routes", () => {
 
     expect(ok.status).toBe(200);
     expect(ok.headers.get("Content-Type")).toBe("image/png");
-    expect(ok.headers.get("Cache-Control")).toBe("private, max-age=31536000, immutable");
+    expect(ok.headers.get("Cache-Control")).toBe(
+      "private, max-age=31536000, immutable",
+    );
     signInAs(carol);
     expect((await getPhoto(photoId)).status).toBe(404);
     signInAdmin(ptId, "pt");
@@ -884,6 +886,7 @@ describe("replying to a post", () => {
       authorAvatarUrl: null,
       caption: "Leg day done",
       photo: null,
+      photoCount: 0,
     });
     const [row] = await db.select().from(dmMessages);
 
@@ -932,6 +935,7 @@ describe("replying to a post", () => {
         width: 800,
         height: 600,
       },
+      photoCount: 1,
     });
   });
 

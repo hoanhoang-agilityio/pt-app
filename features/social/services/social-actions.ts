@@ -45,6 +45,7 @@ const MESSAGES: Record<PostMutationError, string> = {
   not_found: SOCIAL_MESSAGES.NOT_FOUND,
   forbidden: SOCIAL_MESSAGES.NOT_ALLOWED,
   photo_not_found: SOCIAL_MESSAGES.PHOTO_NOT_FOUND,
+  too_many_photos: SOCIAL_MESSAGES.TOO_MANY_PHOTOS,
 };
 
 const fail = (message: string): ActionErrorResult => ({

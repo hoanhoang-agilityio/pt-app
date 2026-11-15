@@ -772,8 +772,9 @@ export const socialPosts = sqliteTable(
   ],
 );
 
-// One photo per post, stored like chat_photos. post_id null = uploaded but not
-// posted yet (dropped after a day).
+// Up to 10 photos per post, stored like chat_photos. post_id null = uploaded
+// but not posted yet (dropped after a day). position is the order inside the
+// post (0 = cover); null (posts from before several photos) counts as 0.
 export const socialPostPhotos = sqliteTable(
   "social_post_photos",
   {
@@ -781,6 +782,7 @@ export const socialPostPhotos = sqliteTable(
     // "user:<id>" or "admin:<id>".
     uploaderKey: text("uploader_key").notNull(),
     postId: integer("post_id"),
+    position: integer("position"),
     mime: text("mime", {
       enum: ["image/webp", "image/jpeg", "image/png"],
     }).notNull(),

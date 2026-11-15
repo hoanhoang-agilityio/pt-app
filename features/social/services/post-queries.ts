@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm";
 
 import { db } from "@/db";
-import { admins, socialPostPhotos, socialPosts, users } from "@/db/schema";
+import { admins, socialPosts, users } from "@/db/schema";
 import { avatarUrl } from "@/features/avatar/utils/avatar-rules";
 import { loadAliases } from "@/features/contact-aliases/services/contact-aliases";
 import { overlayName } from "@/features/contact-aliases/utils/alias-rules";
@@ -25,6 +25,7 @@ import {
 } from "@/features/social/services/engagement-queries";
 import { loadVisiblePost } from "@/features/social/services/post-access";
 import { loadVisibilityContext } from "@/features/social/services/post-context";
+import { loadPhotosOfPosts } from "@/features/social/services/post-photos";
 import { listFriendIds } from "@/features/social/services/relationships";
 import type {
   PostAuthorRef,
@@ -36,7 +37,6 @@ import {
   actorKey,
   canDeletePost,
   canEditPost,
-  socialPhotoUrl,
 } from "@/features/social/utils/post-rules";
 import { visiblePrivacies } from "@/features/social/utils/visibility";
 import { getFormatTranslator } from "@/i18n/format-translator";
@@ -51,22 +51,19 @@ const SUPER_ADMIN_IDS = sql`(select id from admins where role is null or role = 
 const withCursor = (cursor: number | null): SQL | undefined =>
   cursor === null ? undefined : lt(socialPosts.id, cursor);
 
-// Turns post rows into card data: author names/avatars/ticks, photo sizes and
+// Turns post rows into card data: author names/avatars/ticks, photos and
 // what the viewer may do with each post.
 const toPostViews = async (
-  rows: {
-    post: typeof socialPosts.$inferSelect;
-    photo: { width: number; height: number } | null;
-  }[],
+  posts: (typeof socialPosts.$inferSelect)[],
   viewer: SocialActor,
   locale: Locale,
 ): Promise<PostView[]> => {
-  const userIds = rows
-    .filter((row) => row.post.authorKind === "user")
-    .map((row) => row.post.authorId);
-  const adminIds = rows
-    .filter((row) => row.post.authorKind === "admin")
-    .map((row) => row.post.authorId);
+  const userIds = posts
+    .filter((post) => post.authorKind === "user")
+    .map((post) => post.authorId);
+  const adminIds = posts
+    .filter((post) => post.authorKind === "admin")
+    .map((post) => post.authorId);
   const [userRows, adminRows] = await Promise.all([
     userIds.length
       ? db
@@ -90,24 +87,25 @@ const toPostViews = async (
           .where(inArray(admins.id, adminIds))
       : [],
   ]);
-  const engagement = await loadEngagement(
-    rows.map((row) => row.post.id),
-    viewer,
-  );
+  const [engagement, photosByPost] = await Promise.all([
+    loadEngagement(
+      posts.map((post) => post.id),
+      viewer,
+    ),
+    loadPhotosOfPosts(posts),
+  ]);
   // The viewer's own nicknames for the authors, nobody else's; their own
   // posts keep their real name.
   const viewerKey = actorKey(viewer);
   const aliases = await loadAliases(
     viewerKey,
-    rows.map((row) =>
-      actorKey({ kind: row.post.authorKind, id: row.post.authorId }),
-    ),
+    posts.map((post) => actorKey({ kind: post.authorKind, id: post.authorId })),
   );
   const usersById = new Map(userRows.map((row) => [row.id, row]));
   const adminsById = new Map(adminRows.map((row) => [row.id, row]));
   const t = getFormatTranslator(locale);
 
-  return rows.map(({ post, photo }) => {
+  return posts.map((post) => {
     const isAdmin = post.authorKind === "admin";
     const admin = adminsById.get(post.authorId);
     const author = isAdmin ? admin : usersById.get(post.authorId);
@@ -130,15 +128,7 @@ const toPostViews = async (
       authorVerified: Boolean(admin?.verifiedAt),
       caption: post.caption ?? "",
       privacy: post.privacy,
-      photo:
-        post.photoId !== null && photo
-          ? {
-              id: post.photoId,
-              url: socialPhotoUrl(post.photoId),
-              width: photo.width,
-              height: photo.height,
-            }
-          : null,
+      photos: photosByPost.get(post.id) ?? [],
       createdAt: post.createdAt.getTime(),
       edited: post.updatedAt.getTime() > post.createdAt.getTime(),
       canEdit: canEditPost(viewer, ref),
@@ -155,31 +145,18 @@ const runPage = async (
   locale: Locale,
 ): Promise<PostPage> => {
   const rows = await db
-    .select({
-      post: socialPosts,
-      photo: { width: socialPostPhotos.width, height: socialPostPhotos.height },
-    })
+    .select()
     .from(socialPosts)
-    .leftJoin(socialPostPhotos, eq(socialPostPhotos.id, socialPosts.photoId))
     .where(and(live, withCursor(cursor), where))
     .orderBy(desc(socialPosts.id))
     .limit(POSTS_PAGE_SIZE + 1);
   const hasMore = rows.length > POSTS_PAGE_SIZE;
   const pageRows = rows.slice(0, POSTS_PAGE_SIZE);
-  const posts = await toPostViews(
-    pageRows.map((row) => ({
-      post: row.post,
-      photo: row.photo?.width ? row.photo : null,
-    })),
-    viewer,
-    locale,
-  );
+  const posts = await toPostViews(pageRows, viewer, locale);
 
   return {
     posts,
-    nextCursor: hasMore
-      ? (pageRows[pageRows.length - 1]?.post.id ?? null)
-      : null,
+    nextCursor: hasMore ? (pageRows[pageRows.length - 1]?.id ?? null) : null,
   };
 };
 
@@ -318,23 +295,15 @@ export const getPostView = async (
     return null;
   }
   const [row] = await db
-    .select({
-      post: socialPosts,
-      photo: { width: socialPostPhotos.width, height: socialPostPhotos.height },
-    })
+    .select()
     .from(socialPosts)
-    .leftJoin(socialPostPhotos, eq(socialPostPhotos.id, socialPosts.photoId))
     .where(eq(socialPosts.id, postId))
     .limit(1);
 
   if (!row) {
     return null;
   }
-  const [view] = await toPostViews(
-    [{ post: row.post, photo: row.photo?.width ? row.photo : null }],
-    viewer,
-    locale,
-  );
+  const [view] = await toPostViews([row], viewer, locale);
 
   return view ?? null;
 };

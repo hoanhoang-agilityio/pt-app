@@ -154,7 +154,7 @@ describe("terms gate", () => {
     const id = await insertPost("user", dave, "everyone");
 
     asUser(dave, "dave", null);
-    const input = { caption: "hi", privacy: "friends", photoId: null };
+    const input = { caption: "hi", privacy: "friends", photoIds: [] };
     const results = [
       await actions.createPostAction("user", input),
       await actions.editPostAction("user", {
@@ -197,7 +197,7 @@ describe("create, edit and delete permissions", () => {
     const result = await actions.createPostAction("user", {
       caption: "  Hôm nay tập chân  ",
       privacy: "only_me",
-      photoId: null,
+      photoIds: [],
     });
 
     expect(result.status).toBe("success");
@@ -216,10 +216,10 @@ describe("create, edit and delete permissions", () => {
   it("rejects an empty post, a long caption and a bad privacy", async () => {
     asUser(alice);
     for (const input of [
-      { caption: "   ", privacy: "friends", photoId: null },
-      { caption: "a".repeat(2001), privacy: "friends", photoId: null },
-      { caption: "ok", privacy: "public", photoId: null },
-      { caption: "ok", privacy: "friends", photoId: -1 },
+      { caption: "   ", privacy: "friends", photoIds: [] },
+      { caption: "a".repeat(2001), privacy: "friends", photoIds: [] },
+      { caption: "ok", privacy: "public", photoIds: [] },
+      { caption: "ok", privacy: "friends", photoIds: [-1] },
       null,
     ]) {
       expect((await actions.createPostAction("user", input)).status).toBe(
@@ -250,7 +250,7 @@ describe("create, edit and delete permissions", () => {
     const stolen = await actions.createPostAction("user", {
       caption: "",
       privacy: "everyone",
-      photoId: theirs,
+      photoIds: [theirs],
     });
 
     expect(stolen.status).toBe("error");
@@ -258,14 +258,14 @@ describe("create, edit and delete permissions", () => {
     const ok = await actions.createPostAction("user", {
       caption: "",
       privacy: "everyone",
-      photoId: mine,
+      photoIds: [mine],
     });
 
     expect(ok.status).toBe("success");
     const again = await actions.createPostAction("user", {
       caption: "",
       privacy: "everyone",
-      photoId: mine,
+      photoIds: [mine],
     });
 
     expect(again.status).toBe("error");
@@ -336,7 +336,7 @@ describe("create, edit and delete permissions", () => {
     await actions.createPostAction("user", {
       caption: "x",
       privacy: "everyone",
-      photoId,
+      photoIds: [photoId],
     });
     const [{ id }] = await db.select().from(socialPosts);
 
@@ -370,7 +370,7 @@ describe("create, edit and delete permissions", () => {
         await actions.createPostAction("admin", {
           caption: "PT",
           privacy: "friends",
-          photoId: null,
+          photoIds: [],
         })
       ).status,
     ).toBe("success");
@@ -679,6 +679,237 @@ describe("feed and profile queries", () => {
     );
 
     expect(own.status).toBe("success");
+  });
+});
+
+describe("posts with several photos", () => {
+  const pending = (uploaderKey: string, width = 10) =>
+    photos.createPendingPostPhoto({
+      uploaderKey,
+      mime: "image/png",
+      width,
+      height: 10,
+      bytes: new Uint8Array(8),
+    });
+  const pendingMany = async (uploaderKey: string, count: number) => {
+    const ids: number[] = [];
+
+    for (let index = 0; index < count; index += 1) {
+      ids.push(await pending(uploaderKey, 10 + index));
+    }
+    return ids;
+  };
+  const create = (photoIds: number[]) =>
+    actions.createPostAction("user", {
+      caption: "x",
+      privacy: "everyone",
+      photoIds,
+    });
+
+  it("creates a post with 3 photos in the given order and the first as cover", async () => {
+    const [a, b, c] = await pendingMany(`user:${alice}`, 3);
+
+    asUser(alice);
+    expect((await create([c, a, b])).status).toBe("success");
+    const [post] = await db.select().from(socialPosts);
+    const rows = await db
+      .select({
+        id: socialPostPhotos.id,
+        postId: socialPostPhotos.postId,
+        position: socialPostPhotos.position,
+      })
+      .from(socialPostPhotos);
+
+    expect(post.photoId).toBe(c);
+    expect(rows.sort((x, y) => x.id - y.id)).toEqual([
+      { id: a, postId: post.id, position: 1 },
+      { id: b, postId: post.id, position: 2 },
+      { id: c, postId: post.id, position: 0 },
+    ]);
+  });
+
+  it("creates a photo-only post and a post with no photo and no cover", async () => {
+    const [only] = await pendingMany(`user:${alice}`, 1);
+
+    asUser(alice);
+    expect(
+      (
+        await actions.createPostAction("user", {
+          caption: "",
+          privacy: "everyone",
+          photoIds: [only],
+        })
+      ).status,
+    ).toBe("success");
+    expect((await create([])).status).toBe("success");
+    const rows = await db.select().from(socialPosts);
+
+    expect(rows.map((row) => row.photoId)).toEqual([only, null]);
+  });
+
+  it("rejects 11 photos and leaves everything pending", async () => {
+    const ids = await pendingMany(`user:${alice}`, 11);
+
+    asUser(alice);
+    expect((await create(ids)).status).toBe("error");
+    expect(await db.select().from(socialPosts)).toHaveLength(0);
+    const rows = await db.select().from(socialPostPhotos);
+
+    expect(rows).toHaveLength(11);
+    expect(rows.every((row) => row.postId === null)).toBe(true);
+  });
+
+  it("accepts exactly 10 photos", async () => {
+    const ids = await pendingMany(`user:${alice}`, 10);
+
+    asUser(alice);
+    expect((await create(ids)).status).toBe("success");
+    const rows = await db.select().from(socialPostPhotos);
+
+    expect(rows.map((row) => row.position).sort((x, y) => x! - y!)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    ]);
+  });
+
+  it("rejects a photo owned by someone else and attaches none of the others", async () => {
+    const [mine1, mine2] = await pendingMany(`user:${alice}`, 2);
+    const [theirs] = await pendingMany(`user:${bob}`, 1);
+
+    asUser(alice);
+    expect((await create([mine1, theirs, mine2])).status).toBe("error");
+    expect(await db.select().from(socialPosts)).toHaveLength(0);
+    const rows = await db.select().from(socialPostPhotos);
+
+    expect(rows).toHaveLength(3);
+    expect(
+      rows.every((row) => row.postId === null && row.position === null),
+    ).toBe(true);
+  });
+
+  it("rejects an already attached photo and a photo that does not exist", async () => {
+    const [first, second] = await pendingMany(`user:${alice}`, 2);
+
+    asUser(alice);
+    expect((await create([first])).status).toBe("success");
+    expect((await create([second, first])).status).toBe("error");
+    expect((await create([second, 9999])).status).toBe("error");
+    expect(await db.select().from(socialPosts)).toHaveLength(1);
+    const [row] = await db
+      .select()
+      .from(socialPostPhotos)
+      .where(eq(socialPostPhotos.id, second));
+
+    expect(row.postId).toBeNull();
+  });
+
+  it("rejects the same photo twice in one post", async () => {
+    const [only] = await pendingMany(`user:${alice}`, 1);
+
+    asUser(alice);
+    expect((await create([only, only])).status).toBe("error");
+    expect(await db.select().from(socialPosts)).toHaveLength(0);
+  });
+
+  it("delete removes every photo of the post and only those", async () => {
+    const ids = await pendingMany(`user:${alice}`, 3);
+    const [other] = await pendingMany(`user:${alice}`, 1);
+
+    asUser(alice);
+    await create(ids);
+    const [{ id }] = await db.select().from(socialPosts);
+
+    expect((await actions.deletePostAction("user", id)).status).toBe("success");
+    const left = await db.select().from(socialPostPhotos);
+
+    expect(left.map((row) => row.id)).toEqual([other]);
+  });
+
+  it("queries return the photos of each post ordered by position, in one page", async () => {
+    const [a, b, c] = await pendingMany(`user:${alice}`, 3);
+    const [d] = await pendingMany(`user:${alice}`, 1);
+
+    asUser(alice);
+    await create([b, c, a]);
+    await create([d]);
+    await create([]);
+    const page = await queries.listUserFeed(alice);
+    const byPhotos = page.posts.map((post) => post.photos.map((p) => p.id));
+
+    // Newest first: no photos, one photo, three photos in position order.
+    expect(byPhotos).toEqual([[], [d], [b, c, a]]);
+    const three = page.posts[2].photos;
+
+    expect(three.map((photo) => photo.width)).toEqual([11, 12, 10]);
+    expect(three[0]).toEqual({
+      id: b,
+      url: `/api/social/photos/${b}`,
+      width: 11,
+      height: 10,
+    });
+    const view = await queries.getPostView(
+      { kind: "user", id: alice },
+      page.posts[2].id,
+    );
+
+    expect(view?.photos.map((photo) => photo.id)).toEqual([b, c, a]);
+    const profile = await queries.listProfilePosts(
+      { kind: "user", id: alice },
+      { kind: "user", id: alice },
+    );
+
+    expect(profile.posts.map((post) => post.photos.length)).toEqual([0, 1, 3]);
+  });
+
+  it("an old post with only photo_id (no position) returns its one photo", async () => {
+    const photoId = await pending(`user:${alice}`);
+    const postId = await insertPost("user", alice, "everyone");
+
+    await db
+      .update(socialPostPhotos)
+      .set({ postId })
+      .where(eq(socialPostPhotos.id, photoId));
+    await db
+      .update(socialPosts)
+      .set({ photoId })
+      .where(eq(socialPosts.id, postId));
+    const page = await queries.listUserFeed(alice);
+
+    expect(page.posts).toHaveLength(1);
+    expect(page.posts[0].photos).toEqual([
+      {
+        id: photoId,
+        url: `/api/social/photos/${photoId}`,
+        width: 10,
+        height: 10,
+      },
+    ]);
+  });
+
+  it("serves every photo of a post to those who see it, not only the cover", async () => {
+    const ids = await pendingMany(`user:${alice}`, 3);
+
+    asUser(alice);
+    await create(ids);
+    // Alice and the friends-only rule: carol is no friend, post is "everyone".
+    asUser(carol);
+    for (const id of ids) {
+      const response = await serve.GET(
+        new NextRequest(`http://localhost/api/social/photos/${id}`),
+        { params: Promise.resolve({ id: String(id) }) },
+      );
+
+      expect(response.status).toBe(200);
+    }
+    // Make it only_me: the cover and the others are all hidden from carol.
+    await db.update(socialPosts).set({ privacy: "only_me" });
+    for (const id of ids) {
+      const response = await serve.GET(
+        new NextRequest(`http://localhost/api/social/photos/${id}`),
+        { params: Promise.resolve({ id: String(id) }) },
+      );
+
+      expect(response.status).toBe(404);
+    }
   });
 });
 

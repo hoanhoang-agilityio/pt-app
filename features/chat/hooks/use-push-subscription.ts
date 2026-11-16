@@ -4,6 +4,10 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  clearAppBadgeSafe,
+  notifyPushSubscriptionChange,
+} from "@/features/app-badge/utils/app-badge-client";
+import {
   getPushOptInState,
   type PushOptInState,
   urlBase64ToUint8Array,
@@ -179,6 +183,7 @@ export const usePushSubscription = (role: PushRole) => {
       await postSubscription(role, subscription.toJSON());
       resyncedRoles.add(role);
       setSubscribed(true);
+      notifyPushSubscriptionChange();
     } catch {
       setError(t("error"));
     } finally {
@@ -206,6 +211,9 @@ export const usePushSubscription = (role: PushRole) => {
       }
       resyncedRoles.delete(role);
       setSubscribed(false);
+      // Notifications off: the home-screen icon badge goes too.
+      await clearAppBadgeSafe();
+      notifyPushSubscriptionChange();
     } catch {
       setError(t("error"));
     } finally {

@@ -570,3 +570,22 @@ describe("GET /api/chat/unread groups field", () => {
     expect(body.perTrainee).toEqual([]);
   });
 });
+
+describe("GET /api/chat/unread appBadge field", () => {
+  it("sums chats and groups for a trainee", async () => {
+    const body = await (await unreadRoute.GET(req("/api/chat/unread"))).json();
+
+    expect(body.appBadge).toBe(body.count + body.groups.total);
+    expect(body.appBadge).toBe(1);
+  });
+
+  it("sums chats and groups for an admin", async () => {
+    asSuper();
+    const body = await (
+      await unreadRoute.GET(req("/api/chat/unread?as=admin"))
+    ).json();
+
+    expect(body.appBadge).toBe(body.count + body.groups.total);
+    expect(body.appBadge).toBe(1);
+  });
+});

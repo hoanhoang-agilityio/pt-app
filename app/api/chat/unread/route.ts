@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
+import { sumAppBadge } from "@/features/app-badge/utils/app-badge-rules";
 import { isChatEnabled } from "@/features/chat/services/chat-permission";
 import {
   countUnreadForUser,
@@ -13,6 +14,7 @@ import {
 } from "@/features/chat-groups/services/group-access";
 import { countGroupUnread } from "@/features/chat-groups/services/group-queries";
 import { countDmUnread } from "@/features/social/services/dm-queries";
+import { countUnreadNotifications } from "@/features/social/services/social-notifications";
 import { getApiAdmin, getApiUser } from "@/services/auth-guard";
 
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -34,16 +36,24 @@ export const GET = async (request: NextRequest) => {
     if (!admin) {
       return unauthorized();
     }
-    const [perTrainee, groups] = await Promise.all([
+    const [perTrainee, groups, notifications] = await Promise.all([
       listUnreadByTraineeForAdmin(admin.id),
       countGroupUnread(sessionOfAdmin(admin)),
+      countUnreadNotifications(`admin:${admin.id}`),
     ]);
+    const count = perTrainee.reduce((total, row) => total + row.unread, 0);
 
     return NextResponse.json(
       {
-        count: perTrainee.reduce((total, row) => total + row.unread, 0),
+        count,
         perTrainee,
         groups,
+        // Home-screen icon badge: chats + groups + social notifications.
+        appBadge: sumAppBadge({
+          chat: count,
+          groups: groups.total,
+          notifications,
+        }),
       },
       { headers: NO_STORE },
     );
@@ -53,14 +63,21 @@ export const GET = async (request: NextRequest) => {
   if (!user) {
     return unauthorized();
   }
-  const [coachCount, conversation, dmCount, latestLoudIncomingId, groups] =
-    await Promise.all([
-      countUnreadForUser(user.id),
-      findConversationByUserId(user.id),
-      countDmUnread(user.id),
-      findLatestLoudIncomingForUser(user.id),
-      countGroupUnread(sessionOfUser(user)),
-    ]);
+  const [
+    coachCount,
+    conversation,
+    dmCount,
+    latestLoudIncomingId,
+    groups,
+    notifications,
+  ] = await Promise.all([
+    countUnreadForUser(user.id),
+    findConversationByUserId(user.id),
+    countDmUnread(user.id),
+    findLatestLoudIncomingForUser(user.id),
+    countGroupUnread(sessionOfUser(user)),
+    countUnreadNotifications(`user:${user.id}`),
+  ]);
   // The Messages tab badge covers the coach chat and the friend chats.
   const count = coachCount + dmCount;
 
@@ -75,6 +92,12 @@ export const GET = async (request: NextRequest) => {
       // Group chats: reported next to the existing fields, which do not
       // change (the badge wiring comes with the trainee UI).
       groups,
+      // Home-screen icon badge: chats + groups + social notifications.
+      appBadge: sumAppBadge({
+        chat: count,
+        groups: groups.total,
+        notifications,
+      }),
     },
     { headers: NO_STORE },
   );

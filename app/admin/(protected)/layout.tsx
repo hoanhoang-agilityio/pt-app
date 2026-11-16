@@ -1,3 +1,4 @@
+import { AppIconBadge } from "@/features/app-badge/components/AppIconBadge";
 import { BackgroundLock } from "@/features/auth/components/BackgroundLock";
 import { PresenceHeartbeat } from "@/features/chat/components/PresenceHeartbeat";
 import { ChatBubbleHost } from "@/features/chat-bubbles/components/ChatBubbleHost";
@@ -11,6 +12,7 @@ const AdminProtectedLayout = async ({ children }: LayoutProps<"/admin">) => {
   return (
     <>
       <PresenceHeartbeat role="admin" />
+      <AppIconBadge role="admin" />
       {admin.hasPasscode && <BackgroundLock />}
       {children}
       <ChatBubbleHost role="admin" />

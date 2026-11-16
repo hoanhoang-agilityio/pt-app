@@ -236,6 +236,7 @@ describe("GET /api/chat/unread", () => {
       latestLoudIncomingId: lastId,
       // Group chats report next to the unchanged coach fields.
       groups: { total: 0, perGroup: [] },
+      appBadge: 1,
     });
   });
 });
@@ -328,6 +329,7 @@ describe("GET /api/chat/unread?as=admin", () => {
       count: 0,
       perTrainee: [],
       groups: { total: 0, perGroup: [] },
+      appBadge: 0,
     });
   });
 
@@ -360,6 +362,7 @@ describe("GET /api/chat/unread?as=admin", () => {
       latestLoudIncomingId: lastId,
       // Group chats report next to the unchanged coach fields.
       groups: { total: 0, perGroup: [] },
+      appBadge: 1,
     });
   });
 });

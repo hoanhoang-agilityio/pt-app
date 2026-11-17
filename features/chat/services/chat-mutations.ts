@@ -5,7 +5,6 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { chatMessageEdits, chatMessages, chatReactions } from "@/db/schema";
 import { CHAT_MESSAGES } from "@/features/chat/constants/messages";
-import { deletePhotoOfMessage } from "@/features/chat/services/chat-photos";
 import { scheduleReactionPush } from "@/features/chat/services/chat-push";
 import {
   type ChatMessage,
@@ -246,7 +245,8 @@ export const editChatMessage = async (
   return finish(actor, conversation, messageId);
 };
 
-// Unsend for everyone: soft delete, idempotent.
+// Unsend for everyone: flag only (deleted_at), idempotent. The content
+// (text, reply link, photo) stays stored; readers blank it via the flag.
 export const unsendChatMessage = async (
   actor: ChatActor,
   conversation: ChatConversationRef,
@@ -271,10 +271,8 @@ export const unsendChatMessage = async (
   }
   await db
     .update(chatMessages)
-    .set({ deletedAt: new Date(), replyPostId: null })
+    .set({ deletedAt: new Date() })
     .where(eq(chatMessages.id, messageId));
-  // KAN-160: an unsent photo is gone for good, bytes included.
-  await deletePhotoOfMessage(messageId);
   return finish(actor, conversation, messageId);
 };
 

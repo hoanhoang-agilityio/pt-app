@@ -437,7 +437,7 @@ describe("sending", () => {
 });
 
 describe("unsend", () => {
-  it("removes the message and its photo bytes, own messages only", async () => {
+  it("flags the message as unsent and keeps its content, own messages only", async () => {
     await befriend(alice, bob);
     const id = await openChat(alice, bob);
     const photoId = await uploadPhoto(id, alice);
@@ -452,11 +452,22 @@ describe("unsend", () => {
     expect((await mutations.unsendDmMessage(id, messageId, alice)).ok).toBe(
       true,
     );
-    expect(await db.select().from(dmPhotos)).toHaveLength(0);
+    expect(await db.select().from(dmPhotos)).toHaveLength(1);
     const [row] = await db.select().from(dmMessages);
 
     expect(row.deletedAt).not.toBeNull();
-    expect(row.body).toBeNull();
+    expect(row.body).toBe("look");
+    expect(row.photoId).toBe(photoId);
+    // Readers still get nothing, even for a direct read of the row.
+    expect(
+      (await queries.getDmMessageView(messageId, member(alice)))?.body,
+    ).toBeNull();
+    expect(
+      (await queries.getDmMessageView(messageId, member(alice)))?.photos,
+    ).toEqual([]);
+    expect(
+      await dmPhotosService.findDmPhotoForViewer(photoId, member(alice)),
+    ).toBeNull();
     // A second unsend finds nothing to take back.
     expect((await mutations.unsendDmMessage(id, messageId, alice)).ok).toBe(
       false,
@@ -1032,7 +1043,7 @@ describe("replying to a post", () => {
     expect(thread.messages[0].post?.id).toBe(postId);
   });
 
-  it("clears the post on unsend", async () => {
+  it("keeps the post link stored on unsend but shows nothing", async () => {
     const postId = await addPost(bob, "friends");
     const sent = await reply(alice, postId);
 
@@ -1047,7 +1058,10 @@ describe("replying to a post", () => {
     ).toBe(true);
     const [row] = await db.select().from(dmMessages);
 
-    expect(row.replyPostId).toBeNull();
+    expect(row.replyPostId).toBe(postId);
+    expect(
+      (await queries.getDmMessageView(row.id, member(alice)))?.post,
+    ).toBeNull();
   });
 
   it("keeps a retried send idempotent", async () => {
@@ -1206,7 +1220,7 @@ describe("several photos in one message", () => {
         )
       ).ok,
     ).toBe(true);
-    expect(await db.select().from(dmPhotos)).toHaveLength(0);
+    expect(await db.select().from(dmPhotos)).toHaveLength(3);
     for (const photoId of ids) {
       expect((await getPhoto(photoId)).status).toBe(404);
     }

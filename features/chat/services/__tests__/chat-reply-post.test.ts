@@ -425,14 +425,14 @@ describe("previews are checked per viewer on every read", () => {
     expect(sent.status).toBe("success");
   });
 
-  it("clears the post when the message is unsent", async () => {
+  it("hides the post when the message is unsent, but keeps the link stored", async () => {
     const postId = await addPost("admin", 1);
     const sent = await traineeSends(postId);
     const messageId = sent.status === "success" ? sent.message.id : -1;
     const unsent = await user.unsendMessageAction({ messageId });
 
     expect(unsent.status === "success" && unsent.message.post).toBeNull();
-    expect(await storedPostId(messageId)).toBeNull();
+    expect(await storedPostId(messageId)).toBe(postId);
     expect(
       (await queries.findMessageById(messageId, superViewer))?.post,
     ).toBeNull();

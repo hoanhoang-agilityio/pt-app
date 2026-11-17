@@ -80,6 +80,7 @@ const adminActions =
   await import("@/features/chat/services/chat-admin-actions");
 const service = await import("@/features/chat/services/chat-photos");
 const queries = await import("@/features/chat/services/chat-queries");
+const photosService = await import("@/features/chat/services/chat-photos");
 const { schedulePush } = await import("@/features/chat/services/chat-push");
 
 let db: TestDb;
@@ -496,7 +497,7 @@ describe("GET /api/chat/photos/[id]", () => {
 });
 
 describe("unsending a photo message", () => {
-  it("deletes the stored bytes, and the URL then answers 404", async () => {
+  it("keeps the stored bytes, but the URL then answers 404", async () => {
     const id = await uploadAs();
     const sent = await sendPhoto(id);
     const messageId = (sent as { message: { id: number } }).message.id;
@@ -508,11 +509,19 @@ describe("unsending a photo message", () => {
       status: "success",
       message: { deleted: true, photo: null },
     });
-    expect(await photoRows()).toHaveLength(0);
+    // Flag only: the photo row stays for the owner, but is never served.
+    expect(await photoRows()).toHaveLength(1);
+    expect((await photoRows())[0].messageId).toBe(messageId);
+    expect(
+      (await queries.findStoredMessage(messageId))?.deletedAt,
+    ).not.toBeNull();
     expect((await get(id)).status).toBe(404);
+    expect(
+      await photosService.findPhotoForViewer(id, { kind: "user", id: alice }),
+    ).toBeNull();
   });
 
-  it("works for a PT unsending their own photo, and leaves other photos alone", async () => {
+  it("works for a PT unsending their own photo, and keeps every photo row", async () => {
     const other = await uploadAs();
 
     await sendPhoto(other);
@@ -530,7 +539,10 @@ describe("unsending a photo message", () => {
       messageId: (sent as { message: { id: number } }).message.id,
     });
 
-    expect((await photoRows()).map((row) => row.id)).toEqual([other]);
+    expect((await photoRows()).map((row) => row.id).sort()).toEqual(
+      [other, id].sort(),
+    );
+    expect((await get(id)).status).toBe(404);
   });
 
   it("does not delete a photo when someone else tries to unsend the message", async () => {
@@ -817,7 +829,7 @@ describe("several photos in one message", () => {
     );
   });
 
-  it("unsending removes every photo row of the message and leaves others alone", async () => {
+  it("unsending keeps every photo row but serves none of that message", async () => {
     const other = await uploadAs();
 
     await sendPhoto(other);
@@ -833,10 +845,13 @@ describe("several photos in one message", () => {
       status: "success",
       message: { deleted: true, photo: null, photos: [] },
     });
-    expect((await photoRows()).map((row) => row.id)).toEqual([other]);
+    expect((await photoRows()).map((row) => row.id).sort()).toEqual(
+      [other, ...ids].sort(),
+    );
     for (const id of ids) {
       expect((await get(id)).status).toBe(404);
     }
+    expect((await get(other)).status).toBe(200);
   });
 
   it("names the count in the inbox line and the quote of a photo message", async () => {

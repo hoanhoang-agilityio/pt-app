@@ -14,7 +14,6 @@ import {
   type GroupContext,
   resolveSendBlock,
 } from "@/features/chat-groups/services/group-access";
-import { deleteGroupPhotoOfMessage } from "@/features/chat-groups/services/group-photos";
 import {
   findGroupMessageView,
   findStoredGroupMessage,
@@ -193,8 +192,8 @@ export const editGroupMessage = async (
   return finish(context, messageId);
 };
 
-// Unsend for everyone: soft delete that drops the text and the photo bytes.
-// Idempotent. A restricted trainee may still take their own message back.
+// Unsend for everyone: flag only (deleted_at); text, sticker and photo stay
+// stored, readers blank them via the flag. Idempotent. A restricted trainee may still take their own message back.
 export const unsendGroupMessage = async (
   context: GroupContext,
   user: GroupUser,
@@ -229,14 +228,8 @@ export const unsendGroupMessage = async (
   }
   await db
     .update(chatGroupMessages)
-    .set({
-      deletedAt: new Date(),
-      body: "",
-      stickerRef: null,
-      stickerUrl: null,
-    })
+    .set({ deletedAt: new Date() })
     .where(eq(chatGroupMessages.id, messageId));
-  await deleteGroupPhotoOfMessage(messageId);
   return finish(context, messageId);
 };
 

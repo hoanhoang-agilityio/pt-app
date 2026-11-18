@@ -1,6 +1,7 @@
 // Shown name in chat (KAN-141, spec D2): the conversation's shared nickname if
 // there is one, else the real name. Private contact aliases are not used in
-// chat (docs/specs/messenger-nicknames.md).
+// chat itself (docs/specs/messenger-nicknames.md); only push notifications
+// overlay the recipient's own alias on top (see chat-push.ts).
 
 export const resolveDisplayName = (
   nickname: string | null | undefined,

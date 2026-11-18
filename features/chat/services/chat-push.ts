@@ -25,6 +25,13 @@ import {
   type PushSubscriptionInput,
   userOwnerKey,
 } from "@/features/chat/utils/push-rules";
+import { loadAliasesForOwners } from "@/features/contact-aliases/services/contact-aliases";
+import {
+  adminActorKey,
+  overlayName,
+  PT_ALIAS_TARGET,
+  userActorKey,
+} from "@/features/contact-aliases/utils/alias-rules";
 import { getPushTranslator } from "@/i18n/push-translator";
 import { isUserInAdminScope, toAdminRole } from "@/services/admin-scope";
 import { getVapidConfig } from "@/services/env";
@@ -240,30 +247,62 @@ export const loadOwnerLocales = async (
   ]);
 };
 
-// Sends one payload per recipient language. Owners without a stored locale
-// (or no longer in the database) get Vietnamese.
-export const deliverLocalized = async (
+// Sends one payload per recipient language and per shown name. `nameFor`
+// returns the name a given recipient sees for the sender (their private
+// alias, say); recipients that resolve to the same locale and name share one
+// payload. Owners without a stored locale (or no longer in the database) get
+// Vietnamese.
+export const deliverLocalizedNamed = async (
   targets: StoredSubscription[],
-  buildPayload: (locale: Locale) => ChatPushPayload,
+  nameFor: (ownerKey: string) => string | undefined,
+  buildPayload: (locale: Locale, name: string | undefined) => ChatPushPayload,
   vapid: VapidConfig,
   sender: PushSender,
 ) => {
   const locales = await loadOwnerLocales([
     ...new Set(targets.map((target) => target.ownerKey)),
   ]);
-  const groups = new Map<Locale, StoredSubscription[]>();
+  const groups = new Map<
+    string,
+    { locale: Locale; name: string | undefined; targets: StoredSubscription[] }
+  >();
 
   for (const target of targets) {
     const locale = locales.get(target.ownerKey) ?? parseLocale(null);
+    const name = nameFor(target.ownerKey);
+    const groupKey = `${locale}\u0000${name ?? ""}\u0000${name === undefined}`;
+    const group = groups.get(groupKey) ?? { locale, name, targets: [] };
 
-    groups.set(locale, [...(groups.get(locale) ?? []), target]);
+    group.targets.push(target);
+    groups.set(groupKey, group);
   }
   await Promise.all(
-    [...groups].map(([locale, group]) =>
-      deliver(group, buildPayload(locale), vapid, sender),
+    [...groups.values()].map((group) =>
+      deliver(
+        group.targets,
+        buildPayload(group.locale, group.name),
+        vapid,
+        sender,
+      ),
     ),
   );
 };
+
+// Sends one payload per recipient language. Owners without a stored locale
+// (or no longer in the database) get Vietnamese.
+export const deliverLocalized = (
+  targets: StoredSubscription[],
+  buildPayload: (locale: Locale) => ChatPushPayload,
+  vapid: VapidConfig,
+  sender: PushSender,
+) =>
+  deliverLocalizedNamed(
+    targets,
+    () => undefined,
+    (locale) => buildPayload(locale),
+    vapid,
+    sender,
+  );
 
 export const deliver = async (
   targets: StoredSubscription[],
@@ -326,12 +365,11 @@ export const sendChatPush = async (
       return;
     }
     const recipientRole = senderRole === "user" ? "admin" : "user";
-    // The title uses the conversation's shared nickname for the sender when
-    // one is set, else the real name, as the chat itself does. A private
-    // contact alias is never used inside chat.
+    // Name precedence per recipient: their private contact alias for the
+    // sender, then the conversation's shared nickname, then the real name.
     const nicknames = await loadNicknames(conversationId);
     let traineeName: string | null = null;
-    let senderName = "PT";
+    let adminName = "PT";
 
     if (recipientRole === "admin") {
       const [trainee] = await db
@@ -346,27 +384,55 @@ export const sendChatPush = async (
         .from(adminsTable)
         .where(eq(adminsTable.id, senderAdminId));
 
-      senderName = adminLabel(
-        nicknames,
-        senderAdminId,
-        admin?.username ?? "PT",
-        "pt",
-      );
+      adminName = admin?.username ?? "PT";
     }
+    // Aliases are owner-keyed, so only each recipient's own row can apply.
+    const aliasTargets =
+      recipientRole === "admin"
+        ? [userActorKey(traineeUserId)]
+        : [
+            ...(senderAdminId != null ? [adminActorKey(senderAdminId)] : []),
+            PT_ALIAS_TARGET,
+          ];
+    const aliases = await loadAliasesForOwners(
+      targets.map((target) => target.ownerKey),
+      aliasTargets,
+    );
+    const sharedName = (locale: Locale) =>
+      recipientRole === "admin"
+        ? displayNameFor(
+            nicknames,
+            "user",
+            traineeName ?? getPushTranslator(locale)("traineeFallback"),
+          )
+        : senderAdminId != null
+          ? adminLabel(nicknames, senderAdminId, adminName, "pt")
+          : adminName;
+    const privateAlias = (ownerKey: string) => {
+      const own = aliases.get(ownerKey);
 
-    await deliverLocalized(
+      if (!own) {
+        return undefined;
+      }
+      if (recipientRole === "admin") {
+        return overlayName(own, userActorKey(traineeUserId), "") || undefined;
+      }
+      return (
+        (senderAdminId != null
+          ? overlayName(own, adminActorKey(senderAdminId), "")
+          : "") ||
+        overlayName(own, PT_ALIAS_TARGET, "") ||
+        undefined
+      );
+    };
+
+    await deliverLocalizedNamed(
       targets,
-      (locale) =>
+      privateAlias,
+      (locale, alias) =>
         buildChatPushPayload({
           recipientRole,
-          senderName:
-            recipientRole === "admin"
-              ? displayNameFor(
-                  nicknames,
-                  "user",
-                  traineeName ?? getPushTranslator(locale)("traineeFallback"),
-                )
-              : senderName,
+          senderName: alias ?? sharedName(locale),
           traineeUserId,
           conversationId,
           body,
@@ -386,7 +452,8 @@ export const sendChatPush = async (
 export interface SendReactionPushInput {
   // The author of the reacted message, the only person who is notified.
   recipient:
-    { role: "user"; userId: number } | { role: "admin"; adminId: number };
+    | { role: "user"; userId: number }
+    | { role: "admin"; adminId: number };
   reactorName: string;
   // The reactor's chat key ("user" / "admin:<id>"): the conversation's shared
   // nickname for them, if any, replaces `reactorName`.
@@ -437,11 +504,12 @@ export const sendReactionPush = async (
     if (targets.length === 0) {
       return;
     }
-    // The conversation's shared nickname for the reactor (a trainee also
-    // sees the one for the whole PT side), never a private alias.
+    // The recipient's private alias for the reactor wins, then the
+    // conversation's shared nickname (a trainee also sees the one for the
+    // whole PT side), then the real name.
     const nicknames = await loadNicknames(conversationId);
     const adminId = reactorKey ? parseAdminTarget(reactorKey) : null;
-    const shownName =
+    const sharedName =
       !reactorKey || reactorKey.startsWith("admin:")
         ? adminLabel(
             nicknames,
@@ -450,6 +518,23 @@ export const sendReactionPush = async (
             recipient.role === "user" ? "pt" : undefined,
           )
         : displayNameFor(nicknames, reactorKey, reactorName);
+    const recipientKey =
+      recipient.role === "user"
+        ? userOwnerKey(recipient.userId)
+        : adminOwnerKey(recipient.adminId);
+    // The reactor's actor key: "user" means this conversation's trainee.
+    const reactorActorKey = !reactorKey
+      ? null
+      : reactorKey === "user"
+        ? userActorKey(traineeUserId)
+        : reactorKey;
+    const alias = reactorActorKey
+      ? (await loadAliasesForOwners([recipientKey], [reactorActorKey]))
+          .get(recipientKey)
+          ?.get(reactorActorKey)
+          ?.trim()
+      : undefined;
+    const shownName = alias ? alias : sharedName;
 
     await deliverLocalized(
       targets,

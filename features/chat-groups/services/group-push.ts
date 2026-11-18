@@ -6,7 +6,7 @@ import { after } from "next/server";
 import { db } from "@/db";
 import { chatGroupMembers, chatGroups, pushSubscriptions } from "@/db/schema";
 import {
-  deliverLocalized,
+  deliverLocalizedNamed,
   getVapid,
   type PushSender,
   sendWithWebPush,
@@ -14,6 +14,7 @@ import {
 import { loadActorIdentities } from "@/features/chat-groups/services/group-names";
 import { listSuperAdminIds } from "@/features/chat-groups/services/group-queries";
 import { buildGroupPushPayload } from "@/features/chat-groups/utils/group-push-rules";
+import { loadAliasesForOwners } from "@/features/contact-aliases/services/contact-aliases";
 import { logServerError } from "@/services/logger";
 
 export interface SendGroupPushInput {
@@ -100,6 +101,13 @@ export const sendGroupPush = async (
       loadActorIdentities([senderKey]),
     ]);
     const senderName = identities.get(senderKey)?.name ?? "";
+    // Each recipient sees the sender as they alias them, else the real name.
+    const aliases = await loadAliasesForOwners(
+      subscriptions.map((target) => target.ownerKey),
+      [senderKey],
+    );
+    const aliasFor = (ownerKey: string) =>
+      aliases.get(ownerKey)?.get(senderKey)?.trim() || undefined;
 
     await Promise.all(
       (["user", "admin"] as const).map((recipient) => {
@@ -109,14 +117,15 @@ export const sendGroupPush = async (
 
         return targets.length === 0
           ? undefined
-          : deliverLocalized(
+          : deliverLocalizedNamed(
               targets,
-              (locale) =>
+              aliasFor,
+              (locale, alias) =>
                 buildGroupPushPayload({
                   recipient,
                   groupId,
                   groupName: group.name,
-                  senderName,
+                  senderName: alias ?? senderName,
                   body,
                   sticker,
                   photo,

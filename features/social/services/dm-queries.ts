@@ -66,9 +66,15 @@ const toView = (
 
 // Views as `viewer` may see them: the quoted post is checked per viewer.
 export const toMessageViews = async (
-  rows: (typeof dmMessages.$inferSelect)[],
+  storedRows: (typeof dmMessages.$inferSelect)[],
   viewer: SocialActor,
 ) => {
+  // Unsent messages keep their content in the table; no reader gets it.
+  const rows = storedRows.map((row) =>
+    row.deletedAt === null
+      ? row
+      : { ...row, body: null, photoId: null, replyPostId: null },
+  );
   const [photos, posts] = await Promise.all([
     // Sizes only, one query for every message of the page.
     loadPhotosOfDmMessages(

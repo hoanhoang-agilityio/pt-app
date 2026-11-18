@@ -974,7 +974,7 @@ describe("sending several photos", () => {
     expect(result?.photo).toEqual({ id: legacy, width: 700, height: 500 });
   });
 
-  it("unsending removes every photo of the message and leaves other messages' photos", async () => {
+  it("unsending keeps every photo row (flag only)", async () => {
     const [keep] = await pendingMany(1);
 
     await send([keep]);
@@ -988,6 +988,6 @@ describe("sending several photos", () => {
     expect(result).toMatchObject({ status: "success" });
     expect(
       (await db.select().from(chatGroupPhotos)).map((row) => row.id),
-    ).toEqual([keep]);
+    ).toEqual([keep, ...ids].sort());
   });
 });

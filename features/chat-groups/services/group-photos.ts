@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 
 import { db } from "@/db";
-import { chatGroupPhotos, chatGroups } from "@/db/schema";
+import { chatGroupMessages, chatGroupPhotos, chatGroups } from "@/db/schema";
 import { decodeAvatarDataUrl } from "@/features/avatar/utils/avatar-rules";
 import {
   groupPhotosByMessage,
@@ -157,14 +157,7 @@ export const loadPhotosOfGroupMessages = async (
   );
 };
 
-// Unsend: the stored image goes with the message.
-export const deleteGroupPhotoOfMessage = async (messageId: number) => {
-  await db
-    .delete(chatGroupPhotos)
-    .where(eq(chatGroupPhotos.messageId, messageId));
-};
-
-// The photo of a stored message, only for a member of its group (a pending
+// The photo of a live (not unsent) message, only for a member of its group (a pending
 // upload is visible to nobody). Null = answer 404.
 export const findGroupPhotoForSession = async (
   photoId: number,
@@ -178,10 +171,15 @@ export const findGroupPhotoForSession = async (
       data: chatGroupPhotos.data,
     })
     .from(chatGroupPhotos)
+    .innerJoin(
+      chatGroupMessages,
+      eq(chatGroupMessages.id, chatGroupPhotos.messageId),
+    )
     .where(
       and(
         eq(chatGroupPhotos.id, photoId),
         isNotNull(chatGroupPhotos.messageId),
+        isNull(chatGroupMessages.deletedAt),
         groupId === undefined
           ? undefined
           : eq(chatGroupPhotos.groupId, groupId),

@@ -29,6 +29,8 @@ vi.mock("@/db", () => ({
 }));
 
 const access = await import("@/features/chat-groups/services/group-access");
+const photosService =
+  await import("@/features/chat-groups/services/group-photos");
 const mutations =
   await import("@/features/chat-groups/services/group-mutations");
 
@@ -291,7 +293,7 @@ describe("unsendGroupMessage", () => {
       messageId: message,
     });
 
-  it("drops the text and the photo bytes, and is idempotent", async () => {
+  it("flags only: keeps the text and the photo, readers get nothing, and is idempotent", async () => {
     const [photo] = await db
       .insert(chatGroupPhotos)
       .values({
@@ -311,20 +313,27 @@ describe("unsendGroupMessage", () => {
       .update(chatGroupMessages)
       .set({ photoId: photo.id })
       .where(eq(chatGroupMessages.id, message));
+    const served = () =>
+      photosService.findGroupPhotoForSession(photo.id, asAn(), groupId);
+
+    expect(await served()).not.toBeNull();
     const result = await unsend(asAn(), an);
 
     expect(result).toMatchObject({
       status: "success",
       message: { deleted: true, body: "", photoId: null },
     });
+    // The photo row stays for the owner but is never served.
+    expect(await db.select().from(chatGroupPhotos)).toHaveLength(1);
+    expect(await served()).toBeNull();
     const [row] = await db
       .select()
       .from(chatGroupMessages)
       .where(eq(chatGroupMessages.id, message));
 
-    expect(row.body).toBe("");
+    expect(row.body).toBe("Hôm nay tập chân");
+    expect(row.photoId).toBe(photo.id);
     expect(row.deletedAt).not.toBeNull();
-    expect(await db.select().from(chatGroupPhotos)).toHaveLength(0);
     expect(await unsend(asAn(), an)).toMatchObject({ status: "success" });
   });
 

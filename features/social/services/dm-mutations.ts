@@ -242,7 +242,8 @@ const findByClientId = async (conversationId: number, clientId: string) => {
 };
 
 // Only the sender, only a live message, still possible in a read-only chat
-// (a member may always take back their own words). The photo bytes go too.
+// (a member may always take back their own words). Flag only: the content
+// and photo stay stored, readers blank them via deleted_at.
 export const unsendDmMessage = async (
   conversationId: number,
   messageId: number,
@@ -259,7 +260,7 @@ export const unsendDmMessage = async (
   }
   const rows = await db
     .update(dmMessages)
-    .set({ deletedAt: now, body: null, photoId: null, replyPostId: null })
+    .set({ deletedAt: now })
     .where(
       and(
         eq(dmMessages.id, messageId),
@@ -273,7 +274,6 @@ export const unsendDmMessage = async (
   if (rows.length === 0) {
     return { ok: false, error: "not_found" };
   }
-  await db.delete(dmPhotos).where(eq(dmPhotos.messageId, messageId));
   return { ok: true };
 };
 

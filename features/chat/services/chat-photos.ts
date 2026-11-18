@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 
 import { db } from "@/db";
-import { chatConversations, chatPhotos } from "@/db/schema";
+import { chatConversations, chatMessages, chatPhotos } from "@/db/schema";
 import {
   groupPhotosByMessage,
   PHOTO_PENDING_TTL_MS,
@@ -174,16 +174,12 @@ export const countPhotosOfMessages = async (
   );
 };
 
-// Unsend: the stored image goes with the message.
-export const deletePhotoOfMessage = async (messageId: number) => {
-  await db.delete(chatPhotos).where(eq(chatPhotos.messageId, messageId));
-};
-
 export type PhotoViewer = { kind: "user" | "admin"; id: number };
 
 // The trainee of the conversation, and any admin who can access that trainee
 // (a hidden one only after the passcode reveal). Only photos that belong to a
-// message are served; a pending upload is not visible to anyone.
+// live (not unsent) message are served; a pending upload is not visible to
+// anyone, and an unsent message's photo stays stored but is never served.
 export const findPhotoForViewer = async (id: number, viewer: PhotoViewer) => {
   const [photo] = await db
     .select({
@@ -196,7 +192,14 @@ export const findPhotoForViewer = async (id: number, viewer: PhotoViewer) => {
       chatConversations,
       eq(chatConversations.id, chatPhotos.conversationId),
     )
-    .where(and(eq(chatPhotos.id, id), isNotNull(chatPhotos.messageId)));
+    .innerJoin(chatMessages, eq(chatMessages.id, chatPhotos.messageId))
+    .where(
+      and(
+        eq(chatPhotos.id, id),
+        isNotNull(chatPhotos.messageId),
+        isNull(chatMessages.deletedAt),
+      ),
+    );
 
   if (!photo) {
     return null;

@@ -5,6 +5,7 @@ import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
 import {
   admins,
   chatGroupMembers,
+  contactAliases,
   pushSubscriptions,
   users,
 } from "@/db/schema";
@@ -149,6 +150,50 @@ describe("sendGroupPush", () => {
     expect(byEndpoint[`admin-${ptId}`].url).toBe(
       `/admin/messages/groups/${groupId}`,
     );
+  });
+
+  it("names the sender per recipient: own alias, else the real name", async () => {
+    const alias = (ownerKey: string, targetKey: string, value: string) => ({
+      ownerKey,
+      targetKey,
+      alias: value,
+      updatedAt: new Date(),
+    });
+
+    await db.insert(contactAliases).values([
+      alias(`admin:${ptId}`, `user:${anId}`, "Bé An"),
+      alias(`admin:${superId}`, `user:${anId}`, "Học viên An"),
+      alias(`user:${binhId}`, `user:${anId}`, "An bạn thân"),
+      // The sender's own alias for someone else never applies.
+      alias(`user:${anId}`, `user:${binhId}`, "Bình ơi"),
+    ]);
+    await addSub(`user:${binhId}`);
+    await addSub(`admin:${ptId}`);
+    await addSub(`admin:${superId}`);
+    const bodies = Object.fromEntries(
+      (await sendAndCollect()).map(([sub, payload]) => [
+        sub.endpoint.replace("https://push.example/", ""),
+        payload.body,
+      ]),
+    );
+
+    expect(bodies).toEqual({
+      [`user-${binhId}`]: "An bạn thân: Chào cả nhóm",
+      [`admin-${ptId}`]: "Bé An: Chào cả nhóm",
+      [`admin-${superId}`]: "Học viên An: Chào cả nhóm",
+    });
+  });
+
+  it("falls back to the real name when the recipient has no alias", async () => {
+    await db.insert(contactAliases).values({
+      ownerKey: `admin:${ptId}`,
+      targetKey: `user:${binhId}`,
+      alias: "Khác",
+      updatedAt: new Date(),
+    });
+    await addSub(`admin:${ptId}`);
+
+    expect((await sendAndCollect())[0][1].body).toBe("An: Chào cả nhóm");
   });
 
   it("uses a kind label for photos and stickers instead of text", async () => {

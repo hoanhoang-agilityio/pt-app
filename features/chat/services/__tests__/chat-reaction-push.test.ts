@@ -92,7 +92,7 @@ describe("sendReactionPush", () => {
     expect(sender.mock.calls[0][1].url).toBe("/messages/coach");
   });
 
-  it("names the reactor by the conversation's shared nickname, never a private alias", async () => {
+  it("names the reactor by the conversation's shared nickname, ignoring aliases of other owners", async () => {
     const nick = (targetKey: string, nickname: string) => ({
       conversationId: 3,
       targetKey,
@@ -104,6 +104,7 @@ describe("sendReactionPush", () => {
     await db
       .insert(chatNicknames)
       .values([nick("pt", "Thầy"), nick("admin:2", "Sếp"), nick("user", "Na")]);
+    // Not the recipient's alias (owner admin:2, recipient is the trainee).
     await db.insert(contactAliases).values({
       ownerKey: "admin:2",
       targetKey: "admin:1",
@@ -135,6 +136,57 @@ describe("sendReactionPush", () => {
       sender,
     );
     expect(body()).toBe("Na đã thả ❤️ vào tin nhắn của bạn");
+  });
+
+  it("prefers the recipient's private alias for the reactor over shared nicknames", async () => {
+    const alias = (ownerKey: string, targetKey: string, value: string) => ({
+      ownerKey,
+      targetKey,
+      alias: value,
+      updatedAt: new Date(),
+    });
+
+    await db.insert(chatNicknames).values({
+      conversationId: 3,
+      targetKey: "user",
+      nickname: "Na",
+      setByKey: "user",
+      updatedAt: new Date(),
+    });
+    await db.insert(contactAliases).values([
+      alias("admin:3", `user:${traineeId}`, "Bé Na"),
+      // The reactor's own alias for themselves or others never applies.
+      alias(`user:${traineeId}`, `user:${traineeId}`, "Tự gọi"),
+      alias("admin:4", `user:${traineeId}`, "Của admin 4"),
+    ]);
+    await addSub("admin:3", "a3");
+    await addSub("admin:5", "a5");
+    const sender = vi.fn<Sender>(async () => undefined);
+    const body = () => sender.mock.calls.at(-1)?.[1].body;
+
+    await push.sendReactionPush(
+      { ...input({ role: "admin", adminId: 3 }), reactorKey: "user" },
+      sender,
+    );
+    expect(body()).toBe("Bé Na đã thả ❤️ vào tin nhắn của bạn");
+
+    // Another admin without an alias falls back to the shared nickname.
+    await push.sendReactionPush(
+      { ...input({ role: "admin", adminId: 5 }), reactorKey: "user" },
+      sender,
+    );
+    expect(body()).toBe("Na đã thả ❤️ vào tin nhắn của bạn");
+
+    // A trainee recipient with an alias for the reacting admin.
+    await db
+      .insert(contactAliases)
+      .values(alias(`user:${traineeId}`, "admin:1", "Anh Hoan"));
+    await addSub(`user:${traineeId}`, "t1");
+    await push.sendReactionPush(
+      { ...input({ role: "user", userId: traineeId }), reactorKey: "admin:1" },
+      sender,
+    );
+    expect(body()).toBe("Anh Hoan đã thả ❤️ vào tin nhắn của bạn");
   });
 
   it("drops a dead subscription and does not throw", async () => {

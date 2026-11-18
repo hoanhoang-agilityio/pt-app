@@ -187,10 +187,10 @@ describe("sendChatPush", () => {
     await db
       .insert(chatNicknames)
       .values([nickRow("user", "Lan béo"), nickRow("pt", "Thầy")]);
-    // A private alias of a recipient never reaches the title inside chat.
+    // A private alias for someone else (not the sender) never applies.
     await db.insert(contactAliases).values({
       ownerKey: `admin:${admin.id}`,
-      targetKey: `user:${traineeId}`,
+      targetKey: `user:${traineeId + 100}`,
       alias: "Riêng",
       updatedAt: new Date(),
     });
@@ -468,5 +468,129 @@ describe("P1 workspace scope of trainee message pushes", () => {
       .values({ adminId: ownPt, userId: traineeId });
 
     expect(await sendFromTrainee()).toEqual([]);
+  });
+});
+
+describe("sendChatPush private aliases", () => {
+  type PushSender = import("@/features/chat/services/chat-push").PushSender;
+
+  const alias = (ownerKey: string, targetKey: string, value: string) => ({
+    ownerKey,
+    targetKey,
+    alias: value,
+    updatedAt: new Date(),
+  });
+  const nick = (targetKey: string, nickname: string) => ({
+    conversationId: 3,
+    targetKey,
+    nickname,
+    setByKey: "user",
+    updatedAt: new Date(),
+  });
+  const titles = (sender: ReturnType<typeof vi.fn<PushSender>>) =>
+    Object.fromEntries(
+      sender.mock.calls.map(([sub, payload]) => [
+        sub.endpoint.replace("https://push.example/", ""),
+        payload.title,
+      ]),
+    );
+  const fromTrainee = (sender: PushSender) =>
+    push.sendChatPush(
+      { senderRole: "user", traineeUserId: traineeId, conversationId: 3 },
+      sender,
+    );
+
+  it("gives each admin their own alias, else the shared nickname, else the real name", async () => {
+    await db
+      .insert(contactAliases)
+      .values([
+        alias("admin:1", `user:${traineeId}`, "Bé Lan"),
+        alias("admin:2", `user:${traineeId}`, "Học viên A"),
+      ]);
+    await addSub("admin:1", "a1");
+    await addSub("admin:2", "a2");
+    await addSub("admin:3", "a3");
+    const sender = vi.fn<PushSender>(async () => undefined);
+
+    await fromTrainee(sender);
+    expect(titles(sender)).toEqual({
+      a1: "Bé Lan",
+      a2: "Học viên A",
+      a3: "Lan",
+    });
+
+    // The shared nickname applies only where there is no private alias.
+    await db.insert(chatNicknames).values(nick("user", "Lan béo"));
+    sender.mockClear();
+    await fromTrainee(sender);
+    expect(titles(sender)).toEqual({
+      a1: "Bé Lan",
+      a2: "Học viên A",
+      a3: "Lan béo",
+    });
+  });
+
+  it("ignores the trainee's own alias rows and blank aliases", async () => {
+    await db
+      .insert(contactAliases)
+      .values([
+        alias(`user:${traineeId}`, `user:${traineeId}`, "Tự gọi"),
+        alias("admin:1", `user:${traineeId}`, "   "),
+      ]);
+    await addSub("admin:1", "a1");
+    const sender = vi.fn<PushSender>(async () => undefined);
+
+    await fromTrainee(sender);
+    expect(titles(sender)).toEqual({ a1: "Lan" });
+  });
+
+  it("titles an admin message with the trainee's alias for that admin", async () => {
+    const [admin] = await db
+      .insert(admins)
+      .values({
+        username: "Hoan",
+        usernameKey: "hoan-alias",
+        passwordHash: "x",
+        role: "super_admin",
+      })
+      .returning({ id: admins.id });
+    const fromAdmin = (sender: PushSender) =>
+      push.sendChatPush(
+        {
+          senderRole: "admin",
+          senderAdminId: admin.id,
+          traineeUserId: traineeId,
+          conversationId: 3,
+        },
+        sender,
+      );
+
+    await addSub(`user:${traineeId}`, "t");
+    await db.insert(chatNicknames).values(nick("pt", "Thầy"));
+    // An admin's own alias for the trainee (or for themselves) never matters.
+    await db
+      .insert(contactAliases)
+      .values([
+        alias(`admin:${admin.id}`, `user:${traineeId}`, "Của PT"),
+        alias(`admin:${admin.id}`, `admin:${admin.id + 1}`, "Khác"),
+      ]);
+    const sender = vi.fn<PushSender>(async () => undefined);
+
+    await fromAdmin(sender);
+    expect(sender.mock.calls.at(-1)?.[1].title).toBe("Thầy");
+
+    // The trainee's alias for the whole PT side beats the shared nickname.
+    await db
+      .insert(contactAliases)
+      .values(alias(`user:${traineeId}`, "pt", "Huấn luyện"));
+    await fromAdmin(sender);
+    expect(sender.mock.calls.at(-1)?.[1].title).toBe("Huấn luyện");
+
+    // ... and the alias for that very admin beats both.
+    await db
+      .insert(contactAliases)
+      .values(alias(`user:${traineeId}`, `admin:${admin.id}`, "Anh Hoan"));
+    await fromAdmin(sender);
+    expect(sender.mock.calls.at(-1)?.[1].title).toBe("Anh Hoan");
   });
 });

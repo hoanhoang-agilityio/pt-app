@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { useRef, useState } from "react";
@@ -12,6 +13,7 @@ import { ChatPhotoGrid } from "@/features/chat/components/ChatPhotoGrid";
 import { ChatPhotoImage } from "@/features/chat/components/ChatPhotoImage";
 import { ChatPhotoViewer } from "@/features/chat/components/ChatPhotoViewer";
 import { useBubbleGesture } from "@/features/chat/hooks/use-bubble-gesture";
+import type { UnsentKind } from "@/features/chat/services/unsent-reveal";
 import {
   CHAT_TEXT_ON_COLOR,
   chatColorHex,
@@ -31,6 +33,14 @@ import { tokenizeLinks } from "@/features/chat/utils/link-rules";
 import { DmPostQuote } from "@/features/social/components/DmPostQuote";
 
 const STICKER_SIZE_PX = 120;
+
+// Loaded only when a super admin's bubble is unsent, so nobody else ever
+// downloads the reveal code or the server action behind it.
+const RevealableUnsent = dynamic(() =>
+  import("@/features/chat/components/RevealableUnsent").then(
+    (module) => module.RevealableUnsent,
+  ),
+);
 
 // The text with its http(s) links as anchors. A tap on a link opens it; the
 // bubble gesture ignores taps on anchors, so double-tap and long-press on the
@@ -81,6 +91,11 @@ interface MessageBubbleProps {
   isNeutral?: boolean;
   // The sender is a verified admin: blue tick after the name.
   senderVerified?: boolean;
+  // Super admin only (decided on the server): the unsent line becomes a toggle
+  // that shows the original. False renders plain static text.
+  canRevealUnsent?: boolean;
+  // Which chat system the message belongs to, for the reveal action.
+  revealKind?: UnsentKind;
 }
 
 // One chat bubble: mine right in the accent colour, the other side left. Spacing is
@@ -104,6 +119,8 @@ export const MessageBubble = ({
   nicknames,
   avatarSrc = null,
   senderVerified = false,
+  canRevealUnsent = false,
+  revealKind = "coach",
 }: MessageBubbleProps) => {
   const color = isNeutral ? null : pickedColor;
   const {
@@ -313,22 +330,32 @@ export const MessageBubble = ({
               {photo && hasPhoto && !isGrid && (
                 <ChatPhotoImage photo={photo} isDimmed={mine && isSending} />
               )}
-              {(isUnsent || isHidden || message.body !== "" || !hasPhoto) && (
-                <p
-                  className={clsx(
-                    "break-words whitespace-pre-wrap",
-                    hasPhoto && "px-2.5 pt-1.5 pb-1",
-                  )}
-                >
-                  {isUnsent ? (
-                    unsentText(locale)
-                  ) : isHidden ? (
-                    tGroup("thread.hiddenByManager")
-                  ) : (
-                    <LinkedText body={message.body} />
-                  )}
-                </p>
+              {isUnsent && canRevealUnsent && message.id !== null && (
+                <div className="break-words whitespace-pre-wrap">
+                  <RevealableUnsent
+                    kind={revealKind}
+                    messageId={message.id}
+                    label={unsentText(locale)}
+                  />
+                </div>
               )}
+              {!(isUnsent && canRevealUnsent && message.id !== null) &&
+                (isUnsent || isHidden || message.body !== "" || !hasPhoto) && (
+                  <p
+                    className={clsx(
+                      "break-words whitespace-pre-wrap",
+                      hasPhoto && "px-2.5 pt-1.5 pb-1",
+                    )}
+                  >
+                    {isUnsent ? (
+                      unsentText(locale)
+                    ) : isHidden ? (
+                      tGroup("thread.hiddenByManager")
+                    ) : (
+                      <LinkedText body={message.body} />
+                    )}
+                  </p>
+                )}
             </>
           )}
         </div>

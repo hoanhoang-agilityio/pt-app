@@ -56,6 +56,7 @@ const AdminGroupPage = async ({
       isManager={actor.isManager}
       canManage={actor.canManage}
       canResolveAlert={actor.isSuperAdmin}
+      canRevealUnsent={actor.isSuperAdmin}
       canWriteBase
       initialManagersOnly={payload.group.managersOnly}
       initialDissolved={payload.group.dissolved}

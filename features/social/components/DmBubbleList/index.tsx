@@ -2,16 +2,25 @@
 
 import clsx from "clsx";
 import { RotateCcw } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { ChatPhotoGrid } from "@/features/chat/components/ChatPhotoGrid";
 import { ChatPhotoImage } from "@/features/chat/components/ChatPhotoImage";
 import { ChatPhotoViewer } from "@/features/chat/components/ChatPhotoViewer";
+import { unsentText } from "@/features/chat/utils/chat-thread-rules";
 import { PHOTO_ALT } from "@/features/chat/utils/photo-rules";
 import { DmPostQuote } from "@/features/social/components/DmPostQuote";
 import type { DmThreadItem } from "@/features/social/utils/dm-thread-rules";
 import { type Locale, toIntlLocale } from "@/utils/locale";
+
+// Loaded only for the super admin, so nobody else downloads the reveal code.
+const RevealableUnsent = dynamic(() =>
+  import("@/features/chat/components/RevealableUnsent").then(
+    (module) => module.RevealableUnsent,
+  ),
+);
 
 // The photos of one message: a single image, or a grid with a viewer.
 const DmPhotos = ({
@@ -52,6 +61,8 @@ interface DmBubbleListProps {
   names?: Map<number, string>;
   // The own message the other member has read last.
   seenId?: number | null;
+  // Super admin view (decided on the server): unsent lines reveal on click.
+  canRevealUnsent?: boolean;
   onUnsend?: (messageId: number) => void;
   onRetry?: (clientId: string) => void;
 }
@@ -70,11 +81,13 @@ export const DmBubbleList = ({
   meId,
   names,
   seenId = null,
+  canRevealUnsent = false,
   onUnsend,
   onRetry,
 }: DmBubbleListProps) => {
   const locale = useLocale();
   const t = useTranslations("social.dmBubbleList");
+  const unsentLabel = unsentText(locale);
 
   return (
     <ul className="flex flex-col gap-2">
@@ -103,21 +116,35 @@ export const DmBubbleList = ({
                 item.pending === "sending" && "opacity-70",
               )}
             >
-              {item.post && <DmPostQuote post={item.post} />}
-              {item.photo && (
-                <DmPhotos
-                  photos={
-                    item.photos && item.photos.length > 0
-                      ? item.photos
-                      : [item.photo]
-                  }
-                  isDimmed={item.pending === "sending"}
-                />
-              )}
-              {item.body && (
-                <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
-                  {item.body}
-                </p>
+              {item.deleted ? (
+                canRevealUnsent ? (
+                  <RevealableUnsent
+                    kind="dm"
+                    messageId={item.id}
+                    label={unsentLabel}
+                  />
+                ) : (
+                  <p className="text-muted italic">{unsentLabel}</p>
+                )
+              ) : (
+                <>
+                  {item.post && <DmPostQuote post={item.post} />}
+                  {item.photo && (
+                    <DmPhotos
+                      photos={
+                        item.photos && item.photos.length > 0
+                          ? item.photos
+                          : [item.photo]
+                      }
+                      isDimmed={item.pending === "sending"}
+                    />
+                  )}
+                  {item.body && (
+                    <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+                      {item.body}
+                    </p>
+                  )}
+                </>
               )}
             </div>
             <div className="flex items-center gap-2 px-1 text-xs text-muted">

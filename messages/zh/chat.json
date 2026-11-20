@@ -149,6 +149,10 @@
     "report": "举报"
   },
   "messageBubble": {
+    "revealHint": "点击查看",
+    "hideHint": "点击隐藏",
+    "revealing": "加载中…",
+    "revealFailed": "无法加载内容",
     "viewReply": "查看被回复的消息",
     "messageName": "消息",
     "edited": "已编辑",

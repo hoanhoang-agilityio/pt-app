@@ -75,6 +75,8 @@ export interface GroupThreadProps {
   canManage: boolean;
   // Super admin: sees the PT-change alert and its buttons.
   canResolveAlert: boolean;
+  // Super admin: the unsent line shows the original on click.
+  canRevealUnsent?: boolean;
   // False when only the server knows this person may not write.
   canWriteBase: boolean;
   // Why canWriteBase is false, for the banner: the trainee's chat switch is
@@ -174,6 +176,7 @@ export const GroupThread = ({
   isManager,
   canManage,
   canResolveAlert,
+  canRevealUnsent = false,
   canWriteBase,
   lockReason = null,
   initialManagersOnly,
@@ -580,6 +583,8 @@ export const GroupThread = ({
                       viewer={adapter.viewer}
                       onRetry={chat.retry}
                       nicknames={NO_NICKNAMES}
+                      canRevealUnsent={canRevealUnsent}
+                      revealKind="group"
                       isHighlighted={
                         item.message.id !== null &&
                         item.message.id === highlightId

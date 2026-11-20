@@ -97,3 +97,12 @@ export const requireAdmin = async () => {
 // require* guards above (deleted user, password changed since sign-in).
 export const getApiUser = getCurrentUser;
 export const getApiAdmin = getCurrentAdmin;
+
+// Super admin without a redirect, for server actions that answer "forbidden"
+// instead: null for no session, a locked admin, a PT and a trainee (who has no
+// admin cookie at all).
+export const getApiSuperAdmin = async () => {
+  const admin = await getCurrentAdmin();
+
+  return admin && isSuperAdmin(admin) ? admin : null;
+};

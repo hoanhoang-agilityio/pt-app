@@ -41,6 +41,7 @@ const AdminDmThreadPage = async ({
       before: before ?? undefined,
       otherId: null,
       viewer: actorOfAdmin(admin),
+      includeUnsent: true,
     }),
     loadDmMemberNames(view.conversation.userLow, view.conversation.userHigh),
   ]);
@@ -69,7 +70,12 @@ const AdminDmThreadPage = async ({
             {t("noMessages")}
           </p>
         ) : (
-          <DmBubbleList items={thread.messages} meId={null} names={names} />
+          <DmBubbleList
+            items={thread.messages}
+            meId={null}
+            names={names}
+            canRevealUnsent
+          />
         )}
       </main>
     </>

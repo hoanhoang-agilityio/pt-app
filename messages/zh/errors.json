@@ -39,6 +39,7 @@
     "ADMIN_NOT_FOUND": "未找到该教练",
     "STICKER_NOT_EDITABLE": "贴纸无法编辑",
     "MESSAGE_UNSENT": "此消息已撤回",
+    "FORBIDDEN": "你无权查看此内容",
     "POST_NOT_FOUND": "无法回复此帖子。",
     "POST_NEEDS_TEXT": "请输入消息来回复帖子。"
   },

@@ -828,6 +828,9 @@ export const ChatThread = ({
                       viewer={adapter.viewer}
                       onRetry={chat.retry}
                       nicknames={profile.nicknames}
+                      canRevealUnsent={
+                        viewer.role === "admin" && viewer.isSuperAdmin === true
+                      }
                       senderVerified={
                         item.message.senderRole === "admin" &&
                         verifiedIds.has(item.message.senderAdminId ?? -1)

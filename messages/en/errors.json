@@ -39,6 +39,7 @@
     "ADMIN_NOT_FOUND": "PT not found",
     "STICKER_NOT_EDITABLE": "Stickers cannot be edited",
     "MESSAGE_UNSENT": "This message was unsent",
+    "FORBIDDEN": "You are not allowed to view this content",
     "POST_NOT_FOUND": "You cannot reply to this post.",
     "POST_NEEDS_TEXT": "Write a message to reply to the post."
   },

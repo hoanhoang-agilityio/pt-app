@@ -61,6 +61,7 @@ const toView = (
       row.replyPostId === null ? null : (posts.get(row.replyPostId) ?? null),
     clientId: row.clientId,
     createdAt: row.createdAt.toISOString(),
+    ...(row.deletedAt === null ? {} : { deleted: true }),
   };
 };
 
@@ -116,10 +117,15 @@ export const listDmThread = async (
     before?: number;
     otherId: number | null;
     viewer: SocialActor;
+    // Only the super admin's read-only page: unsent messages stay in the list
+    // as blank placeholders (content is still blanked by toMessageViews).
+    includeUnsent?: boolean;
   },
 ): Promise<DmThreadPage> => {
   const inConversation = eq(dmMessages.conversationId, conversationId);
-  const live = sql`${dmMessages.deletedAt} is null`;
+  const live = options.includeUnsent
+    ? undefined
+    : sql`${dmMessages.deletedAt} is null`;
   const rows =
     options.after !== undefined
       ? await db

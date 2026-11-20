@@ -149,9 +149,6 @@
     "report": "Report"
   },
   "messageBubble": {
-    "revealHint": "Tap to view",
-    "hideHint": "Tap to hide",
-    "revealing": "Loading…",
     "revealFailed": "Could not load the content",
     "viewReply": "View the message being replied to",
     "messageName": "message",

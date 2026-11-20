@@ -1,5 +1,6 @@
 "use client";
 
+import clsx from "clsx";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -19,8 +20,8 @@ interface RevealableUnsentProps {
 
 // Super admin only (the caller renders it only for them, and loads this module
 // lazily, so other viewers never download or call the action). The placeholder
-// becomes a toggle: the first click fetches the original, the next ones hide
-// and show it from state without asking the server again.
+// is swapped in place for the original: the first click fetches it, the next
+// ones hide and show it from state without asking the server again.
 export const RevealableUnsent = ({
   kind,
   messageId,
@@ -62,6 +63,8 @@ export const RevealableUnsent = ({
     }
   };
 
+  const showContent = isShown && content !== null;
+
   return (
     <>
       <button
@@ -70,16 +73,48 @@ export const RevealableUnsent = ({
         aria-expanded={isShown}
         aria-busy={isPending}
         disabled={isPending}
-        className="block w-full cursor-pointer text-left italic focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none"
+        className={clsx(
+          "block w-full cursor-pointer text-left focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none",
+          showContent
+            ? "space-y-2 rounded-xl border border-dashed border-line bg-surface px-2.5 py-1.5 text-fg not-italic"
+            : "italic",
+          isPending && "opacity-50",
+        )}
       >
-        {label}
-        <span className="block text-[11px] not-italic underline underline-offset-2 opacity-70">
-          {isPending
-            ? t("revealing")
-            : isShown
-              ? t("hideHint")
-              : t("revealHint")}
-        </span>
+        {showContent ? (
+          <>
+            {content.sticker && (
+              <Image
+                src={content.sticker.url}
+                alt={content.sticker.alt}
+                width={120}
+                height={120}
+                unoptimized
+                draggable={false}
+                className="size-[120px] object-contain"
+              />
+            )}
+            {content.photos.map((photo, index) => (
+              <Image
+                key={index}
+                src={photo.url}
+                alt={photo.alt}
+                width={photo.width}
+                height={photo.height}
+                unoptimized
+                draggable={false}
+                className="h-auto max-w-full rounded-lg"
+              />
+            ))}
+            {content.body !== "" && (
+              <span className="block break-words whitespace-pre-wrap">
+                {content.body}
+              </span>
+            )}
+          </>
+        ) : (
+          label
+        )}
       </button>
       {error && (
         <span
@@ -88,34 +123,6 @@ export const RevealableUnsent = ({
         >
           {error}
         </span>
-      )}
-      {isShown && content && (
-        <div className="mt-2 space-y-2 border-t border-line pt-2 text-fg not-italic">
-          {content.sticker && (
-            <Image
-              src={content.sticker.url}
-              alt={content.sticker.alt}
-              width={120}
-              height={120}
-              unoptimized
-              draggable={false}
-              className="size-[120px] object-contain"
-            />
-          )}
-          {content.photos.map((photo, index) => (
-            <Image
-              key={index}
-              src={photo.url}
-              alt={photo.alt}
-              width={photo.width}
-              height={photo.height}
-              unoptimized
-              draggable={false}
-              className="h-auto max-w-full rounded-lg"
-            />
-          ))}
-          {content.body !== "" && <span>{content.body}</span>}
-        </div>
       )}
     </>
   );

@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { BottomSheet } from "@/components/common/BottomSheet";
-import { CHAT_REACTION_EMOJIS } from "@/features/chat/utils/chat-rules";
+import { ReactionRow } from "@/components/ReactionRow";
 import {
   canEditOrUnsend,
   formatSentAt,
@@ -57,7 +57,7 @@ const ActionRow = ({
   </button>
 );
 
-// Long-press sheet: the six reactions (mine highlighted, tap again removes),
+// Long-press sheet: the reactions (mine highlighted, tap again removes),
 // the exact send time, then Reply / Copy / Edit / Unsend. Edit and Unsend are
 // only offered on my own messages; Report only on the other side's; a sticker offers neither Copy nor Edit.
 export const MessageActionsSheet = ({
@@ -93,31 +93,7 @@ export const MessageActionsSheet = ({
       })}
     >
       {canWrite && (
-        <div
-          role="group"
-          aria-label={t("reactions")}
-          className="mb-2 flex justify-between rounded-2xl border border-line bg-surface p-1.5"
-        >
-          {CHAT_REACTION_EMOJIS.map((emoji) => {
-            const isMine = mine === emoji;
-
-            return (
-              <button
-                key={emoji}
-                type="button"
-                aria-label={emoji}
-                aria-pressed={isMine}
-                onClick={() => onReact(isMine ? null : emoji)}
-                className={clsx(
-                  "flex size-11 items-center justify-center rounded-full text-2xl transition active:scale-90",
-                  isMine && "bg-accent/20 ring-2 ring-accent",
-                )}
-              >
-                {emoji}
-              </button>
-            );
-          })}
-        </div>
+        <ReactionRow mine={mine} label={t("reactions")} onPick={onReact} />
       )}
       <div className="flex flex-col">
         {canWrite && (

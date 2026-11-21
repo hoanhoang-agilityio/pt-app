@@ -1,4 +1,13 @@
 {
+  "emojiPicker": {
+    "title": "Pick a reaction",
+    "search": "Search emoji",
+    "recent": "Recently used",
+    "empty": "No emoji found",
+    "loading": "Loading…",
+    "more": "More reactions",
+    "skinTone": "Skin tone"
+  },
   "clear": "Clear",
   "close": "Close",
   "confirm": { "cancel": "Cancel" },

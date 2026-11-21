@@ -1,7 +1,6 @@
 import { TIME_ZONE } from "@/constants/time";
 import {
   adminReaderKey,
-  CHAT_REACTION_EMOJIS,
   toReplySnippet,
   USER_READER_KEY,
 } from "@/features/chat/utils/chat-rules";
@@ -721,27 +720,31 @@ export interface ReactionGroup {
   names: string[];
 }
 
-// Chips under a bubble: one per emoji, in the picker's order.
+// Chips under a bubble: one per emoji, the most used first. Ties keep the
+// order of first appearance, and the queries send reactions oldest first, so
+// the earlier reaction wins.
 export const groupReactions = (
   reactions: SerializedReaction[],
   viewer: ThreadViewer,
 ): ReactionGroup[] => {
   const key = viewerReactorKey(viewer);
-  const groups: ReactionGroup[] = [];
+  const groups = new Map<string, ReactionGroup>();
 
-  for (const emoji of CHAT_REACTION_EMOJIS) {
-    const matching = reactions.filter((reaction) => reaction.emoji === emoji);
+  for (const reaction of reactions) {
+    const group = groups.get(reaction.emoji) ?? {
+      emoji: reaction.emoji,
+      count: 0,
+      mine: false,
+      names: [],
+    };
 
-    if (matching.length > 0) {
-      groups.push({
-        emoji,
-        count: matching.length,
-        mine: matching.some((reaction) => reaction.reactorKey === key),
-        names: matching.map((reaction) => reaction.reactorName),
-      });
-    }
+    group.count += 1;
+    group.mine = group.mine || reaction.reactorKey === key;
+    group.names.push(reaction.reactorName);
+    groups.set(reaction.emoji, group);
   }
-  return groups;
+  // Array.prototype.sort is stable, so equal counts keep insertion order.
+  return [...groups.values()].sort((a, b) => b.count - a.count);
 };
 
 // The photos of a message, in display order: `photos`, else the one `photo`.

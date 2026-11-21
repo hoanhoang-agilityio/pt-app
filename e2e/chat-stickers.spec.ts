@@ -342,12 +342,12 @@ test("a sticker takes a reaction and a reply (quoted as Sticker), its sheet has 
 
     // The PT reacts: the chip shows on both sides.
     await longPress(admin, sticker(admin, FIRE.alt));
-    await sheet(admin).getByRole("button", { name: "💪" }).click();
+    await sheet(admin).getByRole("button", { name: "😡" }).click();
     await expect(
-      entry(admin, FIRE.alt).getByRole("button", { name: "💪 1" }),
+      entry(admin, FIRE.alt).getByRole("button", { name: "😡 1" }),
     ).toBeVisible();
     await expect(
-      entry(trainee, FIRE.alt).getByRole("button", { name: "💪 1" }),
+      entry(trainee, FIRE.alt).getByRole("button", { name: "😡 1" }),
     ).toBeVisible(SYNC);
 
     // The trainee's own sticker: Reply and Thu hồi, but no Edit or Copy.
@@ -357,7 +357,7 @@ test("a sticker takes a reaction and a reply (quoted as Sticker), its sheet has 
       "😂",
       "😮",
       "😢",
-      "💪",
+      "😡",
       "👍",
       "Trả lời",
       "Thu hồi",
@@ -423,7 +423,7 @@ test("a sticker takes a reaction and a reply (quoted as Sticker), its sheet has 
       await expect(
         page.getByRole("log").locator("[data-bubble] > p", { hasText: UNSENT }),
       ).toHaveCount(1);
-      await expect(page.getByRole("button", { name: "💪 1" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "😡 1" })).toHaveCount(0);
       // The reply that quoted it shows the tombstone instead of "Sticker".
       await expect(
         page

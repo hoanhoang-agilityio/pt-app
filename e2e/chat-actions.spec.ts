@@ -251,45 +251,45 @@ test("long-press opens the sheet, a sheet reaction shows up, and the reactors sh
 
     await longPress(trainee, mine);
     await expect(sheet(trainee).getByText(/^Gửi lúc /)).toBeVisible();
-    await sheet(trainee).getByRole("button", { name: "💪" }).click();
+    await sheet(trainee).getByRole("button", { name: "😡" }).click();
     await expect(sheet(trainee)).toHaveCount(0);
-    await expect(chip(trainee, mine, "💪 1")).toBeVisible();
+    await expect(chip(trainee, mine, "😡 1")).toBeVisible();
     await expect(chip(trainee, mine, "❤️ 1")).toBeVisible();
 
     // Reactors sheet on the trainee side: the PT (heart) and "Bạn" (muscle).
-    await chip(trainee, mine, "💪 1").click();
+    await chip(trainee, mine, "😡 1").click();
     const reactors = sheet(trainee);
 
     await expect(reactors.getByRole("listitem")).toHaveCount(2);
     await expect(
       reactors.getByRole("listitem").filter({ hasText: "Bạn" }),
-    ).toContainText("💪");
+    ).toContainText("😡");
     await expect(
       reactors.getByRole("listitem").filter({ hasText: "❤️" }),
     ).not.toContainText("Bạn");
     await closeSheet(trainee);
 
     // The PT sees both reactions, and "Bạn" now stands for the PT's heart.
-    await expect(chip(admin, mine, "💪 1")).toBeVisible(SYNC);
+    await expect(chip(admin, mine, "😡 1")).toBeVisible(SYNC);
     await chip(admin, mine, "❤️ 1").click();
     await expect(
       sheet(admin).getByRole("listitem").filter({ hasText: "Bạn" }),
     ).toContainText("❤️");
     await expect(
-      sheet(admin).getByRole("listitem").filter({ hasText: "💪" }),
+      sheet(admin).getByRole("listitem").filter({ hasText: "😡" }),
     ).not.toContainText("Bạn");
     await closeSheet(admin);
 
     // Picking another emoji replaces mine: the muscle becomes a thumb.
     await longPress(trainee, mine);
     await expect(
-      sheet(trainee).getByRole("button", { name: "💪" }),
+      sheet(trainee).getByRole("button", { name: "😡" }),
     ).toHaveAttribute("aria-pressed", "true");
     await sheet(trainee).getByRole("button", { name: "👍" }).click();
     await expect(chip(trainee, mine, "👍 1")).toBeVisible();
-    await expect(chip(trainee, mine, "💪 1")).toHaveCount(0);
+    await expect(chip(trainee, mine, "😡 1")).toHaveCount(0);
     await expect(chip(admin, mine, "👍 1")).toBeVisible(SYNC);
-    await expect(chip(admin, mine, "💪 1")).toHaveCount(0);
+    await expect(chip(admin, mine, "😡 1")).toHaveCount(0);
 
     // Picking the same emoji again removes it: only the PT's heart is left.
     await longPress(trainee, mine);

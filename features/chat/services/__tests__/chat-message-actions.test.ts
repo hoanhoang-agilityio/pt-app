@@ -202,10 +202,10 @@ describe("react", () => {
     ]);
   });
 
-  it("rejects an emoji outside the six and stores nothing", async () => {
+  it("rejects a value that is not a single emoji and stores nothing", async () => {
     const result = await user.reactMessageAction({
       messageId: admin1Msg,
-      emoji: "🔥",
+      emoji: "😂😂",
     });
 
     expect(result).toEqual({

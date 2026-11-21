@@ -191,7 +191,7 @@ describe("reactions", () => {
     const post = await insertPost("user", alice, "everyone");
 
     expect(
-      await actions.reactAction("user", { postId: post, emoji: "🔥" }),
+      await actions.reactAction("user", { postId: post, emoji: "hi" }),
     ).toMatchObject({ status: "error" });
     state.user = { id: carol, name: "carol", termsVersion: null };
     expect(

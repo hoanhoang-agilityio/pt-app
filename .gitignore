@@ -55,3 +55,6 @@ next-env.d.ts
 /e2e/.tmp/
 /playwright-report/
 /test-results/
+
+# self-hosted emoji data (scripts/copy-emojibase.mjs)
+/public/emojibase/

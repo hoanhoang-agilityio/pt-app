@@ -1,4 +1,13 @@
 {
+  "emojiPicker": {
+    "title": "选择表情",
+    "search": "搜索表情",
+    "recent": "最近使用",
+    "empty": "未找到表情",
+    "loading": "加载中…",
+    "more": "更多表情",
+    "skinTone": "肤色"
+  },
   "clear": "清除",
   "close": "关闭",
   "confirm": { "cancel": "取消" },

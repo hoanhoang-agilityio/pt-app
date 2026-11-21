@@ -25,7 +25,7 @@ const admin = (id: number, role: "super_admin" | "pt"): SocialActor => ({
 });
 
 describe("reaction schema", () => {
-  it("accepts the six chat emoji and null, nothing else", () => {
+  it("accepts any single emoji and null, nothing else", () => {
     expect(reactSchema.safeParse({ postId: 1, emoji: "💪" }).success).toBe(
       true,
     );
@@ -33,6 +33,12 @@ describe("reaction schema", () => {
       true,
     );
     expect(reactSchema.safeParse({ postId: 1, emoji: "🔥" }).success).toBe(
+      true,
+    );
+    expect(reactSchema.safeParse({ postId: 1, emoji: "😂😂" }).success).toBe(
+      false,
+    );
+    expect(reactSchema.safeParse({ postId: 1, emoji: "hi" }).success).toBe(
       false,
     );
     expect(reactSchema.safeParse({ postId: 0, emoji: "❤️" }).success).toBe(

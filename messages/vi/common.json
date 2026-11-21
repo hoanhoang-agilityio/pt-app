@@ -1,4 +1,13 @@
 {
+  "emojiPicker": {
+    "title": "Chọn cảm xúc",
+    "search": "Tìm emoji",
+    "recent": "Dùng gần đây",
+    "empty": "Không tìm thấy emoji",
+    "loading": "Đang tải…",
+    "more": "Thêm cảm xúc khác",
+    "skinTone": "Màu da"
+  },
   "clear": "Xoá",
   "close": "Đóng",
   "confirm": { "cancel": "Hủy" },

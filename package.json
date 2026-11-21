@@ -7,8 +7,8 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "tsx scripts/setup-database.ts --prebuild && next build",
+    "dev": "node scripts/copy-emojibase.mjs && next dev",
+    "build": "node scripts/copy-emojibase.mjs && tsx scripts/setup-database.ts --prebuild && next build",
     "start": "next start",
     "lint": "eslint --max-warnings 0",
     "format": "prettier --write .",
@@ -29,6 +29,7 @@
     "ably": "^2.30.0",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.3",
+    "frimousse": "^0.4.0",
     "jose": "^6.2.12",
     "lucide-react": "^1.48.0",
     "next": "16.3.8",
@@ -51,6 +52,7 @@
     "@types/web-push": "^3.6.4",
     "babel-plugin-react-compiler": "1.0.0",
     "drizzle-kit": "^0.31.11",
+    "emojibase-data": "16.0.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "eslint-plugin-simple-import-sort": "^14.0.0",

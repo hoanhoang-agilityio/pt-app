@@ -166,7 +166,7 @@ describe("reactToGroupMessage", () => {
       status: "error",
       message: "Không tìm thấy tin nhắn",
     });
-    expect(await react(message, "🤡")).toMatchObject({ status: "error" });
+    expect(await react(message, "🤡🤡")).toMatchObject({ status: "error" });
     expect(await db.select().from(chatGroupReactions)).toHaveLength(0);
   });
 

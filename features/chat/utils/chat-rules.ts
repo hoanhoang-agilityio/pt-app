@@ -8,6 +8,7 @@ import {
   aliasValueSchema,
   PT_ALIAS_TARGET,
 } from "@/features/contact-aliases/utils/alias-rules";
+import { reactionEmojiSchema } from "@/utils/reaction-emoji";
 
 export const CHAT_PAGE_SIZE = 30;
 export const CHAT_BODY_MAX_LENGTH = 2000;
@@ -15,16 +16,6 @@ export const CHAT_PREVIEW_LENGTH = 80;
 
 export const USER_READER_KEY = "user";
 export const adminReaderKey = (adminId: number) => `admin:${adminId}`;
-
-export const CHAT_REACTION_EMOJIS = [
-  "❤️",
-  "😂",
-  "😮",
-  "😢",
-  "💪",
-  "👍",
-] as const;
-export type ChatReactionEmoji = (typeof CHAT_REACTION_EMOJIS)[number];
 
 export const REPLY_SNIPPET_LENGTH = 120;
 export const CHANGES_PAGE_SIZE = 200;
@@ -62,7 +53,7 @@ export const sendMessageSchema = sendMessageShape.refine(hasBodyOrSticker);
 // emoji null = remove my reaction.
 export const reactSchema = z.object({
   messageId: messageIdSchema,
-  emoji: z.enum(CHAT_REACTION_EMOJIS).nullable(),
+  emoji: reactionEmojiSchema.nullable(),
 });
 
 export const editSchema = z.object({

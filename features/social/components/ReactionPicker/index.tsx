@@ -1,10 +1,9 @@
 "use client";
 
-import clsx from "clsx";
 import { useTranslations } from "next-intl";
 
 import { BottomSheet } from "@/components/common/BottomSheet";
-import { CHAT_REACTION_EMOJIS } from "@/features/chat/utils/chat-rules";
+import { ReactionRow } from "@/components/ReactionRow";
 
 interface ReactionPickerProps {
   isOpen: boolean;
@@ -14,8 +13,8 @@ interface ReactionPickerProps {
   onPick: (emoji: string | null) => void;
 }
 
-// The six chat emoji in a sheet (same set and look as the chat message
-// sheet); picking my current one removes it.
+// The reaction row in a sheet (same row as the chat message sheet); picking my
+// current one removes it.
 export const ReactionPicker = ({
   isOpen,
   onOpenChange,
@@ -31,34 +30,14 @@ export const ReactionPicker = ({
       title={t("title")}
       description={t("description")}
     >
-      <div
-        role="group"
-        aria-label={t("title")}
-        className="mb-2 flex justify-between rounded-2xl border border-line bg-surface p-1.5"
-      >
-        {CHAT_REACTION_EMOJIS.map((emoji) => {
-          const isMine = mine === emoji;
-
-          return (
-            <button
-              key={emoji}
-              type="button"
-              aria-label={emoji}
-              aria-pressed={isMine}
-              onClick={() => {
-                onOpenChange(false);
-                onPick(isMine ? null : emoji);
-              }}
-              className={clsx(
-                "flex size-11 items-center justify-center rounded-full text-2xl transition active:scale-90",
-                isMine && "bg-accent/20 ring-2 ring-accent",
-              )}
-            >
-              {emoji}
-            </button>
-          );
-        })}
-      </div>
+      <ReactionRow
+        mine={mine}
+        label={t("title")}
+        onPick={(emoji) => {
+          onOpenChange(false);
+          onPick(emoji);
+        }}
+      />
     </BottomSheet>
   );
 };

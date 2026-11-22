@@ -259,12 +259,12 @@ describe("message mutations", () => {
     ]);
   });
 
-  it("refuses an emoji outside the list without calling the API", async () => {
+  it("refuses a value that is not a single emoji without calling the API", async () => {
     expect(
       await actions.reactGroupMessageAction({
         groupId: 3,
         messageId: 40,
-        emoji: "🦄",
+        emoji: "ab",
       }),
     ).toMatchObject({ status: "error" });
     expect(state.calls).toEqual([]);

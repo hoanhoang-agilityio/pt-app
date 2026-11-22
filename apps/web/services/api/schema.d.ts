@@ -9547,6 +9547,7 @@ export interface operations {
                             }) | null;
                             clientId: string;
                             createdAt: string;
+                            deleted?: boolean;
                         }[];
                         deletedIds: number[];
                         hasMore: boolean;
@@ -9943,6 +9944,7 @@ export interface operations {
                             }) | null;
                             clientId: string;
                             createdAt: string;
+                            deleted?: boolean;
                         };
                         unsentAt: string;
                     };

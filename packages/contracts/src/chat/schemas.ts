@@ -32,7 +32,10 @@ const bodySchema = z
 export const chatPhotoIdsSchema = z
   .array(positiveInt)
   .max(CHAT_MESSAGE_MAX_PHOTOS, CHAT_PHOTO_ERRORS.TOO_MANY)
-  .refine((ids) => new Set(ids).size === ids.length, CHAT_MESSAGES.INVALID_INPUT);
+  .refine(
+    (ids) => new Set(ids).size === ids.length,
+    CHAT_MESSAGES.INVALID_INPUT,
+  );
 
 // Text and/or up to 10 photos, or a sticker alone: never a sticker with text or
 // a photo, never nothing. `photoIds` is the list; `photoId` is the single photo
@@ -524,6 +527,9 @@ export const dmMessageViewSchema = z.object({
   post: chatPostQuoteSchema.nullable(),
   clientId: z.string(),
   createdAt: iso,
+  // Only the super admin's read-only thread lists unsent messages, blank and
+  // flagged; `GET /v1/dm/messages/:mid/original` has the content.
+  deleted: z.boolean().optional(),
 });
 export type DmMessageView = z.infer<typeof dmMessageViewSchema>;
 

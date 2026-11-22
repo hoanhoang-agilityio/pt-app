@@ -80,6 +80,7 @@ export const AdminDmThreadScreen = () => {
       avatarName="DM"
       avatarUri={null}
       thread={thread as never}
+      scope={{ kind: "dm" }}
       chat={null}
       color={{ bg: theme.accent, fg: theme.accentFg }}
       showSender

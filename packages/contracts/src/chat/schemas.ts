@@ -1,3 +1,4 @@
+import { reactionEmojiSchema } from "../reaction-emoji.js";
 import { aliasValueSchema } from "../users/alias-rules.js";
 import { CHAT_COLOR_KEYS } from "../users/constants.js";
 import {
@@ -6,7 +7,6 @@ import {
   CHAT_MESSAGE_MAX_PHOTOS,
   CHAT_MESSAGES,
   CHAT_PHOTO_ERRORS,
-  CHAT_REACTION_EMOJIS,
   STICKER_GIPHY_QUERY_MAX_LENGTH,
 } from "./constants.js";
 import { stickerInputSchema } from "./stickers.js";
@@ -70,7 +70,7 @@ export type ChatEditMessageRequest = z.infer<
 >;
 
 export const chatReactRequestSchema = z.object({
-  emoji: z.enum(CHAT_REACTION_EMOJIS, CHAT_MESSAGES.INVALID_INPUT),
+  emoji: reactionEmojiSchema(CHAT_MESSAGES.INVALID_INPUT),
 });
 export type ChatReactRequest = z.infer<typeof chatReactRequestSchema>;
 
@@ -262,6 +262,16 @@ export const chatMessageResponseSchema = z.object({
   message: chatMessageViewSchema,
 });
 
+// The content of an unsent message, for a super admin only. `message.deleted`
+// stays true; the body, sticker, photos, reactions and quotes are the originals.
+export const chatOriginalMessageResponseSchema = z.object({
+  message: chatMessageViewSchema,
+  unsentAt: iso,
+});
+export type ChatOriginalMessageResponse = z.infer<
+  typeof chatOriginalMessageResponseSchema
+>;
+
 // Keys are "user", "pt" and "admin:<id>"; nicknames are the conversation's
 // shared ones (every member sees the same; private contact aliases are never
 // used in chat), colours are resolved (an admin's per-conversation override
@@ -336,9 +346,13 @@ export const chatUnreadResponseSchema = z.union([
     chatEnabled: z.boolean(),
     hasHistory: z.boolean(),
     latestLoudIncomingId: z.number().int().nullable(),
+    // The app icon number: unread coach chat + DMs + group messages + unread
+    // social notifications.
+    appBadge: z.number().int().nonnegative(),
   }),
   z.object({
     count: z.number().int(),
+    appBadge: z.number().int().nonnegative(),
     perTrainee: z.array(
       z.object({
         userId: z.number().int(),
@@ -512,6 +526,15 @@ export const dmMessageViewSchema = z.object({
   createdAt: iso,
 });
 export type DmMessageView = z.infer<typeof dmMessageViewSchema>;
+
+// The content of an unsent DM, for a super admin only.
+export const dmOriginalMessageResponseSchema = z.object({
+  message: dmMessageViewSchema,
+  unsentAt: iso,
+});
+export type DmOriginalMessageResponse = z.infer<
+  typeof dmOriginalMessageResponseSchema
+>;
 
 export const dmThreadResponseSchema = z.object({
   messages: z.array(dmMessageViewSchema),

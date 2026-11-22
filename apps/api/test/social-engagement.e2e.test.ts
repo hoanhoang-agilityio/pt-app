@@ -137,7 +137,7 @@ describe("reactions", () => {
   it("validates the emoji", async () => {
     const id = await newPost("ann");
 
-    for (const emoji of ["🔥", "", null, 5]) {
+    for (const emoji of ["pizza", "a", "", null, 5, "👍👍"]) {
       const response = await api.put(`/posts/${id}/reaction`, w.tokens.ben, {
         emoji,
       });
@@ -146,9 +146,18 @@ describe("reactions", () => {
       expect(response.body.code).toBe("VALIDATION_FAILED");
     }
     expect(
-      (await api.put(`/posts/${id}/reaction`, w.tokens.ben, { emoji: "🔥" }))
+      (await api.put(`/posts/${id}/reaction`, w.tokens.ben, { emoji: "pizza" }))
         .body.message,
     ).toContain(SOCIAL_MESSAGES.REACTION_INVALID);
+    // Any single emoji is accepted, not only the six defaults.
+    for (const emoji of ["🔥", "🥹", "🇻🇳"]) {
+      expect(
+        (await api.put(`/posts/${id}/reaction`, w.tokens.ben, { emoji })).status,
+      ).toBe(204);
+    }
+    expect(
+      (await api.get(`/posts/${id}`, w.tokens.ben)).body.reactions.mine,
+    ).toBe("🇻🇳");
   });
 
   it("refuses posts the person cannot see, and deleted or missing ones, storing nothing", async () => {

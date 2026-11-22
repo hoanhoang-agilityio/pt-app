@@ -337,6 +337,16 @@ export class ChatQueries {
     return context;
   }
 
+  // The real deleted_at (the readers' deletedAt also counts an admin's hide).
+  async unsentAt(messageId: number) {
+    const rows = await this.run<{ deletedAt: Date | null }[]>(
+      `SELECT deleted_at AS "deletedAt" FROM chat_messages WHERE id = $1`,
+      [messageId],
+    );
+
+    return rows[0]?.deletedAt ?? null;
+  }
+
   findMessageRow(messageId: number, manager?: EntityManager) {
     return this.run<MessageRow[]>(
       `${MESSAGE_SELECT} WHERE m.id = $1`,

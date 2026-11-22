@@ -47,16 +47,6 @@ export const SOCIAL_DEFAULT_POST_PRIVACY: SocialPostPrivacy = "friends";
 export const SOCIAL_AUTHOR_KINDS = ["user", "admin"] as const;
 export type SocialAuthorKind = (typeof SOCIAL_AUTHOR_KINDS)[number];
 
-// The same six emoji as chat; a null reaction removes mine.
-export const SOCIAL_REACTION_EMOJIS = [
-  "❤️",
-  "😂",
-  "😮",
-  "😢",
-  "💪",
-  "👍",
-] as const;
-export type SocialReactionEmoji = (typeof SOCIAL_REACTION_EMOJIS)[number];
 // Emoji shown in the reaction summary under a post.
 export const SOCIAL_REACTION_SUMMARY_TOP = 3;
 

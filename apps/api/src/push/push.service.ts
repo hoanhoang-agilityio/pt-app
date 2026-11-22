@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { PushKind, PushPayload } from "@pt/contracts";
 import { InjectPinoLogger, PinoLogger } from "nestjs-pino";
 
+import { AppBadgeService } from "../chat/app-badge.service.js";
 import { Clock } from "../common/clock.js";
 import type { StoredPushSubscription } from "./push-sender.js";
 import { PUSH_SENDERS, type PushSender } from "./push-sender.js";
@@ -24,6 +25,7 @@ export class PushService {
     private readonly store: PushSubscriptionStore,
     private readonly clock: Clock,
     @InjectPinoLogger(PushService.name) private readonly logger: PinoLogger,
+    private readonly badges: AppBadgeService,
   ) {
     this.byKind = new Map(senders.map((sender) => [sender.kind, sender]));
   }
@@ -46,13 +48,86 @@ export class PushService {
     try {
       const subscriptions = await this.store.listFor(ownerKey);
 
+      const byKind = new Map<PushKind, StoredPushSubscription[]>();
+
+      for (const subscription of subscriptions) {
+        byKind.set(subscription.kind, [
+          ...(byKind.get(subscription.kind) ?? []),
+          subscription,
+        ]);
+      }
+      // The app icon number rides along for phones only; a failure to count
+      // never stops the push.
+      const badge = byKind.has("expo")
+        ? await this.badges.forOwnerKey(ownerKey).catch(() => undefined)
+        : undefined;
+
       await Promise.all(
-        subscriptions.map((subscription) =>
-          this.sendToDevice(subscription, payload),
+        [...byKind].map(([kind, group]) =>
+          this.sendGroup(
+            kind,
+            group,
+            kind === "expo" && badge !== undefined
+              ? { ...payload, badge }
+              : payload,
+          ),
         ),
       );
     } catch (error) {
       this.logger.error({ err: error }, "Push to owner failed");
+    }
+  }
+
+  // The devices of one kind. A sender with sendMany (Expo) gets them in one
+  // call and only the temporary failures are tried again.
+  private async sendGroup(
+    kind: PushKind,
+    group: StoredPushSubscription[],
+    payload: PushPayload,
+  ) {
+    const sender = this.byKind.get(kind);
+
+    if (!sender?.enabled) {
+      return;
+    }
+    if (!sender.sendMany) {
+      await Promise.all(group.map((sub) => this.sendToDevice(sub, payload)));
+      return;
+    }
+    let pending = group;
+
+    try {
+      for (let attempt = 1; attempt <= PUSH_MAX_ATTEMPTS; attempt += 1) {
+        const results = await sender.sendMany(pending, payload);
+        const retry: StoredPushSubscription[] = [];
+
+        for (const subscription of pending) {
+          const result = results.get(subscription.id) ?? "failed";
+
+          if (result === "ok") {
+            await this.store.markSuccess(subscription.id, this.clock.now());
+          } else if (result === "gone") {
+            await this.store.delete(subscription.id);
+          } else if (result === "retry") {
+            retry.push(subscription);
+          } else {
+            this.logger.warn(
+              { subscriptionId: subscription.id, kind: subscription.kind },
+              "Push not delivered",
+            );
+          }
+        }
+        pending = retry;
+        if (pending.length === 0) {
+          return;
+        }
+        if (attempt < PUSH_MAX_ATTEMPTS) {
+          await this.clock.sleep(RETRY_DELAY_MS * attempt);
+        }
+      }
+      this.logger.warn({ kind, devices: pending.length }, "Push not delivered");
+    } catch (error) {
+      this.logger.error({ err: error, kind }, "Push sender threw");
     }
   }
 

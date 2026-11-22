@@ -14,16 +14,6 @@ export const CHAT_JUMP_MAX_NEWER = 500;
 export const CHAT_USER_READER_KEY = "user";
 export const chatAdminReaderKey = (adminId: number) => `admin:${adminId}`;
 
-export const CHAT_REACTION_EMOJIS = [
-  "❤️",
-  "😂",
-  "😮",
-  "😢",
-  "💪",
-  "👍",
-] as const;
-export type ChatReactionEmoji = (typeof CHAT_REACTION_EMOJIS)[number];
-
 export const CHAT_MESSAGES = {
   USER_NOT_FOUND: "Không tìm thấy user này",
   CHAT_LOCKED: "PT đã tạm khoá nhắn tin",

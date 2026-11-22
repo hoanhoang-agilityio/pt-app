@@ -17,6 +17,7 @@ import {
   type DmOpenRequest,
   dmOpenRequestSchema,
   dmOpenResponseSchema,
+  dmOriginalMessageResponseSchema,
   type DmSendRequest,
   dmSendRequestSchema,
   type DmThreadQuery,
@@ -129,11 +130,29 @@ export class DmController {
   @User()
   @HttpCode(204)
   @ApiRoute({
-    summary: "Take back my own old message (the photo bytes go too)",
+    summary:
+      "Take back my own old message (only the flag is set; a super admin can still read it)",
     errors: [400, 401, 403, 404],
   })
   async unsend(@Actor() actor: UserActor, @Param("mid", idParam) mid: number) {
     await this.dm.unsend(actor, mid);
+  }
+
+  @Get("dm/messages/:mid/original")
+  @Roles("super_admin")
+  @ApiRoute({
+    summary:
+      "Super admin only: the original content of an unsent DM (404 for a live one)",
+    response: dmOriginalMessageResponseSchema,
+    errors: [400, 401, 403, 404],
+  })
+  async original(
+    @Actor() actor: AuthActor,
+    @Param("mid", idParam) mid: number,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.set("Cache-Control", "no-store");
+    return this.dm.original(actor, mid);
   }
 
   // 404 unless the viewer is one of the two members (and the chat is not

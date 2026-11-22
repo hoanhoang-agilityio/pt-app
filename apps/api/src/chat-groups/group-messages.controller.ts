@@ -23,6 +23,7 @@ import {
   type GroupMarkReadRequest,
   groupMarkReadRequestSchema,
   groupMessageResponseSchema,
+  groupOriginalMessageResponseSchema,
   groupPhotoResponseSchema,
   type GroupReactRequest,
   groupReactRequestSchema,
@@ -163,6 +164,24 @@ export class GroupMessagesController {
     @Param("mid", idParam) mid: number,
   ) {
     return { message: await this.messages.unsend(actor, groupId, mid) };
+  }
+
+  @Get("messages/:mid/original")
+  @Roles("super_admin")
+  @ApiRoute({
+    summary:
+      "Super admin only: the original content of an unsent group message (404 for a live one)",
+    response: groupOriginalMessageResponseSchema,
+    errors: [400, 401, 403, 404],
+  })
+  async original(
+    @Actor() actor: AuthActor,
+    @Param("groupId", idParam) groupId: number,
+    @Param("mid", idParam) mid: number,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.set("Cache-Control", "no-store");
+    return this.messages.original(actor, groupId, mid);
   }
 
   @Put("messages/:mid/reaction")

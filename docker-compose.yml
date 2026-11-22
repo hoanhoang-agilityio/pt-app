@@ -29,6 +29,9 @@ services:
       VAPID_PUBLIC_KEY: ""
       VAPID_PRIVATE_KEY: ""
       VAPID_SUBJECT: ""
+      # Expo push for the mobile app works without a token; set one only if the Expo project requires it.
+      EXPO_PUSH_ENABLED: "true"
+      EXPO_ACCESS_TOKEN: ""
     # Migrations run on every start (a no-op when the schema is current), then
     # the API starts. Nothing to run by hand.
     command: ["sh", "-c", "node dist/migrate.js && node dist/main.js"]

@@ -505,6 +505,21 @@ describe("reactions", () => {
     expect(groupReactions([], user)).toEqual([]);
   });
 
+  it("groups any emoji: defaults first, then by first appearance", () => {
+    const mixed = [
+      { emoji: "🔥", reactorKey: "user", reactorName: "Lan" },
+      { emoji: "👍", reactorKey: "admin:8", reactorName: "Minh" },
+      { emoji: "🥹", reactorKey: "admin:7", reactorName: "Hoan" },
+      { emoji: "🔥", reactorKey: "admin:8", reactorName: "Minh" },
+    ];
+
+    expect(groupReactions(mixed, admin)).toEqual([
+      { emoji: "👍", count: 1, mine: false, names: ["Minh"] },
+      { emoji: "🔥", count: 2, mine: false, names: ["Lan", "Minh"] },
+      { emoji: "🥹", count: 1, mine: true, names: ["Hoan"] },
+    ]);
+  });
+
   it("finds my reaction per viewer", () => {
     expect(myReactionOf({ reactions }, admin)).toBe("❤️");
     expect(myReactionOf({ reactions }, user)).toBe("👍");

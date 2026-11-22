@@ -653,7 +653,7 @@ describe("sending several photos", () => {
     ).toBe("📷 Ảnh");
   });
 
-  it("deletes every photo, bytes included, when the message is unsent", async () => {
+  it("keeps every photo stored but hides them from readers when the message is unsent", async () => {
     const me = await trainee();
     const ids = await uploadMany(me.token, 3);
     const sent = await send(me.token, { photoIds: ids });
@@ -671,7 +671,7 @@ describe("sending several photos", () => {
       photo: null,
       photos: [],
     });
-    expect(await rowsOf(sent.body.message.id)).toEqual([]);
+    expect(await rowsOf(sent.body.message.id)).toHaveLength(3);
     for (const id of ids) {
       expect((await getPhoto(me.token, id)).status).toBe(404);
     }
@@ -759,18 +759,23 @@ describe("GET /v1/chat/photos/:id", () => {
     expect((await getPhoto(pt.token, id)).status).toBe(200);
   });
 
-  it("is deleted for good, bytes included, when the message is unsent", async () => {
+  it("stays stored but is 404 for the owner when the message is unsent, and a super admin still gets it", async () => {
     const me = await trainee();
     const { id, messageId } = await sentPhoto(me);
 
     await callWith(app, "delete", `/v1/chat/messages/${messageId}`, me.token);
     expect((await getPhoto(me.token, id)).status).toBe(404);
-    expect(await ds.getRepository(ChatPhoto).existsBy({ id })).toBe(false);
+    expect(await ds.getRepository(ChatPhoto).existsBy({ id })).toBe(true);
     const stored = await ds
       .getRepository(ChatMessage)
       .findOneByOrFail({ id: messageId });
 
-    expect(stored.photoId).toBeNull();
+    expect(stored.photoId).not.toBeNull();
+    const boss = await admin("super_admin");
+    const pt = await admin("pt");
+
+    expect((await getPhoto(boss.token, id)).status).toBe(200);
+    expect((await getPhoto(pt.token, id)).status).toBe(404);
     // Another person's unsend does not delete it.
     const again = await sentPhoto(me);
 
@@ -781,6 +786,60 @@ describe("GET /v1/chat/photos/:id", () => {
       (await trainee()).token,
     );
     expect((await getPhoto(me.token, again.id)).status).toBe(200);
+  });
+});
+
+describe("GET /v1/chat/messages/:mid/original", () => {
+  it("gives a super admin the kept content of an unsent message and nobody else", async () => {
+    const pt = await admin("pt");
+    const me = await trainee({ ptAdminId: pt.id });
+    const boss = await admin("super_admin");
+    const photoId = (await uploadMine(me.token, pngBytes(12, 9, 300))).body.photo
+      .id as number;
+    const sent = await send(me.token, { body: "xoá tôi đi", photoIds: [photoId] });
+    const id = sent.body.message.id as number;
+    const original = (token: string | null) =>
+      callWith(app, "get", `/v1/chat/messages/${id}/original`, token);
+
+    // A live message has no original for anybody.
+    expect((await original(boss.token)).status).toBe(404);
+    await callWith(app, "delete", `/v1/chat/messages/${id}`, me.token);
+
+    // Normal readers still get an empty, deleted message.
+    const thread = await callWith(
+      app,
+      "get",
+      "/v1/chat/conversations/me/messages",
+      me.token,
+    );
+
+    expect(thread.body.messages.at(-1)).toMatchObject({
+      id,
+      body: "",
+      deleted: true,
+      photos: [],
+    });
+    for (const token of [me.token, pt.token]) {
+      expect((await original(token)).status).toBe(403);
+    }
+    expect((await original(null)).status).toBe(401);
+    const revealed = await original(boss.token);
+
+    expect(revealed.status).toBe(200);
+    expect(revealed.body.message).toMatchObject({
+      id,
+      body: "xoá tôi đi",
+      deleted: true,
+    });
+    expect(revealed.body.message.photos).toHaveLength(1);
+    expect(typeof revealed.body.unsentAt).toBe("string");
+    expect((await getPhoto(boss.token, photoId)).status).toBe(200);
+    expect((await getPhoto(me.token, photoId)).status).toBe(404);
+    expect((await getPhoto(pt.token, photoId)).status).toBe(404);
+    expect(
+      (await callWith(app, "get", "/v1/chat/messages/999999/original", boss.token))
+        .status,
+    ).toBe(404);
   });
 });
 

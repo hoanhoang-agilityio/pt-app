@@ -11,15 +11,21 @@ import {
 } from "@/features/social/utils/engagement-rules";
 
 describe("reaction schema", () => {
-  it("accepts the six chat emoji and null, nothing else", () => {
+  it("accepts any single emoji and null, nothing else", () => {
     expect(reactSchema.safeParse({ postId: 1, emoji: "💪" }).success).toBe(
       true,
     );
-    expect(reactSchema.safeParse({ postId: 1, emoji: null }).success).toBe(
+    expect(reactSchema.safeParse({ postId: 1, emoji: "🔥" }).success).toBe(
       true,
     );
-    expect(reactSchema.safeParse({ postId: 1, emoji: "🔥" }).success).toBe(
+    expect(reactSchema.safeParse({ postId: 1, emoji: "ab" }).success).toBe(
       false,
+    );
+    expect(reactSchema.safeParse({ postId: 1, emoji: "©" }).success).toBe(
+      false,
+    );
+    expect(reactSchema.safeParse({ postId: 1, emoji: null }).success).toBe(
+      true,
     );
     expect(reactSchema.safeParse({ postId: 0, emoji: "❤️" }).success).toBe(
       false,

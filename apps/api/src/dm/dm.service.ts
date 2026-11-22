@@ -112,7 +112,8 @@ export class DmService {
   }
 
   // Only the sender, only a live message, still possible in a read-only chat
-  // (a member may always take back their own words). The photo bytes go too.
+  // (a member may always take back their own words). Only the flag is set: the
+  // text, quote and photos stay stored for a super admin (`original`).
   async unsend(actor: UserActor, messageId: number) {
     const rows: { conversationId: number }[] = await this.dataSource.query(
       `SELECT conversation_id AS "conversationId" FROM dm_messages WHERE id = $1`,
@@ -131,7 +132,7 @@ export class DmService {
       const updated = returnedRows<{ id: number }>(
         await manager.query(
           `UPDATE dm_messages
-           SET deleted_at = $1, body = NULL, photo_id = NULL, reply_post_id = NULL
+           SET deleted_at = $1
            WHERE id = $2 AND conversation_id = $3 AND sender_id = $4 AND deleted_at IS NULL
            RETURNING id`,
           [this.clock.now(), messageId, conversationId, actor.id],
@@ -141,9 +142,6 @@ export class DmService {
       if (updated.length === 0) {
         return false;
       }
-      await manager.query(`DELETE FROM dm_photos WHERE message_id = $1`, [
-        messageId,
-      ]);
       return true;
     });
 
@@ -155,6 +153,19 @@ export class DmService {
       messageId,
       senderId: actor.id,
     } satisfies DmMessageDeletedEvent);
+  }
+
+  // The content of an unsent message, super admins only.
+  async original(actor: AuthActor, messageId: number) {
+    if (actor.kind !== "admin" || actor.role !== "super_admin") {
+      throw notFound();
+    }
+    const original = await this.queries.originalOf(actor, messageId);
+
+    if (!original) {
+      throw notFound();
+    }
+    return original;
   }
 
   // Marks everything in the conversation as read; for a member only. Read
@@ -188,14 +199,14 @@ export class DmService {
   }
 
   // The bytes, only for a photo of a live message in a conversation the viewer
-  // may open (members, or a super admin read-only). A pending upload is
+  // may open (members, or a super admin read-only, who also gets an unsent one). A pending upload is
   // visible to no one; a PT never gets it.
   async photo(actor: AuthActor, photoId: number): Promise<StoredFile> {
     const rows: { conversationId: number }[] = await this.dataSource.query(
       `SELECT p.conversation_id AS "conversationId"
        FROM dm_photos p JOIN dm_messages m ON m.id = p.message_id
-       WHERE p.id = $1 AND m.deleted_at IS NULL`,
-      [photoId],
+       WHERE p.id = $1 AND (m.deleted_at IS NULL OR $2::boolean)`,
+      [photoId, actor.kind === "admin" && actor.role === "super_admin"],
     );
     const view = rows[0]
       ? await this.queries.resolveView(actor, rows[0].conversationId)

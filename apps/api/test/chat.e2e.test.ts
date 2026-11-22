@@ -1337,16 +1337,22 @@ describe("reactions", () => {
     expect(events.named("chat.reaction.changed")).toHaveLength(0);
   });
 
-  it("rejects an emoji outside the six and a reaction to an unsent message", async () => {
+  it("accepts any single emoji, rejects anything else and a reaction to an unsent message", async () => {
     const me = await trainee();
     const sent = await sendAs(me.token, { body: "emoji" });
     const id = sent.body.message.id;
 
-    expect((await react(me.token, id, "🔥")).status).toBe(400);
+    expect((await react(me.token, id, "x")).status).toBe(400);
     expect((await react(me.token, id, "")).status).toBe(400);
+    expect((await react(me.token, id, "👍👍")).status).toBe(400);
     expect(
       await ds.getRepository(ChatReaction).countBy({ messageId: id }),
     ).toBe(0);
+    expect((await react(me.token, id, "🥹")).status).toBe(200);
+    expect((await react(me.token, id, "🇻🇳")).body.message.reactions).toEqual([
+      expect.objectContaining({ emoji: "🇻🇳" }),
+    ]);
+    await callWith(app, "delete", `/v1/chat/messages/${id}/reaction`, me.token);
     await callWith(app, "delete", `/v1/chat/messages/${id}`, me.token);
     const response = await react(me.token, id, "👍");
 
@@ -1488,6 +1494,7 @@ describe("reads and unread counts", () => {
       chatEnabled: true,
       hasHistory: true,
       latestLoudIncomingId: expect.any(Number),
+      appBadge: 1,
     });
     const before = await unreadOf(pt1.token);
 
@@ -1522,6 +1529,42 @@ describe("reads and unread counts", () => {
       body: { lastReadMessageId: 9999999 },
     });
     expect((await unreadOf(me.token)).count).toBe(0);
+  });
+
+  it("adds unread social notifications to appBadge for a trainee and an admin", async () => {
+    const pt = await admin("pt");
+    const me = await trainee({ ptAdminId: pt.id });
+    const friend = await trainee();
+    const unreadOf = async (token: string) =>
+      (await callWith(app, "get", "/v1/chat/unread", token)).body;
+
+    expect((await unreadOf(me.token)).appBadge).toBe(0);
+    expect((await unreadOf(pt.token)).appBadge).toBe(0);
+    await sendAs(me.token, { body: "một" });
+    await sendAs(me.token, { body: "hai" });
+    await ptSend(pt, me.id, { body: "trả lời" });
+    const notify = (recipientKey: string, readAt: Date | null) =>
+      ds.query(
+        `INSERT INTO social_notifications (recipient_key, kind, actor_key, created_at, read_at)
+         VALUES ($1, 'friend_request', $2, now(), $3)`,
+        [recipientKey, `user:${friend.id}`, readAt],
+      );
+
+    await notify(`user:${me.id}`, null);
+    await notify(`user:${me.id}`, null);
+    // A read one never counts.
+    await notify(`user:${me.id}`, new Date());
+    await notify(`admin:${pt.id}`, null);
+    const trainee1 = await unreadOf(me.token);
+    const admin1 = await unreadOf(pt.token);
+
+    // Coach chat (1) + 2 unread notifications; the PT: 2 messages + 1 notification.
+    expect(trainee1).toMatchObject({ count: 1, appBadge: 3 });
+    expect(admin1).toMatchObject({ count: 2, appBadge: 3 });
+    await callWith(app, "post", "/v1/chat/conversations/me/read", me.token, {
+      body: { lastReadMessageId: 9999999 },
+    });
+    expect((await unreadOf(me.token)).appBadge).toBe(2);
   });
 
   it("counts a silent /imlang message but does not report it as loud", async () => {

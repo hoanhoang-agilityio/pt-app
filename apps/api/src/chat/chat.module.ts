@@ -1,9 +1,12 @@
 import { Module } from "@nestjs/common";
 
 import { AuthModule } from "../auth/auth.module.js";
+import { ChatGroupsModule } from "../chat-groups/chat-groups.module.js";
 import { DmModule } from "../dm/dm.module.js";
 import { FilesModule } from "../files/files.module.js";
+import { SocialModule } from "../social/social.module.js";
 import { StickersModule } from "../stickers/stickers.module.js";
+import { AppBadgeService } from "./app-badge.service.js";
 import { ChatAccess } from "./chat.access.js";
 import { ChatEvents } from "./chat.events.js";
 import { ChatPolicy } from "./chat.policy.js";
@@ -31,6 +34,8 @@ import { PostQuotesModule } from "./post-quotes.module.js";
     StickersModule,
     DmModule,
     PostQuotesModule,
+    ChatGroupsModule,
+    SocialModule,
   ],
   controllers: [ChatConversationsController, ChatMessagesController],
   providers: [
@@ -46,6 +51,7 @@ import { PostQuotesModule } from "./post-quotes.module.js";
     ChatSearchService,
     ChatGalleryService,
     ChatInboxService,
+    AppBadgeService,
   ],
   exports: [
     ChatPolicy,
@@ -53,6 +59,7 @@ import { PostQuotesModule } from "./post-quotes.module.js";
     ChatAccess,
     ChatQueries,
     ChatProfileService,
+    AppBadgeService,
   ],
 })
 export class ChatModule {}

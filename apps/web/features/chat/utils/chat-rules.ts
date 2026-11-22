@@ -1,3 +1,4 @@
+import { DEFAULT_REACTION_EMOJIS, reactionEmojiSchema } from "@pt/contracts";
 import { z } from "zod";
 
 import { CHAT_COLOR_KEYS } from "@/features/chat/utils/chat-palette";
@@ -16,15 +17,8 @@ export const CHAT_PREVIEW_LENGTH = 80;
 export const USER_READER_KEY = "user";
 export const adminReaderKey = (adminId: number) => `admin:${adminId}`;
 
-export const CHAT_REACTION_EMOJIS = [
-  "❤️",
-  "😂",
-  "😮",
-  "😢",
-  "💪",
-  "👍",
-] as const;
-export type ChatReactionEmoji = (typeof CHAT_REACTION_EMOJIS)[number];
+// The picker's quick list; any emoji the API accepts can be stored and shown.
+export const CHAT_REACTION_EMOJIS = DEFAULT_REACTION_EMOJIS;
 
 export const REPLY_SNIPPET_LENGTH = 120;
 export const CHANGES_PAGE_SIZE = 200;
@@ -62,7 +56,7 @@ export const sendMessageSchema = sendMessageShape.refine(hasBodyOrSticker);
 // emoji null = remove my reaction.
 export const reactSchema = z.object({
   messageId: messageIdSchema,
-  emoji: z.enum(CHAT_REACTION_EMOJIS).nullable(),
+  emoji: reactionEmojiSchema("Invalid reaction").nullable(),
 });
 
 export const editSchema = z.object({

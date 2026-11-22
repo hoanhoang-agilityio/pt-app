@@ -55,6 +55,19 @@ export const envSchema = z
     ),
     // A mailto: or https: contact for the push services.
     VAPID_SUBJECT: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+    // Optional access token for the Expo push service (only needed when
+    // "enhanced push security" is on for the Expo project). Expo push works
+    // without it.
+    EXPO_ACCESS_TOKEN: z.preprocess(
+      emptyToUndefined,
+      z.string().min(1).optional(),
+    ),
+    // Switches the Expo sender off with "false". Unset means on, except under
+    // NODE_ENV=test, where it stays off unless explicitly "true".
+    EXPO_PUSH_ENABLED: z.preprocess(
+      emptyToUndefined,
+      z.enum(["true", "false"]).optional(),
+    ),
     // Seconds between re-checks of every open socket's session (sign-out, expiry,
     // lock). Unset means 300.
     REALTIME_RECHECK_SECONDS: z.preprocess(

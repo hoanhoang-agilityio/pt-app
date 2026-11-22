@@ -902,7 +902,9 @@ describe("message changes (company group-mutations)", () => {
     expect(removed.body.message.reactions).toEqual([
       { emoji: "😂", count: 1, mine: false },
     ]);
-    expect((await api.react(ann.token, groupId, mid, "🍕")).status).toBe(400);
+    // Any single emoji is a reaction; plain text is not.
+    expect((await api.react(ann.token, groupId, mid, "🍕")).status).toBe(200);
+    expect((await api.react(ann.token, groupId, mid, "pizza")).status).toBe(400);
   });
 
   it("stamps the change cursor so pollers see edits, reactions and hides", async () => {
@@ -1038,6 +1040,35 @@ describe("message changes (company group-mutations)", () => {
     expect(photos[0].n).toBe(1);
     expect((await api.photo(ben.token, groupId, photo)).status).toBe(404);
     expect((await api.edits(ben.token, groupId, mid)).body.edits).toEqual([]);
+
+    // Only a super admin reads the original, photo included.
+    const original = (token: string) =>
+      api.call("get", `/${groupId}/messages/${mid}/original`, token);
+
+    for (const token of [ann.token, ben.token, pt.token, cat.token]) {
+      expect((await original(token)).status).toBe(403);
+    }
+    const revealed = await original(superAdmin.token);
+
+    expect(revealed.status).toBe(200);
+    expect(revealed.body.message).toMatchObject({
+      id: mid,
+      body: "secret 2",
+      deleted: true,
+    });
+    expect(revealed.body.message.photos.map((p: { id: number }) => p.id)).toEqual([
+      photo,
+    ]);
+    expect(typeof revealed.body.unsentAt).toBe("string");
+    expect((await api.photo(superAdmin.token, groupId, photo)).status).toBe(200);
+    expect((await api.photo(pt.token, groupId, photo)).status).toBe(404);
+    // A live message has no "original".
+    const live = await api.sendId(ann.token, groupId, { body: "still here" });
+
+    expect(
+      (await api.call("get", `/${groupId}/messages/${live}/original`, superAdmin.token))
+        .status,
+    ).toBe(404);
   });
 
   it("hides for a super admin and the creator PT only, with a placeholder, and unhides", async () => {

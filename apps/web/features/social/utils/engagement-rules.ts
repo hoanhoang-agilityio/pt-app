@@ -1,6 +1,6 @@
+import { reactionEmojiSchema } from "@pt/contracts";
 import { z } from "zod";
 
-import { CHAT_REACTION_EMOJIS } from "@/features/chat/utils/chat-rules";
 import {
   COMMENT_MAX_LENGTH,
   PUSH_COMMENT_PREVIEW_LENGTH,
@@ -16,12 +16,10 @@ import { DEFAULT_LOCALE, type Locale } from "@/utils/locale";
 
 const idSchema = z.number().int().positive();
 
-// Same six emoji as chat; null removes my reaction.
+// Any single emoji, same rule as chat; null removes my reaction.
 export const reactSchema = z.object({
   postId: idSchema,
-  emoji: z
-    .enum(CHAT_REACTION_EMOJIS, SOCIAL_MESSAGES.REACTION_INVALID)
-    .nullable(),
+  emoji: reactionEmojiSchema(SOCIAL_MESSAGES.REACTION_INVALID).nullable(),
 });
 
 export const commentBodySchema = z

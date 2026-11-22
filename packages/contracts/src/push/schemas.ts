@@ -1,9 +1,11 @@
 import {
   isAllowedPushEndpoint,
+  isExpoPushToken,
   PUSH_KINDS,
   PUSH_MAX_ENDPOINT_LENGTH,
   PUSH_MAX_KEY_LENGTH,
   PUSH_MESSAGES,
+  PUSH_PLATFORMS,
 } from "./rules.js";
 import { z } from "zod";
 
@@ -31,6 +33,28 @@ export const pushUnsubscribeRequestSchema = z.object({
 });
 export type PushUnsubscribeRequest = z.infer<
   typeof pushUnsubscribeRequestSchema
+>;
+
+// A native device (Expo). The token goes in `push_subscriptions.endpoint`.
+const expoTokenSchema = z
+  .string()
+  .trim()
+  .max(PUSH_MAX_ENDPOINT_LENGTH)
+  .refine(isExpoPushToken, PUSH_MESSAGES.INVALID_SUBSCRIPTION);
+
+export const pushDeviceRegisterRequestSchema = z.object({
+  token: expoTokenSchema,
+  platform: z.enum(PUSH_PLATFORMS),
+});
+export type PushDeviceRegisterRequest = z.infer<
+  typeof pushDeviceRegisterRequestSchema
+>;
+
+export const pushDeviceRemoveRequestSchema = z.object({
+  token: expoTokenSchema,
+});
+export type PushDeviceRemoveRequest = z.infer<
+  typeof pushDeviceRemoveRequestSchema
 >;
 
 export const pushSubscriptionViewSchema = z.object({
@@ -62,5 +86,7 @@ export const pushPayloadSchema = z.object({
   url: z.string(),
   // A newer notification with the same tag replaces the older one.
   tag: z.string(),
+  // The app icon badge (Expo devices only): the unread total of the recipient.
+  badge: z.number().int().nonnegative().optional(),
 });
 export type PushPayload = z.infer<typeof pushPayloadSchema>;

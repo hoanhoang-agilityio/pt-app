@@ -1,10 +1,10 @@
 import {
   CHAT_BODY_MAX_LENGTH,
   CHAT_MESSAGES,
-  CHAT_REACTION_EMOJIS,
 } from "../chat/constants.js";
 import { chatPhotoIdsSchema } from "../chat/schemas.js";
 import { stickerInputSchema } from "../chat/stickers.js";
+import { reactionEmojiSchema } from "../reaction-emoji.js";
 import {
   GROUP_ADD_MAX_IDS,
   GROUP_MESSAGES,
@@ -115,7 +115,7 @@ export type GroupEditMessageRequest = z.infer<
 >;
 
 export const groupReactRequestSchema = z.object({
-  emoji: z.enum(CHAT_REACTION_EMOJIS, CHAT_MESSAGES.INVALID_INPUT),
+  emoji: reactionEmojiSchema(CHAT_MESSAGES.INVALID_INPUT),
 });
 export type GroupReactRequest = z.infer<typeof groupReactRequestSchema>;
 
@@ -224,6 +224,15 @@ export type GroupMessageView = z.infer<typeof groupMessageViewSchema>;
 export const groupMessageResponseSchema = z.object({
   message: groupMessageViewSchema,
 });
+
+// The content of an unsent group message, for a super admin only.
+export const groupOriginalMessageResponseSchema = z.object({
+  message: groupMessageViewSchema,
+  unsentAt: iso,
+});
+export type GroupOriginalMessageResponse = z.infer<
+  typeof groupOriginalMessageResponseSchema
+>;
 
 export const groupHeaderSchema = z.object({
   id: z.number().int(),

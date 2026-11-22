@@ -1,5 +1,6 @@
 import type { INestApplication } from "@nestjs/common";
 import { AVATAR_MAX_BYTES, AVATAR_MESSAGES } from "@pt/contracts";
+import request from "supertest";
 import type { DataSource } from "typeorm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -310,6 +311,44 @@ describe("GET /v1/avatars/:kind/:id", () => {
     expect((await call(app, "get", `/v1/avatars/user/${me.id}`)).status).toBe(
       401,
     );
+  });
+
+  it("serves a native client: Bearer header only, no cookie and no Origin; a cookie alone is not a session", async () => {
+    const me = await trainee();
+    const pt = await admin();
+    const set = await call(app, "put", "/v1/admins/me/avatar", pt.token, {
+      dataUrl: PNG_URL,
+    });
+    const native = (path: string, token: string) =>
+      request(app.getHttpServer())
+        .get(path)
+        .set("Authorization", `Bearer ${token}`)
+        .set("User-Agent", "okhttp/4.12.0");
+
+    // The signed URL from a payload loads as it is, relative to the API host.
+    const signed = await native(set.body.avatarUrl, me.token);
+
+    expect(signed.status).toBe(200);
+    expect(signed.headers["content-type"]).toBe("image/png");
+    expect(Buffer.compare(signed.body, PNG_BYTES)).toBe(0);
+    // The session cookie of the web is never read.
+    const cookieOnly = await request(app.getHttpServer())
+      .get(set.body.avatarUrl)
+      .set("Cookie", `session=${me.token}; token=${me.token}`);
+
+    expect(cookieOnly.status).toBe(401);
+    // Neither is a token in the query string.
+    expect(
+      (
+        await request(app.getHttpServer()).get(
+          `${set.body.avatarUrl}&access_token=${me.token}`,
+        )
+      ).status,
+    ).toBe(401);
+    // A stranger's bare id still 404s: the signature is not weakened.
+    expect(
+      (await native(`/v1/avatars/admin/${pt.id}`, me.token)).status,
+    ).toBe(404);
   });
 
   it("shows a trainee their own photo, never another trainee's", async () => {

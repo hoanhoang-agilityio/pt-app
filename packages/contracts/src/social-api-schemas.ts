@@ -4,6 +4,7 @@ import {
   cursorSchema,
   pageLimitSchema,
 } from "./pagination.js";
+import { reactionEmojiSchema } from "./reaction-emoji.js";
 import {
   parseSocialActorKey,
   SOCIAL_AUTHOR_KINDS,
@@ -15,7 +16,6 @@ import {
   SOCIAL_PAGE_LIMITS,
   SOCIAL_POST_MAX_PHOTOS,
   SOCIAL_POST_PRIVACIES,
-  SOCIAL_REACTION_EMOJIS,
   SOCIAL_RELATIONSHIPS,
   SOCIAL_REPORT_REASON_CODES,
   SOCIAL_REPORT_REASON_MAX_LENGTH,
@@ -99,7 +99,7 @@ export const socialEditPostRequestSchema = z.object({
 export type SocialEditPostRequest = z.infer<typeof socialEditPostRequestSchema>;
 
 export const socialReactionRequestSchema = z.object({
-  emoji: z.enum(SOCIAL_REACTION_EMOJIS, SOCIAL_MESSAGES.REACTION_INVALID),
+  emoji: reactionEmojiSchema(SOCIAL_MESSAGES.REACTION_INVALID),
 });
 export type SocialReactionRequest = z.infer<typeof socialReactionRequestSchema>;
 

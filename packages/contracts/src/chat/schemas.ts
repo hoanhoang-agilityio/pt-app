@@ -1,3 +1,4 @@
+import { reactionEmojiSchema } from "../reaction-emoji.js";
 import { aliasValueSchema } from "../users/alias-rules.js";
 import { CHAT_COLOR_KEYS } from "../users/constants.js";
 import {
@@ -6,7 +7,6 @@ import {
   CHAT_MESSAGE_MAX_PHOTOS,
   CHAT_MESSAGES,
   CHAT_PHOTO_ERRORS,
-  CHAT_REACTION_EMOJIS,
   STICKER_GIPHY_QUERY_MAX_LENGTH,
 } from "./constants.js";
 import { stickerInputSchema } from "./stickers.js";
@@ -70,7 +70,7 @@ export type ChatEditMessageRequest = z.infer<
 >;
 
 export const chatReactRequestSchema = z.object({
-  emoji: z.enum(CHAT_REACTION_EMOJIS, CHAT_MESSAGES.INVALID_INPUT),
+  emoji: reactionEmojiSchema(CHAT_MESSAGES.INVALID_INPUT),
 });
 export type ChatReactRequest = z.infer<typeof chatReactRequestSchema>;
 

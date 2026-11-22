@@ -7625,8 +7625,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    emoji: "❤️" | "😂" | "😮" | "😢" | "💪" | "👍";
+                    emoji: string;
                 };
             };
         };
@@ -10913,8 +10912,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    emoji: "❤️" | "😂" | "😮" | "😢" | "💪" | "👍";
+                    emoji: string;
                 };
             };
         };
@@ -16244,8 +16242,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    emoji: "❤️" | "😂" | "😮" | "😢" | "💪" | "👍";
+                    emoji: string;
                 };
             };
         };

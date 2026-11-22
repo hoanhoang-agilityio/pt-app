@@ -14104,15 +14104,7 @@
                 "type": "object",
                 "properties": {
                   "emoji": {
-                    "type": "string",
-                    "enum": [
-                      "❤️",
-                      "😂",
-                      "😮",
-                      "😢",
-                      "💪",
-                      "👍"
-                    ]
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -23247,15 +23239,7 @@
                 "type": "object",
                 "properties": {
                   "emoji": {
-                    "type": "string",
-                    "enum": [
-                      "❤️",
-                      "😂",
-                      "😮",
-                      "😢",
-                      "💪",
-                      "👍"
-                    ]
+                    "type": "string"
                   }
                 },
                 "required": [
@@ -38248,15 +38232,7 @@
                 "type": "object",
                 "properties": {
                   "emoji": {
-                    "type": "string",
-                    "enum": [
-                      "❤️",
-                      "😂",
-                      "😮",
-                      "😢",
-                      "💪",
-                      "👍"
-                    ]
+                    "type": "string"
                   }
                 },
                 "required": [

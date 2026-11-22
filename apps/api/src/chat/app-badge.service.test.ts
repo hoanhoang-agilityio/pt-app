@@ -19,14 +19,13 @@ const build = (
 ) => {
   const chat = {
     findConversationByUserId: vi.fn().mockResolvedValue({ id: 5 }),
-    unreadByConversation: vi.fn(
-      async (sender: "user" | "admin") =>
-        sender === "admin"
-          ? [{ conversationId: 5, unread: options.coach ?? 0 }]
-          : (options.adminChat ?? []).map((unread, i) => ({
-              conversationId: i + 1,
-              unread,
-            })),
+    unreadByConversation: vi.fn(async (sender: "user" | "admin") =>
+      sender === "admin"
+        ? [{ conversationId: 5, unread: options.coach ?? 0 }]
+        : (options.adminChat ?? []).map((unread, i) => ({
+            conversationId: i + 1,
+            unread,
+          })),
     ),
   };
   const dm = { countUnread: vi.fn().mockResolvedValue(options.dm ?? 0) };
@@ -37,7 +36,10 @@ const build = (
         Object.keys(options.groups ?? {}).map((id) => ({ id: Number(id) })),
       ),
     unreadByGroup: vi.fn(
-      async () => new Map(Object.entries(options.groups ?? {}).map(([k, v]) => [Number(k), v])),
+      async () =>
+        new Map(
+          Object.entries(options.groups ?? {}).map(([k, v]) => [Number(k), v]),
+        ),
     ),
   };
   const notifications = {
@@ -46,7 +48,9 @@ const build = (
   const dataSource = {
     query: vi
       .fn()
-      .mockResolvedValue(options.role === null ? [] : [{ role: options.role ?? "pt" }]),
+      .mockResolvedValue(
+        options.role === null ? [] : [{ role: options.role ?? "pt" }],
+      ),
   };
   const service = new AppBadgeService(
     dataSource as unknown as DataSource,
@@ -61,11 +65,15 @@ const build = (
 
 describe("sumAppBadge", () => {
   it("adds the four parts and never goes below 0", () => {
-    expect(
-      sumAppBadge({ chat: 1, dm: 2, groups: 3, notifications: 4 }),
-    ).toBe(10);
-    expect(sumAppBadge({ chat: 0, dm: 0, groups: 0, notifications: 0 })).toBe(0);
-    expect(sumAppBadge({ chat: -3, dm: 0, groups: 0, notifications: 0 })).toBe(0);
+    expect(sumAppBadge({ chat: 1, dm: 2, groups: 3, notifications: 4 })).toBe(
+      10,
+    );
+    expect(sumAppBadge({ chat: 0, dm: 0, groups: 0, notifications: 0 })).toBe(
+      0,
+    );
+    expect(sumAppBadge({ chat: -3, dm: 0, groups: 0, notifications: 0 })).toBe(
+      0,
+    );
   });
 });
 
@@ -105,6 +113,32 @@ describe("AppBadgeService", () => {
       id: 3,
       role: "pt",
     });
+  });
+
+  it("reuses known chat and DM numbers: only groups and notifications are queried", async () => {
+    const { service, chat, dm, groups, notifications } = build({
+      groups: { 1: 4 },
+      notifications: 6,
+    });
+
+    expect(
+      await service.forActor({ kind: "user", id: 9 } as never, {
+        chat: 2,
+        dm: 3,
+      }),
+    ).toBe(2 + 3 + 4 + 6);
+    expect(chat.findConversationByUserId).not.toHaveBeenCalled();
+    expect(chat.unreadByConversation).not.toHaveBeenCalled();
+    expect(dm.countUnread).not.toHaveBeenCalled();
+    expect(groups.visibleGroups).toHaveBeenCalledTimes(1);
+    expect(notifications.unreadCount).toHaveBeenCalledTimes(1);
+  });
+
+  it("reuses a known admin chat total, and a known 0 still counts as known", async () => {
+    const { service, chat } = build({ adminChat: [50], notifications: 1 });
+
+    expect(await service.forAdmin(3, "pt", { chat: 0 })).toBe(1);
+    expect(chat.unreadByConversation).not.toHaveBeenCalled();
   });
 
   it("reads a push owner key, and counts 0 for a malformed or unknown owner", async () => {

@@ -262,12 +262,19 @@ export class ChatMessagesController {
     @Res({ passthrough: true }) res: Response,
   ) {
     res.set("Cache-Control", "no-store");
-    const [unread, appBadge] = await Promise.all([
-      actor.kind === "user"
-        ? this.inbox.unreadForTrainee(actor)
-        : this.inbox.unreadForAdmin(actor),
-      this.badge.forActor(actor),
-    ]);
+    // The poll already counts coach chat and DMs (trainee) or the trainee
+    // chats (admin); the badge reuses them and adds groups + notifications.
+    if (actor.kind === "user") {
+      const unread = await this.inbox.unreadForTrainee(actor);
+      const appBadge = await this.badge.forActor(actor, {
+        chat: unread.coachCount,
+        dm: unread.dmCount,
+      });
+
+      return { ...unread, appBadge };
+    }
+    const unread = await this.inbox.unreadForAdmin(actor);
+    const appBadge = await this.badge.forActor(actor, { chat: unread.count });
 
     return { ...unread, appBadge };
   }

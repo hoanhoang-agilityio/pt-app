@@ -13,6 +13,9 @@ import { DmQueries } from "../dm/dm.queries.js";
 import { NotificationsService } from "../social/notifications/notifications.service.js";
 import { ChatQueries } from "./chat.queries.js";
 
+// Unread numbers a caller already has; a missing one is queried.
+export type KnownUnread = { chat?: number; dm?: number };
+
 export type AppBadgeParts = {
   // The coach chat: a trainee's unread from their PT, an admin's unread across
   // their trainees.
@@ -50,10 +53,12 @@ export class AppBadgeService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  forActor(actor: AuthActor) {
+  // `known` carries the chat and DM numbers a caller already computed (the
+  // unread poll has them), so only groups and notifications are queried.
+  forActor(actor: AuthActor, known?: KnownUnread) {
     return actor.kind === "user"
-      ? this.forTrainee(actor.id)
-      : this.forAdmin(actor.id, actor.role);
+      ? this.forTrainee(actor.id, known)
+      : this.forAdmin(actor.id, actor.role, known);
   }
 
   // A push owner key: `user:<id>` or `admin:<id>`; anything else counts 0.
@@ -78,10 +83,10 @@ export class AppBadgeService {
     return 0;
   }
 
-  async forTrainee(userId: number) {
+  async forTrainee(userId: number, known?: KnownUnread) {
     const [chat, dm, groups, notifications] = await Promise.all([
-      this.traineeChat(userId),
-      this.dm.countUnread(userId),
+      known?.chat ?? this.traineeChat(userId),
+      known?.dm ?? this.dm.countUnread(userId),
       this.groupUnread(sessionOf("user", userId, null)),
       this.notifications.unreadCount(`user:${userId}`),
     ]);
@@ -89,9 +94,13 @@ export class AppBadgeService {
     return sumAppBadge({ chat, dm, groups, notifications });
   }
 
-  async forAdmin(adminId: number, role: "super_admin" | "pt") {
+  async forAdmin(
+    adminId: number,
+    role: "super_admin" | "pt",
+    known?: KnownUnread,
+  ) {
     const [chat, groups, notifications] = await Promise.all([
-      this.adminChat(adminId),
+      known?.chat ?? this.adminChat(adminId),
       this.groupUnread(sessionOf("admin", adminId, role)),
       this.notifications.unreadCount(`admin:${adminId}`),
     ]);

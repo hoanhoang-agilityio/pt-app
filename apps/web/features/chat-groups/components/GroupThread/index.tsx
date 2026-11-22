@@ -15,8 +15,8 @@ import {
 import { toast } from "sonner";
 
 import { useConfirm } from "@/components/common/ConfirmDialog/use-confirm";
+import { LoadOlderControl } from "@/components/common/LoadOlderControl";
 import { ScrollJumpButton } from "@/components/common/ScrollJumpButton";
-import { Spinner } from "@/components/common/Spinner";
 import { ChatHeader } from "@/features/chat/components/ChatHeader";
 import { Composer } from "@/features/chat/components/Composer";
 import { LockedBanner } from "@/features/chat/components/LockedBanner";
@@ -55,6 +55,7 @@ import {
   type GroupState,
   groupViewer,
 } from "@/features/chat-groups/utils/group-thread-map";
+import { useLoadOlderOnScroll } from "@/hooks/use-load-older-on-scroll";
 import { useScrollAway } from "@/hooks/use-scroll-away";
 import { useLocalizeMessage } from "@/i18n/use-localize-message";
 import { scrollBehaviorFor } from "@/utils/scroll-rules";
@@ -164,6 +165,7 @@ export const GroupThread = ({
   const locale = useLocale();
   const t = useTranslations("chatGroups");
   const tThread = useTranslations("chat.chatThread");
+  const tCommon = useTranslations("common");
   const tJump = useTranslations("common.scrollJump");
   const localize = useLocalizeMessage();
   const confirm = useConfirm();
@@ -189,9 +191,6 @@ export const GroupThread = ({
   const scroller = useRef<HTMLDivElement>(null);
   const wasNearBottom = useRef(true);
   const lastItemKey = useRef<string | null | undefined>(undefined);
-  const olderAnchor = useRef<{ height: number; firstId: number | null } | null>(
-    null,
-  );
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showNewChip, setShowNewChip] = useState(false);
   const [newCount, setNewCount] = useState(0);
@@ -285,18 +284,15 @@ export const GroupThread = ({
     }
   }, [lastKey, last, viewerKey, scrollToBottom]);
 
-  // Older messages were prepended: keep what the reader was looking at.
-  const firstId = firstStoredId(messages);
-
-  useLayoutEffect(() => {
-    const anchor = olderAnchor.current;
-    const node = scroller.current;
-
-    if (anchor && node && firstId !== anchor.firstId) {
-      node.scrollTop += node.scrollHeight - anchor.height;
-      olderAnchor.current = null;
-    }
-  }, [firstId]);
+  // Older messages load when the top sentinel nears the top; the hook also
+  // keeps the reader's place after the prepend.
+  const older = useLoadOlderOnScroll({
+    rootRef: scroller,
+    hasMore,
+    isLoading: chat.isLoadingOlder,
+    loadOlder: chat.loadOlder,
+    firstKey: firstStoredId(messages),
+  });
 
   const viewportHeight = viewport?.height;
 
@@ -479,15 +475,6 @@ export const GroupThread = ({
     }
   };
 
-  const handleLoadOlder = () => {
-    const node = scroller.current;
-
-    if (node) {
-      olderAnchor.current = { height: node.scrollHeight, firstId };
-    }
-    void chat.loadOlder();
-  };
-
   const hideLabel = (message: ThreadMessage) =>
     message.hidden ? t("thread.unhide") : t("thread.hide");
 
@@ -519,21 +506,21 @@ export const GroupThread = ({
           className="h-full overflow-y-auto overscroll-contain px-4 pb-3"
         >
           <div className="mx-auto w-full max-w-lg">
-            {hasMore && (
-              <div className="flex justify-center pt-4">
-                <button
-                  type="button"
-                  onClick={handleLoadOlder}
-                  disabled={chat.isLoadingOlder}
-                  className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium text-muted transition active:bg-line disabled:opacity-50"
-                >
-                  {chat.isLoadingOlder && <Spinner size="sm" />}
-                  {chat.isLoadingOlder
-                    ? tThread("loadingOlder")
-                    : tThread("loadOlder")}
-                </button>
-              </div>
-            )}
+            <LoadOlderControl
+              sentinelRef={older.sentinelRef}
+              hasMore={hasMore}
+              isLoading={older.isLoading}
+              hasError={older.error !== null}
+              hasItems={items.length > 0}
+              onLoad={older.retry}
+              labels={{
+                loading: tCommon("loading"),
+                loadOlder: tThread("loadOlder"),
+                retry: tThread("loadOlderRetry"),
+                start: tThread("conversationStart"),
+              }}
+              className="pt-2"
+            />
             {items.length === 0 && (
               <p className="px-6 py-16 text-center text-sm text-muted">
                 {t("thread.empty")}

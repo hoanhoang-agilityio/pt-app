@@ -721,7 +721,8 @@ export interface ReactionGroup {
   names: string[];
 }
 
-// Chips under a bubble: one per emoji, in the picker's order.
+// Chips under a bubble: one per emoji the API returned, the picker's defaults
+// first, then the others in order of first appearance.
 export const groupReactions = (
   reactions: SerializedReaction[],
   viewer: ThreadViewer,
@@ -729,7 +730,12 @@ export const groupReactions = (
   const key = viewerReactorKey(viewer);
   const groups: ReactionGroup[] = [];
 
-  for (const emoji of CHAT_REACTION_EMOJIS) {
+  const seen = new Set<string>(CHAT_REACTION_EMOJIS);
+
+  for (const reaction of reactions) {
+    seen.add(reaction.emoji);
+  }
+  for (const emoji of seen) {
     const matching = reactions.filter((reaction) => reaction.emoji === emoji);
 
     if (matching.length > 0) {

@@ -340,10 +340,10 @@ describe("reactions and comments", () => {
     });
   });
 
-  it("refuses an emoji outside the six", async () => {
+  it("refuses a value that is not a single emoji", async () => {
     const result = await engagement.reactAction("user", {
       postId: 2,
-      emoji: "🙂",
+      emoji: "ab",
     });
 
     expect(result.status).toBe("error");

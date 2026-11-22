@@ -17,6 +17,7 @@ import {
   mergeMessages,
   myReactionOf,
   newestPeerMessageId,
+  pickCoachAvatar,
   pollIntervalFor,
   quoteLabel,
   quoteText,
@@ -750,5 +751,30 @@ describe("canReportMessage", () => {
     expect(canReportMessage({ ...fromTrainee, delivery: "failed" }, pt)).toBe(
       false,
     );
+  });
+});
+
+describe("pickCoachAvatar", () => {
+  const avatars = new Map([
+    [1, "/api/avatar/admin/1?v=1"],
+    [2, "/api/avatar/admin/2?v=1"],
+  ]);
+
+  it("prefers the PT who wrote last", () => {
+    expect(pickCoachAvatar(2, 1, avatars)).toBe("/api/avatar/admin/2?v=1");
+  });
+
+  it("falls back to the assigned PT when the last sender has no photo", () => {
+    expect(pickCoachAvatar(9, 1, avatars)).toBe("/api/avatar/admin/1?v=1");
+  });
+
+  it("uses the assigned PT when nobody has written yet", () => {
+    expect(pickCoachAvatar(null, 2, avatars)).toBe("/api/avatar/admin/2?v=1");
+  });
+
+  it("returns null when neither has a photo or both are missing", () => {
+    expect(pickCoachAvatar(9, 8, avatars)).toBeNull();
+    expect(pickCoachAvatar(null, null, avatars)).toBeNull();
+    expect(pickCoachAvatar(1, null, new Map())).toBeNull();
   });
 });

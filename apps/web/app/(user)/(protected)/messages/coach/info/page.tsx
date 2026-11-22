@@ -6,6 +6,7 @@ import { listGalleryPhotos } from "@/features/chat/services/chat-gallery";
 import { loadMyThread } from "@/features/chat/services/chat-queries";
 import { listAdminAvatarUrls } from "@/features/chat/services/chat-team";
 import { chatPaths } from "@/features/chat/utils/chat-links";
+import { pickCoachAvatar } from "@/features/chat/utils/chat-thread-rules";
 import { INFO_PREVIEW_COUNT } from "@/features/chat/utils/gallery-rules";
 import { requireUser } from "@/services/auth-guard";
 
@@ -41,9 +42,11 @@ const MessagesInfoPage = async () => {
       selfName={user.name}
       initialProfile={state.profile}
       chatEnabled={state.chatEnabled}
-      peerAvatarUrl={
-        sender?.id != null ? (adminAvatars.get(sender.id) ?? null) : null
-      }
+      peerAvatarUrl={pickCoachAvatar(
+        sender?.id ?? null,
+        user.ptAdminId,
+        adminAvatars,
+      )}
       paths={chatPaths("user", user.id)}
       preview={gallery.items}
     />

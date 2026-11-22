@@ -9,7 +9,12 @@ import { ROUTES } from "@/constants/routes";
 import { CARD, PAGE_CONTAINER, SECTION_TITLE } from "@/constants/styles";
 import { TIME_ZONE } from "@/constants/time";
 import { InboxLiveRefresh } from "@/features/chat/components/InboxLiveRefresh";
-import { loadUserUnread } from "@/features/chat/services/chat-queries";
+import {
+  loadMyThread,
+  loadUserUnread,
+} from "@/features/chat/services/chat-queries";
+import { listAdminAvatarUrls } from "@/features/chat/services/chat-team";
+import { pickCoachAvatar } from "@/features/chat/utils/chat-thread-rules";
 import { BubbleRowTrigger } from "@/features/chat-bubbles/components/BubbleRowTrigger";
 import { bubbleKeyFor } from "@/features/chat-bubbles/utils/bubble-links";
 import { GroupInboxSection } from "@/features/chat-groups/components/GroupInboxSection";
@@ -44,10 +49,14 @@ const MessagesInboxPage = async () => {
   const dm = await getTranslations("social.dm");
   const locale = await getLocale();
   const user = await requireUser();
-  const [unread, chats, groups] = await Promise.all([
+  // The coach row shows the PT who wrote last, else the assigned PT; the
+  // thread answer (without its messages) names the last PT.
+  const [unread, chats, groups, adminAvatars, coachThread] = await Promise.all([
     loadUserUnread(),
     listDmInbox(),
     listMyGroups("user"),
+    listAdminAvatarUrls("user"),
+    loadMyThread({ after: 2_000_000_000 }).catch(() => null),
   ]);
 
   return (
@@ -67,7 +76,15 @@ const MessagesInboxPage = async () => {
               disabled={!unread.chatEnabled}
             >
               <Link href={ROUTES.MESSAGES_COACH} className={ROW}>
-                <Avatar name="PT" className="size-12 shrink-0 text-base" />
+                <Avatar
+                  name="PT"
+                  src={pickCoachAvatar(
+                    coachThread?.latestPt?.id ?? null,
+                    user.ptAdminId,
+                    adminAvatars,
+                  )}
+                  className="size-12 shrink-0 text-base"
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-fg">
                     {dm("coachTitle")}

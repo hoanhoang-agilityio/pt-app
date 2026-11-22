@@ -540,6 +540,9 @@ export const GroupThread = ({
                       viewer={adapter.viewer}
                       onRetry={chat.retry}
                       nicknames={NO_NICKNAMES}
+                      canRevealUnsent={groupState.isSuperAdmin}
+                      revealKind="group"
+                      revealGroupId={groupId}
                       isHighlighted={
                         item.message.id !== null &&
                         item.message.id === highlightId

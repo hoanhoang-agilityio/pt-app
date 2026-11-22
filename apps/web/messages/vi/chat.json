@@ -149,6 +149,7 @@
     "report": "Báo cáo"
   },
   "messageBubble": {
+    "revealFailed": "Không tải được nội dung",
     "viewReply": "Xem tin nhắn được trả lời",
     "messageName": "tin nhắn",
     "edited": "Đã chỉnh sửa",

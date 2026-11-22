@@ -24,6 +24,9 @@ export interface DmMessageView {
   post: DmReplyPostView | null;
   clientId: string;
   createdAt: string;
+  // Only the super admin's read-only view lists unsent messages: content is
+  // blank and the view shows a placeholder instead.
+  deleted?: boolean;
 }
 
 export interface DmThreadPage {

@@ -149,6 +149,7 @@
     "report": "Report"
   },
   "messageBubble": {
+    "revealFailed": "Could not load the content",
     "viewReply": "View the message being replied to",
     "messageName": "message",
     "edited": "Edited",

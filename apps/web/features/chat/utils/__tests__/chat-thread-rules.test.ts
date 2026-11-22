@@ -17,6 +17,7 @@ import {
   mergeMessages,
   myReactionOf,
   newestPeerMessageId,
+  pickCoachAvatar,
   pollIntervalFor,
   quoteLabel,
   quoteText,
@@ -496,7 +497,7 @@ describe("reactions", () => {
     { emoji: "❤️", reactorKey: "admin:8", reactorName: "Minh" },
   ];
 
-  it("groups by emoji in picker order with counts and my flag", () => {
+  it("groups by emoji, most used first, with counts and my flag", () => {
     expect(groupReactions(reactions, admin)).toEqual([
       { emoji: "❤️", count: 2, mine: true, names: ["Hoan", "Minh"] },
       { emoji: "👍", count: 1, mine: false, names: ["Lan"] },
@@ -505,19 +506,25 @@ describe("reactions", () => {
     expect(groupReactions([], user)).toEqual([]);
   });
 
-  it("groups any emoji: defaults first, then by first appearance", () => {
+  it("keeps any emoji and breaks count ties by first appearance", () => {
     const mixed = [
       { emoji: "🔥", reactorKey: "user", reactorName: "Lan" },
-      { emoji: "👍", reactorKey: "admin:8", reactorName: "Minh" },
-      { emoji: "🥹", reactorKey: "admin:7", reactorName: "Hoan" },
+      { emoji: "👍", reactorKey: "admin:7", reactorName: "Hoan" },
       { emoji: "🔥", reactorKey: "admin:8", reactorName: "Minh" },
+      { emoji: "🇻🇳", reactorKey: "admin:9", reactorName: "Nam" },
+      { emoji: "👍", reactorKey: "admin:10", reactorName: "Vy" },
+      { emoji: "🚀", reactorKey: "admin:11", reactorName: "Bo" },
     ];
 
-    expect(groupReactions(mixed, admin)).toEqual([
-      { emoji: "👍", count: 1, mine: false, names: ["Minh"] },
-      { emoji: "🔥", count: 2, mine: false, names: ["Lan", "Minh"] },
-      { emoji: "🥹", count: 1, mine: true, names: ["Hoan"] },
-    ]);
+    expect(groupReactions(mixed, admin).map((g) => [g.emoji, g.count])).toEqual(
+      [
+        ["🔥", 2],
+        ["👍", 2],
+        ["🇻🇳", 1],
+        ["🚀", 1],
+      ],
+    );
+    expect(groupReactions(mixed, admin).find((g) => g.mine)?.emoji).toBe("👍");
   });
 
   it("finds my reaction per viewer", () => {
@@ -744,5 +751,30 @@ describe("canReportMessage", () => {
     expect(canReportMessage({ ...fromTrainee, delivery: "failed" }, pt)).toBe(
       false,
     );
+  });
+});
+
+describe("pickCoachAvatar", () => {
+  const avatars = new Map([
+    [1, "/api/avatar/admin/1?v=1"],
+    [2, "/api/avatar/admin/2?v=1"],
+  ]);
+
+  it("prefers the PT who wrote last", () => {
+    expect(pickCoachAvatar(2, 1, avatars)).toBe("/api/avatar/admin/2?v=1");
+  });
+
+  it("falls back to the assigned PT when the last sender has no photo", () => {
+    expect(pickCoachAvatar(9, 1, avatars)).toBe("/api/avatar/admin/1?v=1");
+  });
+
+  it("uses the assigned PT when nobody has written yet", () => {
+    expect(pickCoachAvatar(null, 2, avatars)).toBe("/api/avatar/admin/2?v=1");
+  });
+
+  it("returns null when neither has a photo or both are missing", () => {
+    expect(pickCoachAvatar(9, 8, avatars)).toBeNull();
+    expect(pickCoachAvatar(null, null, avatars)).toBeNull();
+    expect(pickCoachAvatar(1, null, new Map())).toBeNull();
   });
 });

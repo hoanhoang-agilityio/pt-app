@@ -1,7 +1,9 @@
 {
   "clear": "Clear",
   "close": "Close",
-  "confirm": { "cancel": "Cancel" },
+  "confirm": {
+    "cancel": "Cancel"
+  },
   "errorFallback": {
     "title": "Something went wrong",
     "serverError": "The server ran into a problem loading this page. Try again in a few minutes; if it keeps failing, send the code below to your PT.",
@@ -28,14 +30,19 @@
     "dayIsToday": "today",
     "dayIsSelected": "selected"
   },
-  "month": { "previous": "Previous month", "next": "Next month" },
+  "month": {
+    "previous": "Previous month",
+    "next": "Next month"
+  },
   "photoViewer": {
     "previous": "Previous photo",
     "next": "Next photo",
     "download": "Download",
     "showInChat": "Show in chat"
   },
-  "avatarLightbox": { "label": "Photo of {name}" },
+  "avatarLightbox": {
+    "label": "Photo of {name}"
+  },
   "verified": "Verified",
   "loading": "Loading…",
   "alias": {
@@ -53,5 +60,14 @@
     "toTop": "Back to top",
     "toLatest": "Jump to latest message",
     "newCount": "{count, plural, one {# new message} other {# new messages}}"
+  },
+  "emojiPicker": {
+    "title": "Pick a reaction",
+    "search": "Search emoji",
+    "recent": "Recently used",
+    "empty": "No emoji found",
+    "loading": "Loading…",
+    "more": "More reactions",
+    "skinTone": "Skin tone"
   }
 }

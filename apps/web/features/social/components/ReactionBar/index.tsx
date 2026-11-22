@@ -54,7 +54,7 @@ const ACTION =
   "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-medium text-muted active:bg-line/70";
 const SUMMARY_EMOJIS = 3;
 
-// Tap = toggle ❤️, long-press (or right click) = the six emoji. One reaction
+// Tap = toggle ❤️, long-press (or right click) = the reaction row. One reaction
 // per person; the summary and the count open the list of who reacted.
 export const ReactionBar = ({
   postId,

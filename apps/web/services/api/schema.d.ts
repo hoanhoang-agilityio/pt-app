@@ -5369,6 +5369,7 @@ export interface operations {
                             }) | null;
                         }[];
                         hasMore: boolean;
+                        hasNewer: boolean;
                         changes: {
                             id: number;
                             /** @enum {string} */
@@ -6268,6 +6269,7 @@ export interface operations {
                             }) | null;
                         }[];
                         hasMore: boolean;
+                        hasNewer: boolean;
                         changes: {
                             id: number;
                             /** @enum {string} */
@@ -9547,6 +9549,7 @@ export interface operations {
                             }) | null;
                             clientId: string;
                             createdAt: string;
+                            deleted?: boolean;
                         }[];
                         deletedIds: number[];
                         hasMore: boolean;
@@ -9943,6 +9946,7 @@ export interface operations {
                             }) | null;
                             clientId: string;
                             createdAt: string;
+                            deleted?: boolean;
                         };
                         unsentAt: string;
                     };

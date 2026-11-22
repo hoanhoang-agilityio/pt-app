@@ -138,6 +138,43 @@ const safeUrl = (value) =>
     ? value
     : "/";
 
+// Home-screen icon badge (Badging API). The count comes from the same
+// endpoint the app polls (`appBadge`: chats + groups + social notifications).
+// Admin pushes all carry /admin... urls, so those read the admin view. Pushes
+// only arrive while the browser holds a push subscription, so turning
+// "Thông báo đẩy" off (which removes it) also stops this from setting the
+// badge. Never throws: a failed fetch must not block the notification.
+const refreshAppBadge = async (url) => {
+  try {
+    if (!("setAppBadge" in self.navigator)) {
+      return;
+    }
+    const endpoint = url.startsWith("/admin")
+      ? "/api/chat/unread?as=admin"
+      : "/api/chat/unread";
+    const response = await fetch(endpoint, {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return;
+    }
+    const { appBadge } = await response.json();
+
+    if (typeof appBadge !== "number" || !Number.isFinite(appBadge)) {
+      return;
+    }
+    if (appBadge > 0) {
+      await self.navigator.setAppBadge(Math.floor(appBadge));
+    } else {
+      await self.navigator.clearAppBadge();
+    }
+  } catch {
+    // The badge is a nicety.
+  }
+};
+
 self.addEventListener("push", (event) => {
   const data = readPushPayload(event);
   const title =
@@ -160,7 +197,12 @@ self.addEventListener("push", (event) => {
     options.tag = data.tag;
     options.renotify = true;
   }
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      refreshAppBadge(options.data.url),
+    ]),
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {

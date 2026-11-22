@@ -131,6 +131,13 @@
     "empty": "未找到消息",
     "loadMore": "查看更多结果"
   },
+  "searchResultBar": {
+    "backToResults": "返回搜索结果",
+    "resultsFor": "“{query}”的结果",
+    "older": "更早的结果",
+    "newer": "更新的结果",
+    "close": "关闭搜索结果"
+  },
   "messageActions": {
     "title": "消息选项",
     "sentAt": "发送于 {time}",
@@ -142,6 +149,7 @@
     "report": "举报"
   },
   "messageBubble": {
+    "revealFailed": "无法加载内容",
     "viewReply": "查看被回复的消息",
     "messageName": "消息",
     "edited": "已编辑",
@@ -219,9 +227,6 @@
       "green": "绿色"
     }
   },
-  "adminChatThread": {
-    "title": "与 {name} 聊天"
-  },
   "adminInbox": {
     "passcodeRequired": "隐藏学员前请先设置密码锁。",
     "hiddenToast": "已隐藏 {count, plural, other {# 位学员}}",
@@ -252,6 +257,12 @@
     "traineeFallback": "学员",
     "loadingOlder": "加载中…",
     "loadOlder": "查看更早的消息",
+    "loadOlderRetry": "加载失败，请重试",
+    "loadNewer": "加载更新的消息",
+    "loadNewerRetry": "加载失败，请重试",
+    "jumpNotFound": "找不到这条消息",
+    "latestFailed": "无法加载最新消息",
+    "conversationStart": "对话的开始",
     "editing": "正在编辑",
     "cancelEdit": "取消编辑",
     "replying": "正在回复 {name}",
@@ -323,5 +334,8 @@
     "slotsFull": "每条消息最多 {max} 张照片。",
     "trimmed": "只能再添加 {count} 张照片（最多 {max} 张），其余已跳过。",
     "pending": "请等待照片上传完成，或移除上传失败的照片。"
+  },
+  "adminChatThread": {
+    "title": "与 {name} 聊天"
   }
 }

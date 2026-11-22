@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 
 import { ChatSearch } from "@/features/chat/components/ChatSearch";
 import { findTraineeChatHeader } from "@/features/chat/services/chat-queries";
-import { chatPaths } from "@/features/chat/utils/chat-links";
+import { chatPaths, parseSearchQuery } from "@/features/chat/utils/chat-links";
 import { requireAdmin } from "@/services/auth-guard";
 
 export const generateMetadata = async (): Promise<Metadata> => {
@@ -17,9 +17,11 @@ export const generateMetadata = async (): Promise<Metadata> => {
 // hidden trainee is "not found" unless revealed.
 const AdminMessagesSearchPage = async ({
   params,
+  searchParams,
 }: PageProps<"/admin/users/[id]/messages/search">) => {
   const admin = await requireAdmin();
   const { id } = await params;
+  const { q } = await searchParams;
   const userId = Number(id);
   const header = Number.isSafeInteger(userId)
     ? await findTraineeChatHeader(userId)
@@ -36,6 +38,7 @@ const AdminMessagesSearchPage = async ({
       endpoint={`/api/admin/chat/${header.conversationId ?? 0}/search`}
       paths={chatPaths("admin", header.userId)}
       nicknames={header.profile.nicknames}
+      initialQuery={parseSearchQuery(q) ?? ""}
     />
   );
 };

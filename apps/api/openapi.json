@@ -6278,7 +6278,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           },
           {
@@ -6289,7 +6289,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           },
           {
@@ -6300,7 +6300,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           },
           {
@@ -6659,6 +6659,9 @@
                       }
                     },
                     "hasMore": {
+                      "type": "boolean"
+                    },
+                    "hasNewer": {
                       "type": "boolean"
                     },
                     "changes": {
@@ -7060,6 +7063,7 @@
                   "required": [
                     "messages",
                     "hasMore",
+                    "hasNewer",
                     "changes",
                     "lastChangeAt",
                     "profile",
@@ -7909,7 +7913,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           }
         ],
@@ -8165,7 +8169,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           }
         ],
@@ -9265,7 +9269,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           },
           {
@@ -9276,7 +9280,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           },
           {
@@ -9287,7 +9291,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           },
           {
@@ -9646,6 +9650,9 @@
                       }
                     },
                     "hasMore": {
+                      "type": "boolean"
+                    },
+                    "hasNewer": {
                       "type": "boolean"
                     },
                     "changes": {
@@ -10047,6 +10054,7 @@
                   "required": [
                     "messages",
                     "hasMore",
+                    "hasNewer",
                     "changes",
                     "lastChangeAt",
                     "profile",
@@ -10276,7 +10284,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           }
         ],
@@ -10586,7 +10594,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           }
         ],
@@ -19251,7 +19259,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           },
           {
@@ -19262,7 +19270,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           }
         ],
@@ -19442,6 +19450,9 @@
                           },
                           "createdAt": {
                             "type": "string"
+                          },
+                          "deleted": {
+                            "type": "boolean"
                           }
                         },
                         "required": [
@@ -20549,6 +20560,9 @@
                         },
                         "createdAt": {
                           "type": "string"
+                        },
+                        "deleted": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -29916,7 +29930,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           }
         ],
@@ -32764,7 +32778,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           },
           {
@@ -32775,7 +32789,7 @@
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true,
-              "maximum": 9007199254740991
+              "maximum": 2147483647
             }
           },
           {

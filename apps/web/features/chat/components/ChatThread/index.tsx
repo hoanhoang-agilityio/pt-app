@@ -17,14 +17,19 @@ import {
 import { toast } from "sonner";
 
 import { useConfirm } from "@/components/common/ConfirmDialog/use-confirm";
+import { LoadNewerControl } from "@/components/common/LoadNewerControl";
+import { LoadOlderControl } from "@/components/common/LoadOlderControl";
 import { ScrollJumpButton } from "@/components/common/ScrollJumpButton";
-import { Spinner } from "@/components/common/Spinner";
 import { Composer } from "@/features/chat/components/Composer";
 import { LockedBanner } from "@/features/chat/components/LockedBanner";
 import { MessageBubble } from "@/features/chat/components/MessageBubble";
 import { PushOptInCard } from "@/features/chat/components/PushOptInCard";
 import { ReplyBar } from "@/features/chat/components/ReplyBar";
 import { ReplyPostBar } from "@/features/chat/components/ReplyPostBar";
+import {
+  type SearchContext,
+  SearchResultBar,
+} from "@/features/chat/components/SearchResultBar";
 import { TypingIndicator } from "@/features/chat/components/TypingIndicator";
 import { useChatAdapter } from "@/features/chat/hooks/use-chat-adapter";
 import {
@@ -61,6 +66,8 @@ import { chatNotificationTags } from "@/features/chat/utils/clear-notifications"
 import type { PresenceView } from "@/features/chat/utils/presence-status";
 import { useIsEmbedded } from "@/features/chat-bubbles/hooks/use-is-embedded";
 import type { DmReplyPostView } from "@/features/social/types/dm";
+import { useLoadNewerOnScroll } from "@/hooks/use-load-newer-on-scroll";
+import { useLoadOlderOnScroll } from "@/hooks/use-load-older-on-scroll";
 import { useScrollAway } from "@/hooks/use-scroll-away";
 import { scrollBehaviorFor } from "@/utils/scroll-rules";
 
@@ -72,6 +79,11 @@ export interface ChatThreadProps {
   infoHref: string;
   // Open scrolled to this message and highlight it (gallery, search).
   jumpToId?: number | null;
+  // `?m=` was given but the message is gone (deleted or not in this chat):
+  // the chat opens at the newest and says so.
+  jumpMissed?: boolean;
+  // Opened from a search result (`?q=`): shows the result bar on top.
+  searchContext?: SearchContext | null;
   // The page header; rendered inside the shell so the keyboard resize keeps
   // it in place. A function receives the username of the newest PT who wrote
   // in the loaded messages (null if none or deleted) and the peer presence
@@ -101,6 +113,8 @@ export interface ChatThreadProps {
   // Photos of the people in this thread (versioned /api/avatar URLs), keyed
   // like nicknames: "user" or "admin:<id>". Only people with a photo.
   avatars?: Readonly<Record<string, string>>;
+  // Trainee header photo when the loaded messages name no PT with a photo.
+  fallbackPeerAvatar?: string | null;
   // A post to reply to, opened from a post card (`?replyPost=`); sent with the
   // next text message. Attaching it replaces a message reply and vice versa.
   replyPost?: (DmReplyPostView & { available: true }) | null;
@@ -225,12 +239,15 @@ export const ChatThread = ({
   header,
   infoHref,
   jumpToId = null,
+  jumpMissed = false,
+  searchContext = null,
   viewer = USER_VIEWER,
   fallbackPeerName = "PT",
   verifiedAdminIds = NO_VERIFIED,
   emptyText,
   ariaLabel,
   avatars = NO_AVATARS,
+  fallbackPeerAvatar = null,
   replyPost = null,
   isEmbed = false,
 }: ChatThreadProps) => {
@@ -245,7 +262,7 @@ export const ChatThread = ({
   const [isVisible, setIsVisible] = useState(true);
   const adapter = useChatAdapter(viewer, userId, conversationId);
   const chat = useChatMessages({ adapter, initial, isViewing: isVisible });
-  const { messages, hasMore, chatEnabled, peerReadUpTo, sync } = chat;
+  const { messages, hasMore, hasNewer, chatEnabled, peerReadUpTo, sync } = chat;
   // A trainee whose chat is on always has a conversation (the API creates it
   // when the PT switches chat on, or on the first thread read), so the realtime
   // rooms and admin routes always have an id to use. Only a locked chat with
@@ -263,15 +280,20 @@ export const ChatThread = ({
   const viewport = useVisualViewport();
   const scroller = useRef<HTMLDivElement>(null);
   const wasNearBottom = useRef(true);
+  // Latest `hasNewer` for scroll handlers: while the newest messages are not
+  // loaded, nothing may snap the view to the bottom of the loaded window.
+  const hasNewerRef = useRef(hasNewer);
+  // Set while a reset to the newest page is under way; the layout effect
+  // below scrolls to the bottom once it has rendered.
+  const scrollAfterReset = useRef(false);
+  const hadNewer = useRef(hasNewer);
   // undefined = not measured yet (first paint is handled separately).
   const lastItemKey = useRef<string | null | undefined>(undefined);
-  const olderAnchor = useRef<{ height: number; firstId: number | null } | null>(
-    null,
-  );
   const [showNewChip, setShowNewChip] = useState(false);
   const [newCount, setNewCount] = useState(0);
   const { isAway } = useScrollAway({ edge: "bottom", container: scroller });
   const tJump = useTranslations("common.scrollJump");
+  const tCommon = useTranslations("common");
   const confirm = useConfirm();
   // The open sheet and the message it is about; kept after closing so the
   // content does not vanish during the exit animation.
@@ -368,13 +390,19 @@ export const ChatThread = ({
   }, [isPeerTyping, scrollToBottom]);
 
   useLayoutEffect(() => {
+    // Messages that load while the reader pages down a jumped window (or the
+    // page that closes the gap) are not "new": no follow, no chip.
+    const isCatchingUp = hasNewer || hadNewer.current;
+
+    hadNewer.current = hasNewer;
+    hasNewerRef.current = hasNewer;
     if (lastKey === lastItemKey.current) {
       return;
     }
     const isFirstRun = lastItemKey.current === undefined;
 
     lastItemKey.current = lastKey;
-    if (isFirstRun || !last) {
+    if (isFirstRun || !last || isCatchingUp) {
       return;
     }
     if (wasNearBottom.current || last.senderRole === viewer.role) {
@@ -383,20 +411,39 @@ export const ChatThread = ({
       setShowNewChip(true);
       setNewCount((n) => n + 1);
     }
-  }, [lastKey, last, scrollToBottom, viewer.role]);
+  }, [lastKey, last, hasNewer, scrollToBottom, viewer.role]);
 
-  // Older messages were prepended: keep what the reader was looking at.
-  const firstId = firstStoredId(messages);
-
+  // The newest page replaced the jumped window: show the bottom of it.
   useLayoutEffect(() => {
-    const anchor = olderAnchor.current;
-    const node = scroller.current;
-
-    if (anchor && node && firstId !== anchor.firstId) {
-      node.scrollTop += node.scrollHeight - anchor.height;
-      olderAnchor.current = null;
+    if (!hasNewer && scrollAfterReset.current) {
+      scrollAfterReset.current = false;
+      wasNearBottom.current = true;
+      setShowNewChip(false);
+      setNewCount(0);
+      scrollToBottom(false);
     }
-  }, [firstId]);
+  }, [hasNewer, messages, scrollToBottom]);
+
+  // Older messages load when the top sentinel nears the top; the hook also
+  // keeps the reader's place after the prepend. The first stored id changes
+  // only for older messages, not for new ones at the bottom.
+  const firstId = firstStoredId(messages);
+  const older = useLoadOlderOnScroll({
+    rootRef: scroller,
+    hasMore,
+    isLoading: chat.isLoadingOlder,
+    loadOlder: chat.loadOlder,
+    firstKey: firstId,
+  });
+
+  // A jumped window pages down on scroll while newer messages exist.
+  const newer = useLoadNewerOnScroll({
+    rootRef: scroller,
+    hasNewer,
+    isLoading: chat.isLoadingNewer,
+    loadNewer: chat.loadNewer,
+    lastKey,
+  });
 
   // Keyboard open/close and viewport resize: stay on the latest message.
   const viewportHeight = viewport?.height;
@@ -589,19 +636,85 @@ export const ChatThread = ({
     // Only the target matters; jumpToMessage reads refs and state setters.
   }, [jumpToId]);
 
-  const handleSend = (body: string, photos?: SentPhoto[]) => {
+  // The linked message is gone: say why the chat opened at the newest.
+  useEffect(() => {
+    if (jumpMissed) {
+      toast.error(t("jumpNotFound"));
+    }
+    // Once per page load; `t` is stable per locale.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jumpMissed]);
+
+  // Leaves a jumped window for the newest page before sending or scrolling
+  // down; with the newest page already loaded it is just the scroll.
+  const goToLatest = async ({ smooth = true } = {}) => {
+    if (!hasNewerRef.current) {
+      scrollToBottom(smooth);
+      return true;
+    }
+    scrollAfterReset.current = true;
+    const isReset = await chat.resetToLatest();
+
+    if (!isReset) {
+      scrollAfterReset.current = false;
+      toast.error(t("latestFailed"));
+    }
+    return isReset;
+  };
+
+  // Runs `action` at once on the newest page; from a jumped window it first
+  // loads the newest page so the sent bubble lands at the real end. Resolves
+  // false (action not run, error toast already shown) when that load failed.
+  const afterLatest = (action: () => void): true | Promise<boolean> => {
+    if (!hasNewerRef.current) {
+      action();
+      return true;
+    }
+    return goToLatest({ smooth: false }).then((isReady) => {
+      if (isReady) {
+        action();
+      }
+      return isReady;
+    });
+  };
+
+  // Reply and quote are cleared only once the message is on its way, so a
+  // failed jump back to the newest page loses neither them nor the draft (the
+  // composer keeps its own text and photos until this resolves true).
+  const handleSend = (
+    body: string,
+    photos?: SentPhoto[],
+  ): void | Promise<boolean> => {
     // A post reply needs a text; a photo sent without one leaves it in place.
     const post = activeQuote && body.trim() !== "" ? activeQuote : null;
 
-    if (photos) {
-      chat.sendPhotos(photos, body, replyMessage, post);
-    } else {
-      chat.send(body, replyMessage, post);
+    const reply = replyMessage;
+    const finish = () => {
+      setReplyId(null);
+      if (post) {
+        clearQuote();
+      }
+    };
+
+    // Sending from a jumped window: the bubble belongs at the newest page.
+    const result = afterLatest(() => {
+      if (photos) {
+        chat.sendPhotos(photos, body, reply, post);
+      } else {
+        chat.send(body, reply, post);
+      }
+    });
+
+    if (result === true) {
+      finish();
+      return;
     }
-    setReplyId(null);
-    if (post) {
-      clearQuote();
-    }
+    return result.then((isSent) => {
+      if (isSent) {
+        finish();
+      }
+      return isSent;
+    });
   };
 
   const openStickers = () => {
@@ -612,8 +725,19 @@ export const ChatThread = ({
   const handleStickerPick = (
     sticker: Parameters<typeof chat.sendSticker>[0],
   ) => {
-    chat.sendSticker(sticker, replyMessage);
-    setReplyId(null);
+    const reply = replyMessage;
+    const result = afterLatest(() => chat.sendSticker(sticker, reply));
+
+    // On failure goToLatest has shown the error toast; the reply stays.
+    if (result === true) {
+      setReplyId(null);
+    } else {
+      void result.then((isSent) => {
+        if (isSent) {
+          setReplyId(null);
+        }
+      });
+    }
   };
 
   const handleSaveEdit = (body: string) => {
@@ -629,24 +753,13 @@ export const ChatThread = ({
     if (!node) {
       return;
     }
-    wasNearBottom.current = isNearBottom(
-      node.scrollHeight,
-      node.scrollTop,
-      node.clientHeight,
-    );
+    wasNearBottom.current =
+      !hasNewerRef.current &&
+      isNearBottom(node.scrollHeight, node.scrollTop, node.clientHeight);
     if (wasNearBottom.current) {
       setShowNewChip(false);
       setNewCount(0);
     }
-  };
-
-  const handleLoadOlder = () => {
-    const node = scroller.current;
-
-    if (node) {
-      olderAnchor.current = { height: node.scrollHeight, firstId };
-    }
-    void chat.loadOlder();
   };
 
   const emptyMessage =
@@ -657,7 +770,7 @@ export const ChatThread = ({
   const peerAvatar =
     viewer.role === "admin"
       ? (avatars.user ?? null)
-      : (avatars[`admin:${latestAdminId(messages)}`] ?? null);
+      : (avatars[`admin:${latestAdminId(messages)}`] ?? fallbackPeerAvatar);
   const verifiedIds = new Set(verifiedAdminIds);
   const headerNode =
     isEmbed || isFramed
@@ -699,6 +812,9 @@ export const ChatThread = ({
       ) : (
         headerNode
       )}
+      {searchContext !== null && (
+        <SearchResultBar context={searchContext} currentId={jumpToId} />
+      )}
       <div className="relative min-h-0 flex-1">
         <div
           ref={scroller}
@@ -711,19 +827,21 @@ export const ChatThread = ({
                 <PushOptInCard role="user" />
               </div>
             )}
-            {hasMore && (
-              <div className="flex justify-center pt-4">
-                <button
-                  type="button"
-                  onClick={handleLoadOlder}
-                  disabled={chat.isLoadingOlder}
-                  className="inline-flex items-center gap-2 rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium text-muted transition active:bg-line disabled:opacity-50"
-                >
-                  {chat.isLoadingOlder && <Spinner size="sm" />}
-                  {chat.isLoadingOlder ? t("loadingOlder") : t("loadOlder")}
-                </button>
-              </div>
-            )}
+            <LoadOlderControl
+              sentinelRef={older.sentinelRef}
+              hasMore={hasMore}
+              isLoading={older.isLoading}
+              hasError={older.error !== null}
+              hasItems={items.length > 0}
+              onLoad={older.retry}
+              labels={{
+                loading: tCommon("loading"),
+                loadOlder: t("loadOlder"),
+                retry: t("loadOlderRetry"),
+                start: t("conversationStart"),
+              }}
+              className="pt-2"
+            />
             {items.length === 0 && (
               <p className="px-6 py-16 text-center text-sm text-muted">
                 {emptyMessage}
@@ -743,6 +861,9 @@ export const ChatThread = ({
                       viewer={adapter.viewer}
                       onRetry={chat.retry}
                       nicknames={profile.nicknames}
+                      canRevealUnsent={
+                        viewer.role === "admin" && viewer.isSuperAdmin === true
+                      }
                       senderVerified={
                         item.message.senderRole === "admin" &&
                         verifiedIds.has(item.message.senderAdminId ?? -1)
@@ -793,21 +914,34 @@ export const ChatThread = ({
                 );
               })}
             </div>
-            {isPeerTyping && chatEnabled && (
+            {isPeerTyping && chatEnabled && !hasNewer && (
               <TypingIndicator name={typingName} />
             )}
+            <LoadNewerControl
+              sentinelRef={newer.sentinelRef}
+              hasNewer={hasNewer}
+              isLoading={newer.isLoading}
+              hasError={newer.error !== null}
+              onLoad={newer.retry}
+              labels={{
+                loading: tCommon("loading"),
+                loadNewer: t("loadNewer"),
+                retry: t("loadNewerRetry"),
+              }}
+              className="pt-2"
+            />
           </div>
         </div>
         <ScrollJumpButton
           direction="down"
-          visible={showNewChip || isAway}
+          visible={showNewChip || isAway || hasNewer}
           label={
             newCount > 0
               ? tJump("newCount", { count: newCount })
               : tJump("toLatest")
           }
           count={newCount}
-          onClick={() => scrollToBottom(true)}
+          onClick={() => void goToLatest()}
           className="absolute bottom-2 left-1/2 -translate-x-1/2"
         />
       </div>

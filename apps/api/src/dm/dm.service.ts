@@ -88,6 +88,7 @@ export class DmService {
         ...cursor,
         otherId: view.otherId,
         viewer: actor,
+        includeUnsent: view.access === "readonly_admin",
       })),
       readOnlyReason: view.readOnlyReason,
       isReadOnly: view.access !== "member" || view.readOnlyReason !== null,

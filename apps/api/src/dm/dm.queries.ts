@@ -224,14 +224,14 @@ export class DmQueries {
     }
     const [message] = await this.toViews([row], actor);
 
-    return message
-      ? { message, unsentAt: row.unsentAt.toISOString() }
-      : null;
+    return message ? { message, unsentAt: row.unsentAt.toISOString() } : null;
   }
 
   // Newest page (no cursor), older (`before`) or newer (`after`) messages, in
-  // ascending order. Unsent messages never come back; the latest unsent ids
-  // ride along so a polling client can remove them.
+  // ascending order. Unsent messages do not come back (the latest unsent ids
+  // ride along so a polling client can remove them), except with
+  // `includeUnsent` (the super admin's read-only view): they stay in the list
+  // as blank `deleted` placeholders, content only through `originalOf`.
   async listThread(
     conversationId: number,
     options: {
@@ -239,23 +239,26 @@ export class DmQueries {
       before?: number;
       otherId: number | null;
       viewer: AuthActor;
+      includeUnsent?: boolean;
     },
   ) {
     const forward = options.after !== undefined;
     const cursor = options.after ?? options.before;
-    const rows: MessageRow[] = await this.dataSource.query(
-      `SELECT id, sender_id AS "senderId", body, photo_id AS "photoId",
+    const rows: (MessageRow & { deletedAt: Date | null })[] =
+      await this.dataSource.query(
+        `SELECT id, sender_id AS "senderId", body, photo_id AS "photoId",
               reply_post_id AS "replyPostId", client_id AS "clientId",
-              created_at AS "createdAt"
+              created_at AS "createdAt", deleted_at AS "deletedAt"
        FROM dm_messages
-       WHERE conversation_id = $1 AND deleted_at IS NULL
+       WHERE conversation_id = $1
+         ${options.includeUnsent ? "" : "AND deleted_at IS NULL"}
          ${cursor === undefined ? "" : forward ? "AND id > $3" : "AND id < $3"}
        ORDER BY id ${forward ? "ASC" : "DESC"}
        LIMIT $2`,
-      cursor === undefined
-        ? [conversationId, DM_PAGE_SIZE + 1]
-        : [conversationId, DM_PAGE_SIZE + 1, cursor],
-    );
+        cursor === undefined
+          ? [conversationId, DM_PAGE_SIZE + 1]
+          : [conversationId, DM_PAGE_SIZE + 1, cursor],
+      );
     const hasMore = rows.length > DM_PAGE_SIZE;
     const page = rows.slice(0, DM_PAGE_SIZE);
     const ordered = forward ? page : page.reverse();
@@ -275,8 +278,33 @@ export class DmQueries {
           ) as Promise<{ id: number }[]>),
     ]);
 
+    const live = ordered.filter((row) => row.deletedAt === null);
+    const liveViews = new Map(
+      (await this.toViews(live, options.viewer)).map((view) => [view.id, view]),
+    );
+
     return {
-      messages: await this.toViews(ordered, options.viewer),
+      messages: ordered.flatMap((row) => {
+        if (row.deletedAt === null) {
+          const view = liveViews.get(row.id);
+
+          return view ? [view] : [];
+        }
+        // Unsent: no text, photos or quote, only who and when.
+        return [
+          {
+            id: row.id,
+            senderId: row.senderId,
+            body: null,
+            photo: null,
+            photos: [],
+            post: null,
+            clientId: row.clientId,
+            createdAt: row.createdAt.toISOString(),
+            deleted: true,
+          },
+        ];
+      }),
       deletedIds: deleted.map((row) => row.id),
       hasMore,
       otherReadUpTo: read[0]?.id ?? 0,

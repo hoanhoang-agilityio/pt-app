@@ -60,7 +60,12 @@ const AdminDmThreadPage = async ({
             {t("noMessages")}
           </p>
         ) : (
-          <DmBubbleList items={thread.messages} meId={null} names={names} />
+          <DmBubbleList
+            items={thread.messages}
+            meId={null}
+            names={names}
+            canRevealUnsent
+          />
         )}
       </main>
     </>

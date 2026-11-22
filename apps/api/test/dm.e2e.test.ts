@@ -799,6 +799,64 @@ describe("GET /v1/dm/messages/:mid/original", () => {
   });
 });
 
+describe("unsent DMs in the thread list", () => {
+  it("shows a super admin blank deleted placeholders without body or photos, and nobody else", async () => {
+    const me = await trainee();
+    const ann = await trainee();
+    const boss = await admin("super_admin");
+    const pt = await admin("pt");
+    const cid = await conversationBetween(me, ann);
+    const live = await message(cid, ann, "còn đó");
+    const gone = await message(cid, me, "bí mật");
+
+    await dmPhoto(cid, me, gone);
+    expect(
+      (await callWith(app, "delete", `/v1/dm/messages/${gone}`, me.token))
+        .status,
+    ).toBe(204);
+    const read = (token: string | null) =>
+      callWith(app, "get", `/v1/dm/conversations/${cid}/messages`, token);
+    const asBoss = await read(boss.token);
+
+    expect(asBoss.status).toBe(200);
+    const placeholder = asBoss.body.messages.find(
+      (m: { id: number }) => m.id === gone,
+    );
+
+    expect(placeholder).toMatchObject({
+      id: gone,
+      senderId: me.id,
+      body: null,
+      photo: null,
+      photos: [],
+      post: null,
+      deleted: true,
+    });
+    expect(JSON.stringify(placeholder)).not.toContain("bí mật");
+    expect(JSON.stringify(placeholder)).not.toContain("/v1/dm/photos/");
+    expect(asBoss.body.messages.map((m: { id: number }) => m.id)).toEqual([
+      live,
+      gone,
+    ]);
+    expect(
+      asBoss.body.messages.find((m: { id: number }) => m.id === live).deleted,
+    ).toBeUndefined();
+
+    // Members never get it back in the list; only the id rides along.
+    for (const token of [me.token, ann.token]) {
+      const asMember = await read(token);
+
+      expect(asMember.body.messages.map((m: { id: number }) => m.id)).toEqual([
+        live,
+      ]);
+      expect(asMember.body.deletedIds).toEqual([gone]);
+      expect(JSON.stringify(asMember.body)).not.toContain("bí mật");
+    }
+    // A PT (not a super admin) cannot open the thread at all.
+    expect((await read(pt.token)).status).toBe(404);
+  });
+});
+
 describe("GET /v1/dm/photos/:id", () => {
   it("serves a member and a super admin, and 404 for strangers, a PT and unsent photos", async () => {
     const me = await trainee();

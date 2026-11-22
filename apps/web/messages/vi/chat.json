@@ -131,6 +131,13 @@
     "empty": "Không tìm thấy tin nhắn nào",
     "loadMore": "Xem thêm kết quả"
   },
+  "searchResultBar": {
+    "backToResults": "Quay lại kết quả tìm kiếm",
+    "resultsFor": "Kết quả cho “{query}”",
+    "older": "Kết quả cũ hơn",
+    "newer": "Kết quả mới hơn",
+    "close": "Đóng kết quả tìm kiếm"
+  },
   "messageActions": {
     "title": "Tuỳ chọn tin nhắn",
     "sentAt": "Gửi lúc {time}",
@@ -142,6 +149,7 @@
     "report": "Báo cáo"
   },
   "messageBubble": {
+    "revealFailed": "Không tải được nội dung",
     "viewReply": "Xem tin nhắn được trả lời",
     "messageName": "tin nhắn",
     "edited": "Đã chỉnh sửa",
@@ -219,9 +227,6 @@
       "green": "Xanh lá"
     }
   },
-  "adminChatThread": {
-    "title": "Nhắn tin với {name}"
-  },
   "adminInbox": {
     "passcodeRequired": "Hãy đặt mã khoá trước khi ẩn học viên.",
     "hiddenToast": "Đã ẩn {count, plural, other {# học viên}}",
@@ -252,6 +257,12 @@
     "traineeFallback": "Học viên",
     "loadingOlder": "Đang tải…",
     "loadOlder": "Xem tin cũ hơn",
+    "loadOlderRetry": "Không tải được. Thử lại",
+    "loadNewer": "Tải tin nhắn mới hơn",
+    "loadNewerRetry": "Không tải được. Thử lại",
+    "jumpNotFound": "Không tìm thấy tin nhắn này",
+    "latestFailed": "Không tải được tin nhắn mới nhất",
+    "conversationStart": "Bắt đầu cuộc trò chuyện",
     "editing": "Đang chỉnh sửa",
     "cancelEdit": "Huỷ chỉnh sửa",
     "replying": "Đang trả lời {name}",
@@ -323,5 +334,8 @@
     "slotsFull": "Mỗi tin nhắn tối đa {max} ảnh.",
     "trimmed": "Chỉ thêm được {count} ảnh nữa (tối đa {max}). Các ảnh còn lại đã bị bỏ qua.",
     "pending": "Hãy chờ các ảnh tải lên xong hoặc bỏ các ảnh bị lỗi."
+  },
+  "adminChatThread": {
+    "title": "Nhắn tin với {name}"
   }
 }

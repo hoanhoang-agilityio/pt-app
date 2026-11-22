@@ -686,6 +686,7 @@ describe("reading a thread", () => {
     expect(response.body).toEqual({
       messages: [],
       hasMore: false,
+      hasNewer: false,
       changes: [],
       lastChangeAt: 0,
       profile: { nicknames: {}, colors: {} },
@@ -754,20 +755,60 @@ describe("reading a thread", () => {
     expect(response.body.messages).toHaveLength(1);
   });
 
-  it("jumps to a message: the page ending at it plus every newer message", async () => {
+  it("jumps to a message: the page ending at it plus one page of newer messages, with hasNewer", async () => {
     const me = await trainee();
 
     await sendAs(me.token, { body: "seed" });
     const conversation = await conversationOf(me.id);
-    const ids = await seedMessages(conversation.id, 60);
-    const target = ids[10];
+    const seeded = await seedMessages(conversation.id, 100);
+    const first = await ds
+      .getRepository(ChatMessage)
+      .findOneByOrFail({ conversationId: conversation.id, body: "seed" });
+    const ids = [first.id, ...seeded];
+    const target = ids[11];
     const response = await thread(me.token, `?around=${target}`);
     const returned = response.body.messages.map((m: { id: number }) => m.id);
 
-    expect(returned[returned.length - 1]).toBe(ids[ids.length - 1]);
+    expect(returned).toEqual(ids.slice(0, 11 + 1 + 30));
     expect(returned).toContain(target);
-    expect(returned.filter((id: number) => id <= target)).toHaveLength(11 + 1);
+    expect(response.body.hasNewer).toBe(true);
+    expect(response.body.hasMore).toBe(false);
+
+    // The client pages the rest with `after`, until hasMore turns false.
+    let cursor = returned[returned.length - 1] as number;
+    const rest: number[] = [];
+
+    for (;;) {
+      const next = await thread(me.token, `?after=${cursor}`);
+
+      rest.push(...next.body.messages.map((m: { id: number }) => m.id));
+      expect(next.body.hasNewer).toBe(false);
+      if (!next.body.hasMore) {
+        break;
+      }
+      cursor = rest[rest.length - 1];
+    }
+    expect([...returned, ...rest]).toEqual(ids);
     expect((await thread(me.token, "?around=999999")).status).toBe(404);
+  });
+
+  it("reports hasNewer false when the jump window reaches the newest message", async () => {
+    const me = await trainee();
+
+    await sendAs(me.token, { body: "seed" });
+    const conversation = await conversationOf(me.id);
+    const ids = await seedMessages(conversation.id, 40);
+    const near = await thread(me.token, `?around=${ids[20]}`);
+
+    expect(near.body.messages.at(-1).id).toBe(ids[39]);
+    expect(near.body.hasNewer).toBe(false);
+    // Exactly one page after the target is still the end of the thread.
+    const exact = await thread(me.token, `?around=${ids[9]}`);
+
+    expect(exact.body.messages.at(-1).id).toBe(ids[39]);
+    expect(exact.body.hasNewer).toBe(false);
+    // Ordinary reads never claim newer messages.
+    expect((await thread(me.token)).body.hasNewer).toBe(false);
   });
 
   it("shows the PT team's last seen to the trainee, honouring the presence switch", async () => {

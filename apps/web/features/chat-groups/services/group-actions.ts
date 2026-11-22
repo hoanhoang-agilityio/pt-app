@@ -16,6 +16,7 @@ import {
   groupRenameRequestSchema,
   groupResolveAlertRequestSchema,
   groupSendMessageRequestSchema,
+  reactionEmojiSchema,
 } from "@pt/contracts";
 import { z } from "zod";
 
@@ -129,7 +130,9 @@ const send = async (actor: Actor, input: unknown) => {
 
 // ---- react / edit / unsend / hide --------------------------------------------
 
-const reactInput = messageInput.extend({ emoji: z.string().nullable() });
+const reactInput = messageInput.extend({
+  emoji: reactionEmojiSchema(GROUP_MESSAGES.INVALID_INPUT).nullable(),
+});
 
 // One reaction per person: another emoji replaces it, null removes it.
 const react = async (actor: Actor, input: unknown) => {

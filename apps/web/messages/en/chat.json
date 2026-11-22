@@ -131,6 +131,13 @@
     "empty": "No messages found",
     "loadMore": "Load more results"
   },
+  "searchResultBar": {
+    "backToResults": "Back to search results",
+    "resultsFor": "Results for “{query}”",
+    "older": "Older result",
+    "newer": "Newer result",
+    "close": "Close search results"
+  },
   "messageActions": {
     "title": "Message options",
     "sentAt": "Sent at {time}",
@@ -142,6 +149,7 @@
     "report": "Report"
   },
   "messageBubble": {
+    "revealFailed": "Could not load the content",
     "viewReply": "View the message being replied to",
     "messageName": "message",
     "edited": "Edited",
@@ -219,9 +227,6 @@
       "green": "Green"
     }
   },
-  "adminChatThread": {
-    "title": "Chat with {name}"
-  },
   "adminInbox": {
     "passcodeRequired": "Set a passcode before hiding trainees.",
     "hiddenToast": "{count, plural, one {# trainee hidden} other {# trainees hidden}}",
@@ -252,6 +257,12 @@
     "traineeFallback": "Trainee",
     "loadingOlder": "Loading…",
     "loadOlder": "Load older messages",
+    "loadOlderRetry": "Couldn't load. Try again",
+    "loadNewer": "Load newer messages",
+    "loadNewerRetry": "Couldn't load. Try again",
+    "jumpNotFound": "Message not found",
+    "latestFailed": "Couldn't load the latest messages",
+    "conversationStart": "Start of the conversation",
     "editing": "Editing",
     "cancelEdit": "Cancel edit",
     "replying": "Replying to {name}",
@@ -323,5 +334,8 @@
     "slotsFull": "At most {max} photos per message.",
     "trimmed": "Only {count} more photos fit (max {max}). The rest were skipped.",
     "pending": "Wait for the photos to finish uploading or remove the failed ones."
+  },
+  "adminChatThread": {
+    "title": "Chat with {name}"
   }
 }

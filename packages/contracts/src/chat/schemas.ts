@@ -1,3 +1,4 @@
+import { INT4_MAX } from "../pagination.js";
 import { reactionEmojiSchema } from "../reaction-emoji.js";
 import { aliasValueSchema } from "../users/alias-rules.js";
 import { CHAT_COLOR_KEYS } from "../users/constants.js";
@@ -16,7 +17,7 @@ import { z } from "zod";
 // REST request and response shapes of the chat, stickers and trainee DMs.
 
 const positiveInt = z.number().int().positive();
-const cursor = z.coerce.number().int().positive();
+const cursor = z.coerce.number().int().positive().max(INT4_MAX);
 const iso = z.string();
 
 // --- Requests ---------------------------------------------------------------
@@ -32,7 +33,10 @@ const bodySchema = z
 export const chatPhotoIdsSchema = z
   .array(positiveInt)
   .max(CHAT_MESSAGE_MAX_PHOTOS, CHAT_PHOTO_ERRORS.TOO_MANY)
-  .refine((ids) => new Set(ids).size === ids.length, CHAT_MESSAGES.INVALID_INPUT);
+  .refine(
+    (ids) => new Set(ids).size === ids.length,
+    CHAT_MESSAGES.INVALID_INPUT,
+  );
 
 // Text and/or up to 10 photos, or a sticker alone: never a sticker with text or
 // a photo, never nothing. `photoIds` is the list; `photoId` is the single photo
@@ -285,6 +289,9 @@ export type ChatProfile = z.infer<typeof chatProfileSchema>;
 export const chatThreadResponseSchema = z.object({
   messages: z.array(chatMessageViewSchema),
   hasMore: z.boolean(),
+  // True when messages newer than the last returned one exist (an `around`
+  // window that stops short of the newest); page them with `after`.
+  hasNewer: z.boolean(),
   // Messages edited, unsent or reacted to after `changedSince`.
   changes: z.array(chatMessageViewSchema),
   lastChangeAt: z.number().int(),
@@ -524,6 +531,9 @@ export const dmMessageViewSchema = z.object({
   post: chatPostQuoteSchema.nullable(),
   clientId: z.string(),
   createdAt: iso,
+  // Only the super admin's read-only thread lists unsent messages, blank and
+  // flagged; `GET /v1/dm/messages/:mid/original` has the content.
+  deleted: z.boolean().optional(),
 });
 export type DmMessageView = z.infer<typeof dmMessageViewSchema>;
 

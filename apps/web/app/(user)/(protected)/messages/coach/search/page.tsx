@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { ChatSearch } from "@/features/chat/components/ChatSearch";
 import { loadMyChatState } from "@/features/chat/services/chat-queries";
-import { chatPaths } from "@/features/chat/utils/chat-links";
+import { chatPaths, parseSearchQuery } from "@/features/chat/utils/chat-links";
 import { requireUser } from "@/services/auth-guard";
 
 export const generateMetadata = async (): Promise<Metadata> => {
@@ -13,8 +13,11 @@ export const generateMetadata = async (): Promise<Metadata> => {
 };
 
 // The trainee's message search (KAN-160): only their own conversation.
-const MessagesSearchPage = async () => {
+const MessagesSearchPage = async ({
+  searchParams,
+}: PageProps<"/messages/coach/search">) => {
   const user = await requireUser();
+  const { q } = await searchParams;
   const { profile } = await loadMyChatState();
 
   return (
@@ -23,6 +26,7 @@ const MessagesSearchPage = async () => {
       endpoint="/api/chat/search"
       paths={chatPaths("user", user.id)}
       nicknames={profile.nicknames}
+      initialQuery={parseSearchQuery(q) ?? ""}
     />
   );
 };

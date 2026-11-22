@@ -22,6 +22,7 @@ import {
   chatThreadQuerySchema,
   findBundledSticker,
   groupPhotosByOwner,
+  INT4_MAX,
   photoIdsOf,
   stickerCheckImage,
   stickerInputSchema,
@@ -529,5 +530,24 @@ describe("photos of a message", () => {
     // Pending rows and owners nobody asked for are dropped.
     expect(grouped.has(3)).toBe(false);
     expect([...grouped.keys()]).toEqual([1, 2]);
+  });
+});
+
+describe("thread cursors fit PostgreSQL int4", () => {
+  it("accepts the largest int4 and rejects anything above it", () => {
+    expect(chatThreadQuerySchema.parse({ after: String(INT4_MAX) }).after).toBe(
+      INT4_MAX,
+    );
+    expect(
+      chatThreadQuerySchema.safeParse({ after: String(INT4_MAX + 1) }).success,
+    ).toBe(false);
+    expect(
+      chatThreadQuerySchema.safeParse({
+        before: String(Number.MAX_SAFE_INTEGER),
+      }).success,
+    ).toBe(false);
+    expect(
+      chatThreadQuerySchema.safeParse({ around: String(INT4_MAX + 1) }).success,
+    ).toBe(false);
   });
 });

@@ -1,3 +1,4 @@
+import { INT4_MAX } from "../pagination.js";
 import { reactionEmojiSchema } from "../reaction-emoji.js";
 import { aliasValueSchema } from "../users/alias-rules.js";
 import { CHAT_COLOR_KEYS } from "../users/constants.js";
@@ -16,7 +17,7 @@ import { z } from "zod";
 // REST request and response shapes of the chat, stickers and trainee DMs.
 
 const positiveInt = z.number().int().positive();
-const cursor = z.coerce.number().int().positive();
+const cursor = z.coerce.number().int().positive().max(INT4_MAX);
 const iso = z.string();
 
 // --- Requests ---------------------------------------------------------------

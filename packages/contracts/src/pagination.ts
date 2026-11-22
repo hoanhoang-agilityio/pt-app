@@ -2,6 +2,10 @@ import { z } from "zod";
 
 export const CURSOR_MAX_LENGTH = 300;
 
+// Largest PostgreSQL int4: ids and numeric cursors compared with an integer
+// column must fit it, or the query fails with a 500 instead of a clean 400.
+export const INT4_MAX = 2_147_483_647;
+
 // One page of a list that can grow. `nextCursor` is opaque: pass it back as
 // `?cursor=` for the next page; null on the last page.
 export const cursorPageSchema = <T extends z.ZodType>(item: T) =>

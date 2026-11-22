@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import {
   CHAT_CHANGES_PAGE_SIZE,
-    CHAT_PAGE_SIZE,
+  CHAT_PAGE_SIZE,
   CHAT_USER_READER_KEY,
   chatNextReadCursor,
   groupPhotosByOwner,

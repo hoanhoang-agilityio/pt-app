@@ -1,9 +1,7 @@
-import {
-  CHAT_BODY_MAX_LENGTH,
-  CHAT_MESSAGES,
-} from "../chat/constants.js";
+import { CHAT_BODY_MAX_LENGTH, CHAT_MESSAGES } from "../chat/constants.js";
 import { chatPhotoIdsSchema } from "../chat/schemas.js";
 import { stickerInputSchema } from "../chat/stickers.js";
+import { INT4_MAX } from "../pagination.js";
 import { reactionEmojiSchema } from "../reaction-emoji.js";
 import {
   GROUP_ADD_MAX_IDS,
@@ -25,7 +23,7 @@ import { z } from "zod";
 // REST request and response shapes of group chat (/v1/chat/groups).
 
 const positiveInt = z.number().int().positive();
-const cursor = z.coerce.number().int().positive();
+const cursor = z.coerce.number().int().positive().max(INT4_MAX);
 const iso = z.string();
 
 // --- Requests ---------------------------------------------------------------

@@ -6,6 +6,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import { Button, Divider, Screen, Txt } from "@/components/ui";
+import { AdminMeSection } from "@/features/admin/screens/AdminMeSection";
 import { APP_LOCALES, type AppLocale, currentLocale } from "@/i18n";
 import { APP_VERSION } from "@/lib/config";
 import { confirmAction, useErrorText } from "@/lib/ui-helpers";
@@ -65,6 +66,8 @@ export const MeScreen = () => {
           </Txt>
           <Txt tone="muted">{roleLabel}</Txt>
         </View>
+
+        {actor.kind === "admin" ? <AdminMeSection /> : null}
 
         <View style={{ gap: space.sm }}>
           <Txt weight="600">{t("me.language")}</Txt>

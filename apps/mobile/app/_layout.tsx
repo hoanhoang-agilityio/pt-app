@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorState, Screen } from "@/components/ui";
+import { AdminLockScreen, AdminLockWatcher } from "@/features/admin/screens/AdminLockScreen";
 import { AuthProvider, useAuth } from "@/features/auth/auth-context";
 import { RealtimeProvider } from "@/features/chat/realtime";
 import { PushEffects } from "@/features/push/PushEffects";
@@ -49,8 +50,18 @@ const Gate = () => {
       </Screen>
     );
   }
+  // A PT with a passcode sees only the unlock screen until it is entered.
+  if (locked) {
+    return (
+      <>
+        <StatusBar style="auto" />
+        <AdminLockScreen />
+      </>
+    );
+  }
   return (
-    <RealtimeProvider enabled={signedIn && !locked}>
+    <RealtimeProvider enabled={signedIn}>
+      <AdminLockWatcher />
       <StatusBar style="auto" />
       {signedIn ? <PushEffects /> : null}
       <Stack
@@ -67,6 +78,7 @@ const Gate = () => {
         </Stack.Protected>
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="admin" options={{ headerShown: false }} />
           <Stack.Screen name="compose" options={{ presentation: "modal" }} />
           <Stack.Screen name="post/[id]" />
           <Stack.Screen name="profile/[key]" />

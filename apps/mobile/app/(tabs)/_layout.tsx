@@ -1,14 +1,34 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { type Href, Tabs, usePathname, useRouter } from "expo-router";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useAdminActor } from "@/features/admin/use-admin";
 import { useUnreadTotal } from "@/features/chat/hooks";
 import { useTheme } from "@/theme";
+
+// The shared default tab; an admin is moved to the dashboard below.
+export const unstable_settings = { initialRouteName: "index" };
 
 export default function TabsLayout() {
   const { t } = useTranslation();
   const theme = useTheme();
   const unread = useUnreadTotal();
+  // Admins (PT / super admin) get their own tab set: dashboard and members
+  // replace Workouts; every other tab is shared.
+  const isAdmin = useAdminActor() !== null;
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Admins start on the dashboard (only when opened at the root, so a push
+  // deep link to another tab is kept).
+  useEffect(() => {
+    if (isAdmin && pathname === "/") {
+      router.replace("/dashboard" as string as Href);
+    }
+    // Once, at the first render of the tabs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
   return (
     <Tabs
@@ -19,6 +39,22 @@ export default function TabsLayout() {
         tabBarStyle: { backgroundColor: theme.surface, borderTopColor: theme.line },
       }}
     >
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          href: isAdmin ? undefined : null,
+          title: t("admin.tabs.dashboard"),
+          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" color={color as string} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="members"
+        options={{
+          href: isAdmin ? undefined : null,
+          title: t("admin.tabs.members"),
+          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" color={color as string} size={size} />,
+        }}
+      />
       <Tabs.Screen
         name="index"
         options={{
@@ -38,6 +74,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="workouts"
         options={{
+          href: isAdmin ? null : undefined,
           title: t("tabs.workouts"),
           tabBarIcon: ({ color, size }) => <Ionicons name="barbell-outline" color={color as string} size={size} />,
         }}

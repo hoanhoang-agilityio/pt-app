@@ -7,8 +7,6 @@ export const CHAT_PREVIEW_LENGTH = 80;
 export const CHAT_REPLY_SNIPPET_LENGTH = 120;
 // Edited / unsent / reacted messages returned per poll.
 export const CHAT_CHANGES_PAGE_SIZE = 200;
-// The most messages after a jump target one request loads.
-export const CHAT_JUMP_MAX_NEWER = 500;
 
 // Reader / reactor keys of chat_reads and chat_reactions.
 export const CHAT_USER_READER_KEY = "user";

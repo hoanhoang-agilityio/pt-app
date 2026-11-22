@@ -158,6 +158,7 @@ const AdminMessagesPage = async ({
         messages: (thread?.messages ?? []).map(serializeMessage),
         lastChangeAt: thread?.lastChangeAt ?? 0,
         hasMore: thread?.hasMore ?? false,
+        hasNewer: thread?.hasNewer ?? false,
         chatEnabled,
         peerReadUpTo: thread?.peerReadUpTo ?? 0,
         peerLastSeenAt: header.lastSeenAt,

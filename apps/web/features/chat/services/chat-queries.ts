@@ -107,8 +107,8 @@ export const loadMyThread = async (
   );
 
 // The thread opened at a message (a jump from the gallery or a search result):
-// null when that message is not in this conversation or too far back, so the
-// chat just opens at the newest as usual.
+// null when that message is not in this conversation, so the chat just opens
+// at the newest as usual. `hasNewer` says the window stops short of the newest.
 export const loadMyThreadAround = async (
   messageId: number,
 ): Promise<ThreadPayload | null> => {

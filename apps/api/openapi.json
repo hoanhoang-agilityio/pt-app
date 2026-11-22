@@ -6661,6 +6661,9 @@
                     "hasMore": {
                       "type": "boolean"
                     },
+                    "hasNewer": {
+                      "type": "boolean"
+                    },
                     "changes": {
                       "type": "array",
                       "items": {
@@ -7060,6 +7063,7 @@
                   "required": [
                     "messages",
                     "hasMore",
+                    "hasNewer",
                     "changes",
                     "lastChangeAt",
                     "profile",
@@ -9648,6 +9652,9 @@
                     "hasMore": {
                       "type": "boolean"
                     },
+                    "hasNewer": {
+                      "type": "boolean"
+                    },
                     "changes": {
                       "type": "array",
                       "items": {
@@ -10047,6 +10054,7 @@
                   "required": [
                     "messages",
                     "hasMore",
+                    "hasNewer",
                     "changes",
                     "lastChangeAt",
                     "profile",

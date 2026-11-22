@@ -288,6 +288,9 @@ export type ChatProfile = z.infer<typeof chatProfileSchema>;
 export const chatThreadResponseSchema = z.object({
   messages: z.array(chatMessageViewSchema),
   hasMore: z.boolean(),
+  // True when messages newer than the last returned one exist (an `around`
+  // window that stops short of the newest); page them with `after`.
+  hasNewer: z.boolean(),
   // Messages edited, unsent or reacted to after `changedSince`.
   changes: z.array(chatMessageViewSchema),
   lastChangeAt: z.number().int(),

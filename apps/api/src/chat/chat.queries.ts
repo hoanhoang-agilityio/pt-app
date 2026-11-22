@@ -2,8 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { InjectDataSource } from "@nestjs/typeorm";
 import {
   CHAT_CHANGES_PAGE_SIZE,
-  CHAT_JUMP_MAX_NEWER,
-  CHAT_PAGE_SIZE,
+    CHAT_PAGE_SIZE,
   CHAT_USER_READER_KEY,
   chatNextReadCursor,
   groupPhotosByOwner,
@@ -381,9 +380,9 @@ export class ChatQueries {
   }
 
   // The thread as the chat opens it for a jump to `messageId`: the page that
-  // ends at the target plus every newer message, so it still joins up with the
-  // newest and the poll cursor stays valid. Null when the message is not in
-  // this conversation or too far back.
+  // ends at the target plus one page of newer messages. `hasNewer` says
+  // whether more newer messages exist beyond that window (the client pages
+  // them with `after`). Null when the message is not in this conversation.
   async listRowsAround(conversationId: number, messageId: number) {
     const target = await this.run<{ id: number }[]>(
       `SELECT id FROM chat_messages WHERE id = $1 AND conversation_id = $2`,
@@ -395,18 +394,14 @@ export class ChatQueries {
     }
     const [older, newer] = await Promise.all([
       this.listMessageRows(conversationId, { before: messageId + 1 }),
-      this.run<MessageRow[]>(
-        `${MESSAGE_SELECT}
-         WHERE m.conversation_id = $1 AND m.id > $2
-         ORDER BY m.id ASC LIMIT $3`,
-        [conversationId, messageId, CHAT_JUMP_MAX_NEWER + 1],
-      ),
+      this.listMessageRows(conversationId, { after: messageId }),
     ]);
 
-    if (newer.length > CHAT_JUMP_MAX_NEWER) {
-      return null;
-    }
-    return { rows: [...older.rows, ...newer], hasMore: older.hasMore };
+    return {
+      rows: [...older.rows, ...newer.rows],
+      hasMore: older.hasMore,
+      hasNewer: newer.hasMore,
+    };
   }
 
   // Messages edited, unsent or reacted to after `changedSince` (epoch ms),

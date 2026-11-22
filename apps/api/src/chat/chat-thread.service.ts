@@ -38,6 +38,7 @@ export class ChatThreadService {
         payload: {
           messages: [],
           hasMore: false,
+          hasNewer: false,
           changes: [],
           lastChangeAt: 0,
           profile: EMPTY_PROFILE,
@@ -99,6 +100,7 @@ export class ChatThreadService {
       payload: {
         messages,
         hasMore: page.hasMore,
+        hasNewer: "hasNewer" in page && page.hasNewer === true,
         changes,
         lastChangeAt: changed.lastChangeAt,
         profile,

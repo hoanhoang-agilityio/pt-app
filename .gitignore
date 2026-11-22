@@ -61,3 +61,6 @@ dist/
 
 # Playwright e2e scratch files (temporary SQLite and API state)
 apps/web/e2e/.tmp/
+
+# self-hosted emoji data (apps/web/scripts/copy-emojibase.mjs)
+apps/web/public/emojibase/

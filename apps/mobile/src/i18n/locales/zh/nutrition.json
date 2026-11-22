@@ -1,0 +1,184 @@
+{
+  "tabs": {
+    "nutrition": "营养"
+  },
+  "nutri": {
+    "title": "营养",
+    "loadError": "无法加载营养数据",
+    "dailyTargets": "每日目标",
+    "noTarget": "教练尚未为这一天设置营养目标。",
+    "energy": "能量",
+    "macro": {
+      "carbs": "碳水",
+      "protein": "蛋白质",
+      "fat": "脂肪"
+    },
+    "status": {
+      "on": "达标",
+      "under": "不足",
+      "over": "超出"
+    },
+    "completion": {
+      "complete": "已吃完所有餐",
+      "partial": "已吃部分餐"
+    },
+    "plan": {
+      "title": "饮食计划",
+      "empty": "这一天还没有饮食计划。",
+      "future": "还没到这一天,稍后再来记录。"
+    },
+    "meal": {
+      "title": "第 {{index}} 餐:{{name}}",
+      "target": "本餐目标:{{kcal}} 千卡 · 蛋白 {{protein}} · 碳水 {{carbs}} · 脂肪 {{fat}}",
+      "eaten": "已吃 {{eaten}} / {{planned}} 千卡",
+      "ptPlan": "教练计划",
+      "noFoods": "教练还没有为这一餐添加食物。",
+      "extra": "计划外已吃",
+      "logEaten": "记录已吃食物",
+      "planKcal": "/ {{kcal}} 千卡(计划)",
+      "noNutrition": "暂无营养数据",
+      "archived": "食物已从库中删除,数据保留",
+      "missingFood": "食物已不在库中,请删除后重新记录",
+      "removeConfirm": "从记录中删除此食物?"
+    },
+    "mark": {
+      "achieved": "达标",
+      "achievedHint": "标记本餐已按计划吃完",
+      "note": "给教练的备注",
+      "notePlaceholder": "例如:用土豆代替米饭",
+      "save": "保存备注",
+      "saved": "已保存"
+    },
+    "log": {
+      "addTitle": "记录食物",
+      "editTitle": "编辑食物",
+      "searchPlaceholder": "搜索食物",
+      "noResults": "没有找到食物",
+      "moreResults": "还有更多食物,输入更多文字缩小范围。",
+      "freeFood": "不在库中的食物",
+      "grams": "克数",
+      "gramsOptional": "克数(如果知道)",
+      "name": "食物名称",
+      "namePlaceholder": "例如:牛肉粉",
+      "nutritionOptional": "营养(可选)",
+      "kcal": "热量(千卡)",
+      "protein": "蛋白质(克)",
+      "carbs": "碳水(克)",
+      "fat": "脂肪(克)",
+      "add": "添加食物",
+      "pickOther": "选择其他食物",
+      "searchLibrary": "在库中搜索",
+      "invalidNumber": "数字无效",
+      "nameRequired": "请输入食物名称",
+      "gramsRequired": "请输入大于 0 的克数",
+      "saved": "已记录",
+      "updated": "已更新",
+      "removed": "已删除"
+    },
+    "prefs": {
+      "title": "给教练的请求",
+      "mealCount": "每日餐数",
+      "mealAny": "由教练决定",
+      "foodNote": "喜欢或忌口的食物",
+      "foodNotePlaceholder": "例如:不吃海鲜,喜欢鸡肉",
+      "save": "保存请求",
+      "saved": "已保存你的请求"
+    },
+    "entries": {
+      "title": "旧记录",
+      "add": "快速记录一餐",
+      "addTitle": "记录一餐",
+      "editTitle": "编辑餐食",
+      "meal": "餐次",
+      "what": "吃了什么?",
+      "whatPlaceholder": "例如:一碗米饭,水煮鸡胸",
+      "estimate": "估算克数(可选)",
+      "empty": "请输入食物或克数",
+      "deleteConfirm": "删除这一餐?",
+      "saved": "已记录",
+      "deleted": "已删除"
+    },
+    "meals": {
+      "breakfast": "早餐",
+      "lunch": "午餐",
+      "dinner": "晚餐",
+      "snack": "加餐"
+    },
+    "library": {
+      "link": "食物库",
+      "linkHint": "查看每种食物的热量和营养素",
+      "title": "食物库",
+      "search": "搜索食物",
+      "all": "全部",
+      "empty": "暂无食物",
+      "per100": "每 100 克",
+      "serving": "份量:{{label}} = {{grams}} 克",
+      "calc": "按重量计算",
+      "source": "来源:{{source}}"
+    },
+    "group": {
+      "meat": "肉类",
+      "seafood": "鱼和海鲜",
+      "egg_dairy": "蛋奶",
+      "starch": "淀粉类",
+      "vegetable": "蔬菜",
+      "fruit": "水果",
+      "legume_nut": "豆类和坚果",
+      "fat_oil": "油脂",
+      "dish": "成品菜",
+      "other": "其他"
+    },
+    "state": {
+      "raw": "生",
+      "cooked": "熟"
+    },
+    "body": {
+      "title": "身体数据",
+      "edit": "编辑",
+      "empty": "输入身体数据以计算营养目标。",
+      "sex": "性别",
+      "male": "男",
+      "female": "女",
+      "age": "年龄",
+      "height": "身高(厘米)",
+      "weight": "体重(公斤)",
+      "activityLabel": "活动水平",
+      "goalLabel": "目标",
+      "goal": {
+        "cut": "减脂",
+        "maintain": "保持",
+        "bulk": "增肌"
+      },
+      "activity": {
+        "sedentary": "久坐",
+        "light": "轻度(每周 1-3 次)",
+        "moderate": "中度(每周 3-5 次)",
+        "active": "高强度(每周 6-7 次)",
+        "very_active": "非常活跃"
+      },
+      "save": "保存数据",
+      "saved": "已保存",
+      "appliedTarget": "已保存并按 TDEE 更新目标",
+      "keptManual": "已保存。教练设置了手动目标,保持不变。",
+      "invalid": "请检查数据",
+      "bmr": "基础代谢 {{kcal}} 千卡",
+      "tdee": "每日消耗 {{kcal}} 千卡",
+      "target": "目标 {{kcal}} 千卡",
+      "ageYears": "{{age}} 岁"
+    },
+    "weight": {
+      "title": "体重",
+      "today": "今日体重",
+      "todayLogged": "今日体重(已记录,可修改)",
+      "placeholder": "例如:72.5",
+      "save": "保存体重",
+      "saved": "已记录体重",
+      "savedTarget": "已记录并按 TDEE 更新目标",
+      "invalid": "体重须为 30 到 250 公斤",
+      "latest": "最近一周均值:{{kg}} 公斤",
+      "vsLastWeek": "较上周 {{change}} 公斤",
+      "empty": "最近 12 周没有体重记录。记录体重开始吧。",
+      "chart": "每周平均体重"
+    }
+  }
+}

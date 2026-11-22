@@ -37,7 +37,7 @@ const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: "app.ptapp.mobile",
     adaptiveIcon: {
-      backgroundColor: "#f4f4f5",
+      backgroundColor: "#0c0c0e",
       foregroundImage: "./assets/images/android-icon-foreground.png",
       backgroundImage: "./assets/images/android-icon-background.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",
@@ -53,7 +53,11 @@ const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
       {
         backgroundColor: "#f4f4f5",
         image: "./assets/images/splash-icon.png",
-        imageWidth: 120,
+        imageWidth: 160,
+        dark: {
+          backgroundColor: "#0c0c0e",
+          image: "./assets/images/splash-icon-dark.png",
+        },
       },
     ],
     [

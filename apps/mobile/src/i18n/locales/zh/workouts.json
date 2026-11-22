@@ -1,0 +1,85 @@
+{
+  "train": {
+    "weekPrev": "上一周",
+    "weekNext": "下一周",
+    "weekNow": "本周",
+    "weekProgress": "{{completed}}/{{total}} 个动作 · {{percent}}%",
+    "weekProgressLabel": "本周进度",
+    "summaryLink": "每周概览",
+    "today": "今天",
+    "exerciseCount": "{{count}} 个动作",
+    "rest": "休息",
+    "dayDone": "已完成",
+    "workoutTitle": "今日训练",
+    "restTitle": "休息日",
+    "restDayTitle": "休息与恢复",
+    "restDayDescription": "这一天没有训练。睡好觉,多喝水!",
+    "dayProgress": "当日进度",
+    "dayComplete": "训练完成!好好休息。",
+    "completedAt": "完成于 {{time}} · {{date}}",
+    "personalBest": "新纪录",
+    "openYoutube": "在 YouTube 打开",
+    "playVideo": "观看视频 {{title}}",
+    "sets": "{{count}} 组",
+    "loadError": "无法加载训练计划",
+    "logger": {
+      "weightUnit": "公斤",
+      "repsUnit": "次",
+      "bodyweightHint": "自重训练请留空公斤",
+      "addRow": "添加一组",
+      "removeRow": "删除第 {{n}} 组",
+      "save": "保存",
+      "saving": "保存中…",
+      "saved": "已保存",
+      "personalBest": "新纪录!已保存",
+      "nothingToSave": "请至少输入一组",
+      "hint": "上次:{{set}}",
+      "bodyweight": "自重",
+      "weightPlaceholder": "公斤",
+      "repsPlaceholder": "次",
+      "err": {
+        "missingReps": "第 {{n}} 组:请输入次数",
+        "weight": "第 {{n}} 组:重量须为 0.5 到 500 公斤",
+        "weightStep": "第 {{n}} 组:重量须为 0.5 公斤的倍数",
+        "reps": "第 {{n}} 组:次数须为 1 到 100",
+        "repsInteger": "第 {{n}} 组:次数须为整数",
+        "invalid": "第 {{n}} 组:数据无效",
+        "tooMany": "最多 10 组"
+      }
+    },
+    "logged": {
+      "prefix": "已记录:",
+      "none": "尚未记录"
+    },
+    "timedHint": "计时动作:无需记录组数",
+    "completion": {
+      "done": "已完成 · {{time}}",
+      "undo": "(点按撤销)",
+      "notDue": "还没到训练日",
+      "mark": "标记为已完成",
+      "toast": "已标记完成"
+    },
+    "weekday": {
+      "0": "一",
+      "1": "二",
+      "2": "三",
+      "3": "四",
+      "4": "五",
+      "5": "六",
+      "6": "日"
+    },
+    "summary": {
+      "title": "每周概览",
+      "sessions": "已完成 {{completed}}/{{total}} 个动作",
+      "workouts": "训练",
+      "nutrition": "营养",
+      "weight": "体重",
+      "openWorkouts": "查看训练",
+      "openNutrition": "查看营养",
+      "loggedDays": "已记录 {{count}} 天",
+      "onTargetDays": "{{count}} 天达标",
+      "avgPerDay": "日均:{{kcal}} 千卡",
+      "noNutrition": "本周尚无营养记录。"
+    }
+  }
+}

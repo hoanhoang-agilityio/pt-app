@@ -12,6 +12,7 @@ import { confirmAction, useErrorText } from "@/lib/ui-helpers";
 import { radius, space, useTheme } from "@/theme";
 
 import { useAuth } from "../auth/auth-context";
+import { ProfileAvatar, TraineeProfileSection } from "./TraineeProfileSection";
 
 export const MeScreen = () => {
   const { t } = useTranslation();
@@ -59,12 +60,14 @@ export const MeScreen = () => {
     <Screen>
       <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.lg }}>
         <View style={styles.header}>
-          <Avatar name={name} size={72} />
+          {actor.kind === "user" ? <ProfileAvatar name={name} /> : <Avatar name={name} size={72} />}
           <Txt size={20} weight="700">
             {name}
           </Txt>
           <Txt tone="muted">{roleLabel}</Txt>
         </View>
+
+        {actor.kind === "user" ? <TraineeProfileSection /> : null}
 
         <View style={{ gap: space.sm }}>
           <Txt weight="600">{t("me.language")}</Txt>

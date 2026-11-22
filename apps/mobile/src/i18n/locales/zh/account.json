@@ -1,0 +1,53 @@
+{
+  "acct": {
+    "avatar": {
+      "change": "更换头像",
+      "remove": "删除头像",
+      "removeConfirm": "删除头像?",
+      "saved": "头像已更新",
+      "removed": "头像已删除",
+      "permission": "请在设置中允许访问照片。",
+      "tooLarge": "照片过大,请换一张。"
+    },
+    "statsTitle": "概览",
+    "stats": {
+      "workouts": "本周:已完成 {{completed}}/{{total}} 个动作",
+      "nutrition": "{{count}} 天有营养记录",
+      "open": "查看每周概览"
+    },
+    "bio": {
+      "title": "个人简介",
+      "placeholder": "介绍一下你自己",
+      "save": "保存简介",
+      "saved": "已保存简介",
+      "counter": "{{count}}/{{max}}"
+    },
+    "color": {
+      "title": "聊天颜色",
+      "default": "默认",
+      "saved": "聊天颜色已更新",
+      "orange": "橙色",
+      "red": "红色",
+      "pink": "粉色",
+      "purple": "紫色",
+      "indigo": "靛蓝",
+      "blue": "蓝色",
+      "teal": "青色",
+      "green": "绿色"
+    },
+    "password": {
+      "title": "修改密码",
+      "current": "当前密码",
+      "new": "新密码",
+      "confirm": "再次输入新密码",
+      "submit": "修改密码",
+      "mismatch": "两次输入的密码不一致",
+      "tooShort": "新密码至少 {{min}} 个字符",
+      "same": "新密码不能与当前密码相同",
+      "required": "请输入当前密码",
+      "changed": "密码已修改,其他设备已退出登录。",
+      "hint": "其他设备将退出登录。"
+    },
+    "accentNote": "服务器暂不支持个性化主题色。"
+  }
+}

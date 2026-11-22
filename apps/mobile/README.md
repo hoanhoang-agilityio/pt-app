@@ -1,6 +1,6 @@
 # @pt/mobile
 
-Expo (React Native) app for the PT platform: feed (posts, reactions, comments, profiles), messenger (coach chat, groups, read-only trainee DMs, realtime), push notifications and a Me tab. Workouts and nutrition are not in the app yet (placeholder tab). Spec: `docs/specs/mobile-app.md`.
+Expo (React Native) app for the PT platform: feed (posts, reactions, comments, profiles), messenger (coach chat, groups, read-only trainee DMs, realtime), push notifications and a Me tab. Trainees also get workouts, nutrition, a week summary and profile settings (admin workouts are separate). Spec: `docs/specs/mobile-app.md`.
 
 Stack: Expo SDK 58, Expo Router (typed routes), TypeScript strict, TanStack Query, socket.io-client, expo-secure-store, expo-image, expo-notifications, i18next (vi default, en, zh), `@pt/contracts` for Zod validation.
 

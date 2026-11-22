@@ -1,0 +1,53 @@
+{
+  "acct": {
+    "avatar": {
+      "change": "Change photo",
+      "remove": "Remove photo",
+      "removeConfirm": "Remove your profile photo?",
+      "saved": "Photo updated",
+      "removed": "Photo removed",
+      "permission": "Allow photo access in Settings.",
+      "tooLarge": "Photo too large. Pick another."
+    },
+    "statsTitle": "Overview",
+    "stats": {
+      "workouts": "This week: {{completed}}/{{total}} exercises done",
+      "nutrition": "{{count}} days with nutrition logged",
+      "open": "Open week summary"
+    },
+    "bio": {
+      "title": "Bio",
+      "placeholder": "A few words about you",
+      "save": "Save bio",
+      "saved": "Bio saved",
+      "counter": "{{count}}/{{max}}"
+    },
+    "color": {
+      "title": "Chat colour",
+      "default": "Default",
+      "saved": "Chat colour saved",
+      "orange": "Orange",
+      "red": "Red",
+      "pink": "Pink",
+      "purple": "Purple",
+      "indigo": "Indigo",
+      "blue": "Blue",
+      "teal": "Teal",
+      "green": "Green"
+    },
+    "password": {
+      "title": "Change password",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Repeat new password",
+      "submit": "Change password",
+      "mismatch": "The passwords do not match",
+      "tooShort": "The new password needs at least {{min}} characters",
+      "same": "The new password must differ from the current one",
+      "required": "Enter your current password",
+      "changed": "Password changed. Other devices were signed out.",
+      "hint": "Other devices will be signed out."
+    },
+    "accentNote": "Personal accent colour is not available on the server yet."
+  }
+}

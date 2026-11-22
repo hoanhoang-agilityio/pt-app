@@ -3,9 +3,23 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlatList, Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 
-import { EmptyState, ErrorState, IconButton, Screen, Spinner, Txt } from "@/components/ui";
+import {
+  EmptyState,
+  ErrorState,
+  IconButton,
+  Screen,
+  Spinner,
+  Txt,
+} from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
 import { currentLocale } from "@/i18n";
 import { buildRows, fromCoachMessage, mergeMessages } from "@/lib/chat-model";
@@ -14,7 +28,11 @@ import { formatClock, formatDate } from "@/lib/time";
 import { useErrorText } from "@/lib/ui-helpers";
 import { radius, space, useTheme } from "@/theme";
 
-import { type CoachScope, fetchAround, searchConversation } from "../api-manage";
+import {
+  type CoachScope,
+  fetchAround,
+  searchConversation,
+} from "../api-manage";
 import { MessageBubble } from "../components/MessageBubble";
 
 // Search inside a coach conversation (at least two characters). A result opens
@@ -26,7 +44,10 @@ export const ChatSearchScreen = () => {
   const { state } = useAuth();
   const params = useLocalSearchParams<{ cid: string }>();
   const scope: CoachScope = params.cid === "me" ? "me" : Number(params.cid);
-  const adminId = state.status === "signedIn" && state.me.actor.kind === "admin" ? state.me.actor.id : 0;
+  const adminId =
+    state.status === "signedIn" && state.me.actor.kind === "admin"
+      ? state.me.actor.id
+      : 0;
   const [text, setText] = useState("");
   const [q, setQ] = useState("");
   const [around, setAround] = useState<number | null>(null);
@@ -55,14 +76,17 @@ export const ChatSearchScreen = () => {
     if (!context.data) {
       return [];
     }
-    const viewer = state.status === "signedIn" && state.me.actor.kind === "admin"
-      ? ({ kind: "admin", adminId } as const)
-      : ({ kind: "trainee" } as const);
+    const viewer =
+      state.status === "signedIn" && state.me.actor.kind === "admin"
+        ? ({ kind: "admin", adminId } as const)
+        : ({ kind: "trainee" } as const);
 
     return buildRows(
       mergeMessages(
         [],
-        context.data.messages.map((m) => fromCoachMessage(m, viewer, context.data.profile.colors)),
+        context.data.messages.map((m) =>
+          fromCoachMessage(m, viewer, context.data.profile.colors),
+        ),
       ),
     ).reverse();
   }, [context.data, state, adminId]);
@@ -83,11 +107,17 @@ export const ChatSearchScreen = () => {
         />
       </View>
       {!ready ? (
-        <EmptyState icon="search-outline" title={t("chatSearch.hint", { count: CHAT_SEARCH_MIN_LENGTH })} />
+        <EmptyState
+          icon="search-outline"
+          title={t("chatSearch.hint", { count: CHAT_SEARCH_MIN_LENGTH })}
+        />
       ) : results.isPending ? (
         <Spinner />
       ) : results.isError ? (
-        <ErrorState message={errorText(results.error)} onRetry={() => void results.refetch()} />
+        <ErrorState
+          message={errorText(results.error)}
+          onRetry={() => void results.refetch()}
+        />
       ) : (
         <FlatList
           data={items}
@@ -98,7 +128,9 @@ export const ChatSearchScreen = () => {
               void results.fetchNextPage();
             }
           }}
-          ListEmptyComponent={<EmptyState icon="search-outline" title={t("chatSearch.empty")} />}
+          ListEmptyComponent={
+            <EmptyState icon="search-outline" title={t("chatSearch.empty")} />
+          }
           contentContainerStyle={{ flexGrow: 1 }}
           renderItem={({ item }) => {
             const date = new Date(item.createdAt);
@@ -109,7 +141,12 @@ export const ChatSearchScreen = () => {
                 onPress={() => setAround(item.messageId)}
                 style={[styles.result, { borderBottomColor: theme.line }]}
               >
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Txt weight="600" size={13}>
                     {item.senderName ?? t("chatSearch.unknownSender")}
                   </Txt>
@@ -129,16 +166,27 @@ export const ChatSearchScreen = () => {
           }}
         />
       )}
-      <Modal visible={around !== null} animationType="slide" onRequestClose={() => setAround(null)}>
+      <Modal
+        visible={around !== null}
+        animationType="slide"
+        onRequestClose={() => setAround(null)}
+      >
         <Screen>
           <View style={styles.modalHeader}>
-            <IconButton name="close" label={t("common.close")} onPress={() => setAround(null)} />
+            <IconButton
+              name="close"
+              label={t("common.close")}
+              onPress={() => setAround(null)}
+            />
             <Txt weight="600">{t("chatSearch.context")}</Txt>
           </View>
           {context.isPending ? (
             <Spinner />
           ) : context.isError ? (
-            <ErrorState message={errorText(context.error)} onRetry={() => void context.refetch()} />
+            <ErrorState
+              message={errorText(context.error)}
+              onRetry={() => void context.refetch()}
+            />
           ) : (
             <FlatList
               inverted
@@ -147,14 +195,20 @@ export const ChatSearchScreen = () => {
               contentContainerStyle={{ paddingVertical: space.sm }}
               renderItem={({ item }) =>
                 item.type === "day" ? (
-                  <Txt tone="muted" size={12} style={{ textAlign: "center", marginVertical: space.md }}>
+                  <Txt
+                    tone="muted"
+                    size={12}
+                    style={{ textAlign: "center", marginVertical: space.md }}
+                  >
                     {formatDate(new Date(item.at), currentLocale())}
                   </Txt>
                 ) : (
                   <View
                     style={[
                       { paddingHorizontal: space.md },
-                      item.message.id === around && { backgroundColor: theme.surface },
+                      item.message.id === around && {
+                        backgroundColor: theme.surface,
+                      },
                     ]}
                   >
                     <MessageBubble
@@ -178,7 +232,22 @@ export const ChatSearchScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  input: { minHeight: 46, borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: space.lg, fontSize: 16 },
-  result: { padding: space.lg, gap: 4, borderBottomWidth: StyleSheet.hairlineWidth },
-  modalHeader: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.sm },
+  input: {
+    minHeight: 46,
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.lg,
+    fontSize: 16,
+  },
+  result: {
+    padding: space.lg,
+    gap: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    paddingHorizontal: space.sm,
+  },
 });

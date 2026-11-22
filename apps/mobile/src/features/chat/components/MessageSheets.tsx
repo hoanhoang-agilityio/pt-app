@@ -19,9 +19,7 @@ import {
 } from "../api-manage";
 
 export type MessageScope =
-  | { kind: "coach" }
-  | { kind: "dm" }
-  | { kind: "group"; groupId: number };
+  { kind: "coach" } | { kind: "dm" } | { kind: "group"; groupId: number };
 
 const scopeKey = (scope: MessageScope) =>
   scope.kind === "group" ? `group:${scope.groupId}` : scope.kind;
@@ -56,11 +54,18 @@ export const EditsSheet = ({
   });
 
   return (
-    <Sheet visible={messageId !== null} onClose={onClose} title={t("chatx.editHistory")}>
+    <Sheet
+      visible={messageId !== null}
+      onClose={onClose}
+      title={t("chatx.editHistory")}
+    >
       {query.isPending ? (
         <Spinner />
       ) : query.isError ? (
-        <ErrorState message={errorText(query.error)} onRetry={() => void query.refetch()} />
+        <ErrorState
+          message={errorText(query.error)}
+          onRetry={() => void query.refetch()}
+        />
       ) : query.data.length === 0 ? (
         <Txt tone="muted">{t("chatx.editHistoryEmpty")}</Txt>
       ) : (
@@ -98,11 +103,18 @@ export const SeenBySheet = ({
   });
 
   return (
-    <Sheet visible={messageId !== null} onClose={onClose} title={t("chatx.seenByTitle")}>
+    <Sheet
+      visible={messageId !== null}
+      onClose={onClose}
+      title={t("chatx.seenByTitle")}
+    >
       {query.isPending ? (
         <Spinner />
       ) : query.isError ? (
-        <ErrorState message={errorText(query.error)} onRetry={() => void query.refetch()} />
+        <ErrorState
+          message={errorText(query.error)}
+          onRetry={() => void query.refetch()}
+        />
       ) : query.data.seenBy.length === 0 ? (
         <Txt tone="muted">{t("chatx.seenByEmpty")}</Txt>
       ) : (
@@ -110,7 +122,12 @@ export const SeenBySheet = ({
           {query.data.seenBy.map((person) => (
             <View
               key={person.key}
-              style={{ flexDirection: "row", justifyContent: "space-between", minHeight: 44, alignItems: "center" }}
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                minHeight: 44,
+                alignItems: "center",
+              }}
             >
               <Txt>{person.name}</Txt>
               <Txt tone="muted" size={12}>
@@ -145,11 +162,18 @@ export const OriginalSheet = ({
   });
 
   return (
-    <Sheet visible={messageId !== null} onClose={onClose} title={t("chatx.originalTitle")}>
+    <Sheet
+      visible={messageId !== null}
+      onClose={onClose}
+      title={t("chatx.originalTitle")}
+    >
       {query.isPending ? (
         <Spinner />
       ) : query.isError ? (
-        <ErrorState message={errorText(query.error)} onRetry={() => void query.refetch()} />
+        <ErrorState
+          message={errorText(query.error)}
+          onRetry={() => void query.refetch()}
+        />
       ) : query.data.body === "" ? (
         <Txt tone="muted">{t("chatx.originalEmpty")}</Txt>
       ) : (

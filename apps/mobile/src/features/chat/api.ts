@@ -6,7 +6,6 @@ import {
   chatPhotoResponseSchema,
   type ChatProfile,
   chatThreadResponseSchema,
-  chatUnreadResponseSchema,
   dmInboxResponseSchema,
   dmThreadResponseSchema,
   groupListResponseSchema,
@@ -19,6 +18,7 @@ import {
 } from "@pt/contracts";
 
 import { api } from "@/lib/api";
+import { unreadWithBadgeSchema } from "@/lib/badge";
 import {
   type ChatMsg,
   fromCoachMessage,
@@ -71,7 +71,7 @@ export const fetchInbox = () =>
   api.get("/v1/chat/inbox", { schema: chatInboxResponseSchema });
 
 export const fetchUnread = () =>
-  api.get("/v1/chat/unread", { schema: chatUnreadResponseSchema });
+  api.get("/v1/chat/unread", { schema: unreadWithBadgeSchema });
 
 export const fetchBubbles = () =>
   api.get("/v1/chat/bubbles", { schema: chatBubblesResponseSchema });
@@ -167,8 +167,12 @@ export const coachApi = (
       };
     }
     return {
-      messages: response.messages.map((m) => fromCoachMessage(m, viewer, response.profile.colors)),
-      changes: response.changes.map((m) => fromCoachMessage(m, viewer, response.profile.colors)),
+      messages: response.messages.map((m) =>
+        fromCoachMessage(m, viewer, response.profile.colors),
+      ),
+      changes: response.changes.map((m) =>
+        fromCoachMessage(m, viewer, response.profile.colors),
+      ),
       hasMore: response.hasMore,
       lastChangeAt: response.lastChangeAt,
       peerReadUpTo: response.peerReadUpTo,
@@ -212,9 +216,14 @@ export const coachApi = (
       await api.post(`${base}/read`, { body: { lastReadMessageId } });
     },
     uploadPhoto: async (photo) => {
-      const result = await api.upload(photoPath, photo.blob, PHOTO_CONTENT_TYPE, {
-        schema: chatPhotoResponseSchema,
-      });
+      const result = await api.upload(
+        photoPath,
+        photo.blob,
+        PHOTO_CONTENT_TYPE,
+        {
+          schema: chatPhotoResponseSchema,
+        },
+      );
 
       return result.photo.id;
     },
@@ -294,9 +303,14 @@ export const groupApi = (groupId: number, viewerKey: string) => {
       await api.post(`${base}/read`, { body: { lastReadMessageId } });
     },
     uploadPhoto: async (photo) => {
-      const result = await api.upload(`${base}/photos`, photo.blob, PHOTO_CONTENT_TYPE, {
-        schema: groupPhotoResponseSchema,
-      });
+      const result = await api.upload(
+        `${base}/photos`,
+        photo.blob,
+        PHOTO_CONTENT_TYPE,
+        {
+          schema: groupPhotoResponseSchema,
+        },
+      );
 
       return result.photo.id;
     },
@@ -310,7 +324,9 @@ export const groupApi = (groupId: number, viewerKey: string) => {
 export const dmApi = (conversationId: number, myUserId: number) => {
   const base = `/v1/dm/conversations/${conversationId}`;
 
-  const load = async (query: ThreadQuery): Promise<ThreadPage<{ readOnly: boolean }>> => {
+  const load = async (
+    query: ThreadQuery,
+  ): Promise<ThreadPage<{ readOnly: boolean }>> => {
     const response = await api.get(`${base}/messages`, {
       query: { before: query.before, after: query.after },
       schema: dmThreadResponseSchema,
@@ -357,4 +373,6 @@ export const fetchGiphy = (q: string) =>
   });
 
 export const fetchCustomStickers = () =>
-  api.get("/v1/chat/stickers/custom", { schema: stickerCustomListResponseSchema });
+  api.get("/v1/chat/stickers/custom", {
+    schema: stickerCustomListResponseSchema,
+  });

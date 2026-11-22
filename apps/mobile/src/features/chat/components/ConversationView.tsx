@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { type Href, useRouter } from "expo-router";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,7 +16,15 @@ import { AuthImage } from "@/components/AuthImage";
 import { Avatar } from "@/components/Avatar";
 import { ReactionPicker } from "@/components/ReactionPicker";
 import { Sheet, SheetAction } from "@/components/Sheet";
-import { EmptyState, ErrorState, IconButton, Screen, Skeleton, Spinner, Txt } from "@/components/ui";
+import {
+  EmptyState,
+  ErrorState,
+  IconButton,
+  Screen,
+  Skeleton,
+  Spinner,
+  Txt,
+} from "@/components/ui";
 import { ReportSheet } from "@/features/social/components/ReportSheet";
 import { currentLocale } from "@/i18n";
 import { parseChatCommand } from "@/lib/chat-commands";
@@ -38,7 +46,12 @@ import type { ChatApi, SendPayload } from "../api";
 import type { useThread } from "../use-thread";
 import { Composer, type ComposeSubmit } from "./Composer";
 import { MessageBubble } from "./MessageBubble";
-import { EditsSheet, type MessageScope, OriginalSheet, SeenBySheet } from "./MessageSheets";
+import {
+  EditsSheet,
+  type MessageScope,
+  OriginalSheet,
+  SeenBySheet,
+} from "./MessageSheets";
 import type { PickedSticker } from "./StickerSheet";
 
 type Thread = ReturnType<typeof useThread<unknown>>;
@@ -117,9 +130,13 @@ export const ConversationView = ({
   // Inverted list: newest first.
   const data = useMemo(() => [...rows].reverse(), [rows]);
   const seenId =
-    seenMode === "peer" ? lastSeenOwnId(thread.messages, thread.peerReadUpTo) : null;
+    seenMode === "peer"
+      ? lastSeenOwnId(thread.messages, thread.peerReadUpTo)
+      : null;
   const lastOwnId = useMemo(
-    () => [...thread.messages].reverse().find((m) => m.mine && m.id !== null)?.id ?? null,
+    () =>
+      [...thread.messages].reverse().find((m) => m.mine && m.id !== null)?.id ??
+      null,
     [thread.messages],
   );
 
@@ -173,7 +190,10 @@ export const ConversationView = ({
     void transmit(clientId);
   };
 
-  const sendSticker = (sticker: PickedSticker, preview: { url: string; alt: string }) => {
+  const sendSticker = (
+    sticker: PickedSticker,
+    preview: { url: string; alt: string },
+  ) => {
     const clientId = uuid();
 
     payloads.current.set(clientId, { sticker });
@@ -182,7 +202,8 @@ export const ConversationView = ({
       sticker: {
         url: preview.url,
         alt: preview.alt,
-        kind: "pack" in sticker ? "pack" : "giphy" in sticker ? "giphy" : "custom",
+        kind:
+          "pack" in sticker ? "pack" : "giphy" in sticker ? "giphy" : "custom",
       },
     });
     void transmit(clientId);
@@ -276,7 +297,10 @@ export const ConversationView = ({
     const seenLabel =
       id !== null && seenMode === "peer" && id === seenId && id === lastOwnId
         ? t("chat.seen")
-        : seenMode === "count" && id !== null && id === lastOwnId && item.message.seenCount > 0
+        : seenMode === "count" &&
+            id !== null &&
+            id === lastOwnId &&
+            item.message.seenCount > 0
           ? t("chat.seenBy", { count: item.message.seenCount })
           : null;
 
@@ -308,22 +332,47 @@ export const ConversationView = ({
     actions.sticker === null &&
     !actions.deleted;
   const canReport =
-    actions !== null && !actions.mine && !actions.deleted && scope.kind !== "dm" && actions.kind === "message";
+    actions !== null &&
+    !actions.mine &&
+    !actions.deleted &&
+    scope.kind !== "dm" &&
+    actions.kind === "message";
 
   return (
     <Screen>
       <View style={[styles.header, { borderBottomColor: theme.line }]}>
-        <IconButton name="chevron-back" label={t("common.back")} onPress={() => router.back()} />
+        <IconButton
+          name="chevron-back"
+          label={t("common.back")}
+          onPress={() => {
+            // Opened cold (push notification): there may be nothing to go back to.
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/messages" as string as Href);
+            }
+          }}
+        />
         <Pressable
           accessibilityRole="button"
           disabled={!onOpenInfo}
           onPress={onOpenInfo}
-          style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm }}
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: space.sm,
+          }}
         >
           <View>
             <Avatar name={avatarName} uri={avatarUri} size={36} />
             {presence?.online ? (
-              <View style={[styles.dot, { backgroundColor: theme.success, borderColor: theme.bg }]} />
+              <View
+                style={[
+                  styles.dot,
+                  { backgroundColor: theme.success, borderColor: theme.bg },
+                ]}
+              />
             ) : null}
           </View>
           <View style={{ flex: 1 }}>
@@ -335,7 +384,11 @@ export const ConversationView = ({
                 {t("chat.typing")}
               </Txt>
             ) : presence?.text ? (
-              <Txt tone={presence.online ? "accent" : "muted"} size={12} numberOfLines={1}>
+              <Txt
+                tone={presence.online ? "accent" : "muted"}
+                size={12}
+                numberOfLines={1}
+              >
                 {presence.text}
               </Txt>
             ) : subtitle ? (
@@ -352,13 +405,27 @@ export const ConversationView = ({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {thread.status === "loading" ? (
-          <View style={{ flex: 1, padding: space.lg, gap: space.md, justifyContent: "flex-end" }}>
+          <View
+            style={{
+              flex: 1,
+              padding: space.lg,
+              gap: space.md,
+              justifyContent: "flex-end",
+            }}
+          >
             <Skeleton width="60%" height={36} />
-            <Skeleton width="45%" height={36} style={{ alignSelf: "flex-end" }} />
+            <Skeleton
+              width="45%"
+              height={36}
+              style={{ alignSelf: "flex-end" }}
+            />
             <Skeleton width="70%" height={36} />
           </View>
         ) : thread.status === "error" && thread.messages.length === 0 ? (
-          <ErrorState message={errorText(thread.error)} onRetry={() => void thread.refresh()} />
+          <ErrorState
+            message={errorText(thread.error)}
+            onRetry={() => void thread.refresh()}
+          />
         ) : (
           <FlatList
             inverted
@@ -395,7 +462,12 @@ export const ConversationView = ({
             allowStickers={allowStickers}
           />
         ) : banner ? (
-          <View style={[styles.banner, { backgroundColor: theme.surface, borderTopColor: theme.line }]}>
+          <View
+            style={[
+              styles.banner,
+              { backgroundColor: theme.surface, borderTopColor: theme.line },
+            ]}
+          >
             <Txt tone="muted" size={13} style={{ textAlign: "center" }}>
               {banner}
             </Txt>
@@ -504,11 +576,23 @@ export const ConversationView = ({
         ) : null}
       </Sheet>
 
-      <EditsSheet scope={scope} messageId={historyId} onClose={() => setHistoryId(null)} />
+      <EditsSheet
+        scope={scope}
+        messageId={historyId}
+        onClose={() => setHistoryId(null)}
+      />
       {scope.kind === "group" ? (
-        <SeenBySheet groupId={scope.groupId} messageId={seenId_} onClose={() => setSeenId(null)} />
+        <SeenBySheet
+          groupId={scope.groupId}
+          messageId={seenId_}
+          onClose={() => setSeenId(null)}
+        />
       ) : null}
-      <OriginalSheet scope={scope} messageId={originalId} onClose={() => setOriginalId(null)} />
+      <OriginalSheet
+        scope={scope}
+        messageId={originalId}
+        onClose={() => setOriginalId(null)}
+      />
       <ReportSheet
         visible={reportId !== null}
         onClose={() => setReportId(null)}
@@ -516,10 +600,23 @@ export const ConversationView = ({
         targetId={reportId ?? 0}
       />
 
-      <Modal visible={viewerUri !== null} transparent animationType="fade" onRequestClose={() => setViewerUri(null)}>
-        <Pressable style={styles.viewer} onPress={() => setViewerUri(null)} accessibilityRole="button">
+      <Modal
+        visible={viewerUri !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewerUri(null)}
+      >
+        <Pressable
+          style={styles.viewer}
+          onPress={() => setViewerUri(null)}
+          accessibilityRole="button"
+        >
           {viewerUri ? (
-            <AuthImage uri={viewerUri} style={{ width: "100%", height: "80%" }} contentFit="contain" />
+            <AuthImage
+              uri={viewerUri}
+              style={{ width: "100%", height: "80%" }}
+              contentFit="contain"
+            />
           ) : null}
         </Pressable>
       </Modal>
@@ -547,5 +644,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   banner: { padding: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
-  viewer: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
+  viewer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

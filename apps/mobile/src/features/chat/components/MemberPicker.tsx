@@ -26,8 +26,14 @@ export const MemberPicker = ({
   const { t } = useTranslation();
   const theme = useTheme();
   const [query, setQuery] = useState("");
-  const trainees = useMemo(() => filterCandidates(candidates.trainees, query), [candidates.trainees, query]);
-  const pts = useMemo(() => filterCandidates(candidates.pts, query), [candidates.pts, query]);
+  const trainees = useMemo(
+    () => filterCandidates(candidates.trainees, query),
+    [candidates.trainees, query],
+  );
+  const pts = useMemo(
+    () => filterCandidates(candidates.pts, query),
+    [candidates.pts, query],
+  );
   const full = selected.size >= max;
 
   if (candidates.trainees.length + candidates.pts.length === 0) {
@@ -40,7 +46,12 @@ export const MemberPicker = ({
   const renderList = (title: string, items: typeof trainees) =>
     items.length === 0 ? null : (
       <View>
-        <Txt tone="muted" size={13} weight="600" style={{ marginVertical: space.sm }}>
+        <Txt
+          tone="muted"
+          size={13}
+          weight="600"
+          style={{ marginVertical: space.sm }}
+        >
           {title}
         </Txt>
         {items.map((item) => {
@@ -94,6 +105,17 @@ export const MemberPicker = ({
 };
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 48 },
-  input: { minHeight: 44, borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: space.lg, fontSize: 16 },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    minHeight: 48,
+  },
+  input: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.lg,
+    fontSize: 16,
+  },
 });

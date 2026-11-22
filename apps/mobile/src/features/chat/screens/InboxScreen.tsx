@@ -1,17 +1,36 @@
 import { type Href, useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
+import {
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  View,
+} from "react-native";
 
 import { Avatar } from "@/components/Avatar";
-import { EmptyState, ErrorState, IconButton, Screen, Skeleton, Txt } from "@/components/ui";
+import {
+  EmptyState,
+  ErrorState,
+  IconButton,
+  Screen,
+  Skeleton,
+  Txt,
+} from "@/components/ui";
 import { currentLocale } from "@/i18n";
 import { formatListTime } from "@/lib/time";
 import { useErrorText } from "@/lib/ui-helpers";
 import { space, useTheme } from "@/theme";
 
 import { useAuth } from "../../auth/auth-context";
-import { useBubbles, useDmInbox, useGroups, useInbox, useUnread } from "../hooks";
+import {
+  useBubbles,
+  useDmInbox,
+  useGroups,
+  useInbox,
+  useUnread,
+} from "../hooks";
 
 type Row = {
   key: string;
@@ -37,15 +56,31 @@ const InboxRow = ({ row }: { row: Row }) => {
     >
       <Avatar name={row.avatarName} uri={row.avatarUri} size={50} />
       <View style={{ flex: 1, gap: 2 }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space.sm }}>
-          <Txt weight={row.unread > 0 ? "700" : "600"} numberOfLines={1} style={{ flexShrink: 1 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            gap: space.sm,
+          }}
+        >
+          <Txt
+            weight={row.unread > 0 ? "700" : "600"}
+            numberOfLines={1}
+            style={{ flexShrink: 1 }}
+          >
             {row.title}
           </Txt>
           <Txt tone="muted" size={12}>
             {row.time}
           </Txt>
         </View>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space.sm }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            gap: space.sm,
+          }}
+        >
           <Txt
             tone={row.unread > 0 ? "default" : "muted"}
             weight={row.unread > 0 ? "600" : "400"}
@@ -76,7 +111,10 @@ const InboxRow = ({ row }: { row: Row }) => {
 const RowSkeletons = () => (
   <View style={{ padding: space.lg, gap: space.lg }}>
     {[0, 1, 2, 3, 4].map((i) => (
-      <View key={i} style={{ flexDirection: "row", gap: space.md, alignItems: "center" }}>
+      <View
+        key={i}
+        style={{ flexDirection: "row", gap: space.md, alignItems: "center" }}
+      >
         <Skeleton width={50} height={50} round />
         <View style={{ gap: 8, flex: 1 }}>
           <Skeleton width="50%" height={12} />
@@ -114,7 +152,8 @@ export const InboxScreen = () => {
         key: `c${item.conversationId}`,
         title: item.displayName,
         preview:
-          (item.lastFromAdmin ? t("chat.you") : "") + (item.preview || t("chat.photoPreview")),
+          (item.lastFromAdmin ? t("chat.you") : "") +
+          (item.preview || t("chat.photoPreview")),
         time: formatListTime(item.lastMessageAt, now, locale, labels),
         unread: item.unread,
         avatarName: item.displayName,
@@ -191,7 +230,8 @@ export const InboxScreen = () => {
 
   const query = tab === "chats" ? (isAdmin ? inbox : dm) : groups;
   const rows = tab === "chats" ? chatRows : groupRows;
-  const pending = tab === "chats" ? (isAdmin ? inbox.isPending : false) : groups.isPending;
+  const pending =
+    tab === "chats" ? (isAdmin ? inbox.isPending : false) : groups.isPending;
   const refreshing = query.isRefetching;
   const refresh = () => {
     void inbox.refetch();
@@ -204,7 +244,13 @@ export const InboxScreen = () => {
   return (
     <Screen>
       <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <Txt size={24} weight="700">
             {t("chat.title")}
           </Txt>
@@ -223,9 +269,16 @@ export const InboxScreen = () => {
               accessibilityRole="tab"
               accessibilityState={{ selected: tab === value }}
               onPress={() => setTab(value)}
-              style={[styles.tab, tab === value && { backgroundColor: theme.surface }]}
+              style={[
+                styles.tab,
+                tab === value && { backgroundColor: theme.surface },
+              ]}
             >
-              <Txt size={14} weight="600" tone={tab === value ? "default" : "muted"}>
+              <Txt
+                size={14}
+                weight="600"
+                tone={tab === value ? "default" : "muted"}
+              >
                 {t(value === "chats" ? "chat.tabChats" : "chat.tabGroups")}
               </Txt>
             </Pressable>
@@ -239,7 +292,9 @@ export const InboxScreen = () => {
           data={pending ? [] : rows}
           keyExtractor={(row) => row.key}
           renderItem={({ item }) => <InboxRow row={item} />}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+          }
           contentContainerStyle={{ flexGrow: 1 }}
           ListEmptyComponent={
             pending ? (
@@ -275,6 +330,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  tabs: { flexDirection: "row", borderRadius: 10, padding: 3, marginTop: space.md, marginBottom: space.sm },
-  tab: { flex: 1, minHeight: 34, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  tabs: {
+    flexDirection: "row",
+    borderRadius: 10,
+    padding: 3,
+    marginTop: space.md,
+    marginBottom: space.sm,
+  },
+  tab: {
+    flex: 1,
+    minHeight: 34,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

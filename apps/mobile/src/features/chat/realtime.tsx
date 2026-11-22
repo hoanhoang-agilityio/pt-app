@@ -66,10 +66,7 @@ export const RealtimeProvider = ({
 
   const notifyConnect = useCallback(() => {
     listeners.current.forEach((listener) => listener.onConnect?.());
-    for (const key of [
-      ["chat"],
-      ["social", "notifications"],
-    ] as const) {
+    for (const key of [["chat"], ["social", "notifications"]] as const) {
       void queryClient.invalidateQueries({ queryKey: key });
     }
   }, [queryClient]);
@@ -92,7 +89,11 @@ export const RealtimeProvider = ({
     socket.on("connect", () => {
       setState("connected");
       followed.current.forEach((_count, id) => {
-        socket.emit(REALTIME_EVENTS.subscribe, { conversationId: id }, () => undefined);
+        socket.emit(
+          REALTIME_EVENTS.subscribe,
+          { conversationId: id },
+          () => undefined,
+        );
       });
       notifyConnect();
     });
@@ -101,14 +102,17 @@ export const RealtimeProvider = ({
         setState("connecting");
       }
     });
-    socket.on("connect_error", (error: Error & { data?: { code?: string } }) => {
-      if (error.data?.code && FATAL_CODES.has(error.data.code)) {
-        socket.disconnect();
-        setState("unavailable");
-      } else {
-        setState("connecting");
-      }
-    });
+    socket.on(
+      "connect_error",
+      (error: Error & { data?: { code?: string } }) => {
+        if (error.data?.code && FATAL_CODES.has(error.data.code)) {
+          socket.disconnect();
+          setState("unavailable");
+        } else {
+          setState("connecting");
+        }
+      },
+    );
     socket.onAny((name: string, data: unknown) => {
       if (isAuthRevoked(name)) {
         socket.disconnect();
@@ -196,7 +200,11 @@ export const RealtimeProvider = ({
     [state, subscribe, emitTyping, follow],
   );
 
-  return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;
+  return (
+    <RealtimeContext.Provider value={value}>
+      {children}
+    </RealtimeContext.Provider>
+  );
 };
 
 export const useRealtime = () => {

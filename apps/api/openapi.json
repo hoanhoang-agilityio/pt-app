@@ -16462,11 +16462,6 @@
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991
-                        },
-                        "appBadge": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
                         }
                       },
                       "required": [
@@ -16483,11 +16478,6 @@
                       "type": "object",
                       "properties": {
                         "count": {
-                          "type": "integer",
-                          "minimum": -9007199254740991,
-                          "maximum": 9007199254740991
-                        },
-                        "appBadge": {
                           "type": "integer",
                           "minimum": -9007199254740991,
                           "maximum": 9007199254740991

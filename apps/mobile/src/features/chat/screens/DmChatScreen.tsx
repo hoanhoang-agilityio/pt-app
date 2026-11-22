@@ -20,16 +20,21 @@ export const DmChatScreen = () => {
   const { state } = useAuth();
   const myId = state.status === "signedIn" ? state.me.actor.id : 0;
   const isSuperAdmin =
-    state.status === "signedIn" && state.me.actor.kind === "admin" && state.me.actor.role === "super_admin";
+    state.status === "signedIn" &&
+    state.me.actor.kind === "admin" &&
+    state.me.actor.role === "super_admin";
   const inbox = useDmInbox();
-  const entry = inbox.data?.conversations.find((c) => c.conversationId === conversationId);
-  const { load, markRead, chat } = useMemo(() => dmApi(conversationId, myId), [conversationId, myId]);
+  const entry = inbox.data?.conversations.find(
+    (c) => c.conversationId === conversationId,
+  );
+  const { load, markRead, chat } = useMemo(
+    () => dmApi(conversationId, myId),
+    [conversationId, myId],
+  );
   const thread = useThread<{ readOnly: boolean }>({
     target: { kind: "dm", conversationId },
     load,
-    onRead: () => {
-      void markRead().catch(() => undefined);
-    },
+    onRead: () => markRead(),
   });
 
   return (

@@ -1,5 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { CHAT_BODY_MAX_LENGTH, CHAT_MESSAGE_MAX_PHOTOS, CHAT_PHOTO_UPLOAD_CONCURRENCY , STICKER_PACK_ID, stickerBundledUrl } from "@pt/contracts";
+import {
+  CHAT_BODY_MAX_LENGTH,
+  CHAT_MESSAGE_MAX_PHOTOS,
+  CHAT_PHOTO_UPLOAD_CONCURRENCY,
+  STICKER_PACK_ID,
+  stickerBundledUrl,
+} from "@pt/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,9 +25,16 @@ import { Txt } from "@/components/ui";
 import { currentLocale } from "@/i18n";
 import { matchCommandSuggestions, parseChatCommand } from "@/lib/chat-commands";
 import type { ChatMsg } from "@/lib/chat-model";
-import { PhotoPermissionError, pickPhotos,type PreparedPhoto } from "@/lib/photos";
+import {
+  PhotoPermissionError,
+  pickPhotos,
+  type PreparedPhoto,
+} from "@/lib/photos";
 import { qk } from "@/lib/query-keys";
-import { getGiphySuggestQuery, matchStickerSuggestions } from "@/lib/sticker-suggest";
+import {
+  getGiphySuggestQuery,
+  matchStickerSuggestions,
+} from "@/lib/sticker-suggest";
 import { useErrorText } from "@/lib/ui-helpers";
 import { usePhotoUploads } from "@/lib/use-photo-uploads";
 import { radius, space, useTheme } from "@/theme";
@@ -52,7 +65,10 @@ export const Composer = ({
 }: {
   uploadPhoto: (photo: PreparedPhoto) => Promise<number>;
   onSubmit: (value: ComposeSubmit) => void;
-  onSticker: (sticker: PickedSticker, preview: { url: string; alt: string }) => void;
+  onSticker: (
+    sticker: PickedSticker,
+    preview: { url: string; alt: string },
+  ) => void;
   onTyping?: () => void;
   replyTo: ChatMsg | null;
   onCancelReply: () => void;
@@ -93,7 +109,8 @@ export const Composer = ({
   const commands = showSuggestions ? matchCommandSuggestions(text) : [];
   const parsed = parseChatCommand(text);
   const bundledSuggestions = useMemo(
-    () => (showSuggestions ? matchStickerSuggestions(text, currentLocale()) : []),
+    () =>
+      showSuggestions ? matchStickerSuggestions(text, currentLocale()) : [],
     [showSuggestions, text],
   );
   const giphyText = showSuggestions ? getGiphySuggestQuery(settled) : null;
@@ -104,13 +121,17 @@ export const Composer = ({
     staleTime: 5 * 60_000,
   });
   const giphySuggestions =
-    giphyText !== null && giphyText === getGiphySuggestQuery(text) ? (giphyQuery.data?.stickers ?? []).slice(0, 6) : [];
+    giphyText !== null && giphyText === getGiphySuggestQuery(text)
+      ? (giphyQuery.data?.stickers ?? []).slice(0, 6)
+      : [];
 
   const trimmed = text.trim();
   const canSend =
     editing !== null
       ? trimmed !== "" && trimmed !== editing.body
-      : (trimmed !== "" || photos.ids.length > 0) && !photos.isUploading && !photos.hasFailed;
+      : (trimmed !== "" || photos.ids.length > 0) &&
+        !photos.isUploading &&
+        !photos.hasFailed;
 
   const submit = () => {
     if (!canSend) {
@@ -136,7 +157,9 @@ export const Composer = ({
 
   const addPhotos = async () => {
     try {
-      const picked = await pickPhotos(CHAT_MESSAGE_MAX_PHOTOS - photos.items.length);
+      const picked = await pickPhotos(
+        CHAT_MESSAGE_MAX_PHOTOS - photos.items.length,
+      );
 
       photos.add(picked);
     } catch (caught) {
@@ -162,10 +185,20 @@ export const Composer = ({
       {replyTo ? (
         <View style={styles.banner}>
           <Txt size={12} tone="muted" numberOfLines={1} style={{ flex: 1 }}>
-            {t("chat.replyingTo", { name: replyTo.senderName ?? t("common.you") })}:{" "}
-            {replyTo.body || (replyTo.photos.length > 0 ? t("chat.photoPreview") : t("chat.stickerPreview"))}
+            {t("chat.replyingTo", {
+              name: replyTo.senderName ?? t("common.you"),
+            })}
+            :{" "}
+            {replyTo.body ||
+              (replyTo.photos.length > 0
+                ? t("chat.photoPreview")
+                : t("chat.stickerPreview"))}
           </Txt>
-          <Pressable accessibilityRole="button" accessibilityLabel={t("common.cancel")} onPress={onCancelReply}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("common.cancel")}
+            onPress={onCancelReply}
+          >
             <Ionicons name="close" size={18} color={theme.muted} />
           </Pressable>
         </View>
@@ -188,11 +221,22 @@ export const Composer = ({
         </View>
       ) : null}
       {photos.items.length > 0 && !editing ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: space.sm }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginBottom: space.sm }}
+        >
           <View style={{ flexDirection: "row", gap: space.sm }}>
             {photos.items.map((item) => (
-              <View key={item.key} style={[styles.thumb, { backgroundColor: theme.line }]}>
-                <AuthImage uri={item.previewUri} style={styles.thumb} contentFit="cover" />
+              <View
+                key={item.key}
+                style={[styles.thumb, { backgroundColor: theme.line }]}
+              >
+                <AuthImage
+                  uri={item.previewUri}
+                  style={styles.thumb}
+                  contentFit="cover"
+                />
                 {item.status === "uploading" ? (
                   <View style={styles.thumbOverlay}>
                     <ActivityIndicator color="#fff" />
@@ -232,18 +276,36 @@ export const Composer = ({
               style={[styles.chip, { borderColor: theme.line }]}
             >
               <Txt size={13} weight="600">{`/${command.name}`}</Txt>
-              <Txt size={12} tone="muted">{` ${t(`chatx.commands.${command.name}`)}`}</Txt>
+              <Txt
+                size={12}
+                tone="muted"
+              >{` ${t(`chatx.commands.${command.name}`)}`}</Txt>
             </Pressable>
           ))}
         </View>
       ) : parsed.command ? (
-        <Txt tone="accent" size={12} style={{ paddingHorizontal: space.sm, paddingBottom: space.xs }}>
+        <Txt
+          tone="accent"
+          size={12}
+          style={{ paddingHorizontal: space.sm, paddingBottom: space.xs }}
+        >
           {t(`chatx.commands.${parsed.command.name}`)}
         </Txt>
       ) : null}
       {bundledSuggestions.length + giphySuggestions.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ marginBottom: space.sm }}>
-          <View style={{ flexDirection: "row", gap: space.sm, alignItems: "center" }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={{ marginBottom: space.sm }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              gap: space.sm,
+              alignItems: "center",
+            }}
+          >
             {bundledSuggestions.map((sticker) => (
               <Pressable
                 key={sticker.id}
@@ -252,7 +314,10 @@ export const Composer = ({
                 onPress={() => {
                   onSticker(
                     { pack: sticker.pack, id: sticker.id },
-                    { url: stickerBundledUrl(STICKER_PACK_ID, sticker.id), alt: sticker.alt },
+                    {
+                      url: stickerBundledUrl(STICKER_PACK_ID, sticker.id),
+                      alt: sticker.alt,
+                    },
                   );
                   setText("");
                 }}
@@ -267,12 +332,22 @@ export const Composer = ({
                 accessibilityRole="button"
                 accessibilityLabel={sticker.alt}
                 onPress={() => {
-                  onSticker({ giphyId: sticker.giphyId, url: sticker.url }, { url: sticker.previewUrl || sticker.url, alt: sticker.alt });
+                  onSticker(
+                    { giphyId: sticker.giphyId, url: sticker.url },
+                    {
+                      url: sticker.previewUrl || sticker.url,
+                      alt: sticker.alt,
+                    },
+                  );
                   setText("");
                 }}
                 style={styles.suggestCell}
               >
-                <AuthImage uri={sticker.previewUrl || sticker.url} style={{ width: 44, height: 44 }} contentFit="contain" />
+                <AuthImage
+                  uri={sticker.previewUrl || sticker.url}
+                  style={{ width: 44, height: 44 }}
+                  contentFit="contain"
+                />
               </Pressable>
             ))}
           </View>
@@ -313,7 +388,14 @@ export const Composer = ({
           placeholderTextColor={theme.muted}
           multiline
           maxLength={CHAT_BODY_MAX_LENGTH}
-          style={[styles.input, { color: theme.fg, borderColor: theme.line, backgroundColor: theme.bg }]}
+          style={[
+            styles.input,
+            {
+              color: theme.fg,
+              borderColor: theme.line,
+              backgroundColor: theme.bg,
+            },
+          ]}
         />
         <Pressable
           accessibilityRole="button"
@@ -321,9 +403,16 @@ export const Composer = ({
           accessibilityState={{ disabled: !canSend }}
           onPress={submit}
           disabled={!canSend}
-          style={[styles.send, { backgroundColor: theme.accent, opacity: canSend ? 1 : 0.4 }]}
+          style={[
+            styles.send,
+            { backgroundColor: theme.accent, opacity: canSend ? 1 : 0.4 },
+          ]}
         >
-          <Ionicons name={editing ? "checkmark" : "arrow-up"} size={20} color={theme.accentFg} />
+          <Ionicons
+            name={editing ? "checkmark" : "arrow-up"}
+            size={20}
+            color={theme.accentFg}
+          />
         </Pressable>
       </View>
       <StickerSheet
@@ -336,13 +425,40 @@ export const Composer = ({
 };
 
 const styles = StyleSheet.create({
-  wrap: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: space.sm, paddingTop: space.sm },
-  banner: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.sm, paddingBottom: space.sm },
+  wrap: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: space.sm,
+    paddingTop: space.sm,
+  },
+  banner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+    paddingHorizontal: space.sm,
+    paddingBottom: space.sm,
+  },
   row: { flexDirection: "row", alignItems: "flex-end", gap: space.xs },
   suggestRow: { flexDirection: "row", gap: space.sm, paddingBottom: space.sm },
-  chip: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: space.md, minHeight: 34 },
-  suggestCell: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
-  iconButton: { width: 36, height: 40, alignItems: "center", justifyContent: "center" },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.md,
+    minHeight: 34,
+  },
+  suggestCell: {
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconButton: {
+    width: 36,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   input: {
     flex: 1,
     minHeight: 40,
@@ -354,7 +470,13 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     fontSize: 16,
   },
-  send: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  send: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   thumb: { width: 64, height: 64, borderRadius: radius.sm, overflow: "hidden" },
   thumbOverlay: {
     position: "absolute",

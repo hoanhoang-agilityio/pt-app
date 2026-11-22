@@ -59,7 +59,8 @@ export const useUnreadTotal = () => {
 
 export const useInbox = () => {
   const { state } = useAuth();
-  const isAdmin = state.status === "signedIn" && state.me.actor.kind === "admin";
+  const isAdmin =
+    state.status === "signedIn" && state.me.actor.kind === "admin";
 
   return useQuery({
     queryKey: qk.inbox,
@@ -70,7 +71,8 @@ export const useInbox = () => {
 
 export const useBubbles = () => {
   const { state } = useAuth();
-  const isTrainee = state.status === "signedIn" && state.me.actor.kind === "user";
+  const isTrainee =
+    state.status === "signedIn" && state.me.actor.kind === "user";
 
   return useQuery({
     queryKey: qk.bubbles,
@@ -80,13 +82,18 @@ export const useBubbles = () => {
 };
 
 export const useGroups = () =>
-  useQuery({ queryKey: qk.groups, queryFn: fetchGroups, enabled: useChatEnabled() });
+  useQuery({
+    queryKey: qk.groups,
+    queryFn: fetchGroups,
+    enabled: useChatEnabled(),
+  });
 
 // Trainee chats are read-only; a trainee who has not accepted the terms gets
 // 403 TERMS_REQUIRED, which is just "no conversations" here.
 export const useDmInbox = () => {
   const { state } = useAuth();
-  const isTrainee = state.status === "signedIn" && state.me.actor.kind === "user";
+  const isTrainee =
+    state.status === "signedIn" && state.me.actor.kind === "user";
   const signedIn = useSignedIn();
 
   return useQuery({

@@ -3,7 +3,14 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlatList, Linking, Modal, Pressable, StyleSheet, View } from "react-native";
+import {
+  FlatList,
+  Linking,
+  Modal,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 
 import { AuthImage } from "@/components/AuthImage";
 import { EmptyState, ErrorState, Screen, Spinner, Txt } from "@/components/ui";
@@ -40,7 +47,9 @@ export const ChatGalleryScreen = () => {
     initialPageParam: undefined as number | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,
   });
-  const items = (query.data?.pages ?? []).flatMap((page) => page.items as GalleryItem[]);
+  const items = (query.data?.pages ?? []).flatMap(
+    (page) => page.items as GalleryItem[],
+  );
 
   return (
     <Screen edges={["bottom"]}>
@@ -52,9 +61,16 @@ export const ChatGalleryScreen = () => {
             accessibilityRole="tab"
             accessibilityState={{ selected: tab === value }}
             onPress={() => setTab(value)}
-            style={[styles.tab, tab === value && { backgroundColor: theme.surface }]}
+            style={[
+              styles.tab,
+              tab === value && { backgroundColor: theme.surface },
+            ]}
           >
-            <Txt size={14} weight="600" tone={tab === value ? "default" : "muted"}>
+            <Txt
+              size={14}
+              weight="600"
+              tone={tab === value ? "default" : "muted"}
+            >
               {t(`chatGallery.tabs.${value}`)}
             </Txt>
           </Pressable>
@@ -63,20 +79,30 @@ export const ChatGalleryScreen = () => {
       {query.isPending ? (
         <Spinner />
       ) : query.isError ? (
-        <ErrorState message={errorText(query.error)} onRetry={() => void query.refetch()} />
+        <ErrorState
+          message={errorText(query.error)}
+          onRetry={() => void query.refetch()}
+        />
       ) : (
         <FlatList
           key={tab}
           data={items}
           numColumns={tab === "links" ? 1 : 3}
-          keyExtractor={(item, index) => `${item.messageId}-${item.key ?? item.url ?? index}`}
+          keyExtractor={(item, index) =>
+            `${item.messageId}-${item.key ?? item.url ?? index}`
+          }
           onEndReached={() => {
             if (query.hasNextPage && !query.isFetchingNextPage) {
               void query.fetchNextPage();
             }
           }}
           contentContainerStyle={{ flexGrow: 1 }}
-          ListEmptyComponent={<EmptyState icon="images-outline" title={t(`chatGallery.empty.${tab}`)} />}
+          ListEmptyComponent={
+            <EmptyState
+              icon="images-outline"
+              title={t(`chatGallery.empty.${tab}`)}
+            />
+          }
           renderItem={({ item }) =>
             tab === "links" ? (
               <Pressable
@@ -101,7 +127,9 @@ export const ChatGalleryScreen = () => {
               <Pressable
                 accessibilityRole="imagebutton"
                 accessibilityLabel={item.alt ?? t("common.photo")}
-                onPress={() => tab === "photos" && item.url && setViewer(item.url)}
+                onPress={() =>
+                  tab === "photos" && item.url && setViewer(item.url)
+                }
                 style={styles.cell}
               >
                 <AuthImage
@@ -114,9 +142,24 @@ export const ChatGalleryScreen = () => {
           }
         />
       )}
-      <Modal visible={viewer !== null} transparent animationType="fade" onRequestClose={() => setViewer(null)}>
-        <Pressable style={styles.viewer} onPress={() => setViewer(null)} accessibilityRole="button">
-          {viewer ? <AuthImage uri={viewer} style={{ width: "100%", height: "80%" }} contentFit="contain" /> : null}
+      <Modal
+        visible={viewer !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewer(null)}
+      >
+        <Pressable
+          style={styles.viewer}
+          onPress={() => setViewer(null)}
+          accessibilityRole="button"
+        >
+          {viewer ? (
+            <AuthImage
+              uri={viewer}
+              style={{ width: "100%", height: "80%" }}
+              contentFit="contain"
+            />
+          ) : null}
         </Pressable>
       </Modal>
     </Screen>
@@ -124,9 +167,35 @@ export const ChatGalleryScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  tabs: { flexDirection: "row", borderRadius: 10, padding: 3, margin: space.lg },
-  tab: { flex: 1, minHeight: 36, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  cell: { flex: 1 / 3, aspectRatio: 1, padding: 2, alignItems: "center", justifyContent: "center" },
-  link: { padding: space.lg, gap: 2, borderBottomWidth: StyleSheet.hairlineWidth },
-  viewer: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
+  tabs: {
+    flexDirection: "row",
+    borderRadius: 10,
+    padding: 3,
+    margin: space.lg,
+  },
+  tab: {
+    flex: 1,
+    minHeight: 36,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cell: {
+    flex: 1 / 3,
+    aspectRatio: 1,
+    padding: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  link: {
+    padding: space.lg,
+    gap: 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  viewer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

@@ -27,12 +27,19 @@ export const useTyping = ({
 
   useRealtimeListener({
     onEvent: (name, data) => {
-      if (name !== REALTIME_EVENTS.typing || !isPeerTypingEvent(data, myRole, myKey)) {
+      if (
+        name !== REALTIME_EVENTS.typing ||
+        !isPeerTypingEvent(data, myRole, myKey)
+      ) {
         return;
       }
       const target = (data as { conversationId?: unknown }).conversationId;
 
-      if (conversationId !== null && typeof target === "number" && target !== conversationId) {
+      if (
+        conversationId !== null &&
+        typeof target === "number" &&
+        target !== conversationId
+      ) {
         return;
       }
       setPeerTyping(true);

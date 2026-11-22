@@ -1,14 +1,32 @@
 import { Ionicons } from "@expo/vector-icons";
-import { chatAdminLabel, type ChatColorKey, chatThreadResponseSchema } from "@pt/contracts";
+import {
+  chatAdminLabel,
+  type ChatColorKey,
+  chatThreadResponseSchema,
+} from "@pt/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type Href, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 
 import { Avatar } from "@/components/Avatar";
 import { Sheet } from "@/components/Sheet";
-import { Button, Divider, ErrorState, Screen, Spinner, Txt } from "@/components/ui";
+import {
+  Button,
+  Divider,
+  ErrorState,
+  Screen,
+  Spinner,
+  Txt,
+} from "@/components/ui";
 import { useAuth } from "@/features/auth/auth-context";
 import { AliasSheet } from "@/features/social/components/AliasSheet";
 import { useAliasName } from "@/features/social/hooks";
@@ -39,12 +57,16 @@ export const ChatInfoScreen = () => {
   const aliasName = useAliasName();
   const { state } = useAuth();
   const params = useLocalSearchParams<{ cid: string; userId?: string }>();
-  const isAdmin = state.status === "signedIn" && state.me.actor.kind === "admin";
+  const isAdmin =
+    state.status === "signedIn" && state.me.actor.kind === "admin";
   const myId = state.status === "signedIn" ? state.me.actor.id : 0;
   const scope: CoachScope = params.cid === "me" ? "me" : Number(params.cid);
   const userId = params.userId ? Number(params.userId) : null;
   const scopeKey = String(scope);
-  const [nickTarget, setNickTarget] = useState<{ key: string; real: string } | null>(null);
+  const [nickTarget, setNickTarget] = useState<{
+    key: string;
+    real: string;
+  } | null>(null);
   const [nickText, setNickText] = useState("");
   const [aliasOpen, setAliasOpen] = useState(false);
 
@@ -82,28 +104,39 @@ export const ChatInfoScreen = () => {
   const profile = info.data?.profile ?? EMPTY_PROFILE;
   const ownKey = isAdmin ? `admin:${myId}` : "user";
   const otherKey = isAdmin ? "user" : "pt";
-  const ownColor = isChatColorKey(profile.colors[ownKey]) ? profile.colors[ownKey] : null;
+  const ownColor = isChatColorKey(profile.colors[ownKey])
+    ? profile.colors[ownKey]
+    : null;
 
   const apply = {
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: qk.chatProfile(scopeKey) });
+      void queryClient.invalidateQueries({
+        queryKey: qk.chatProfile(scopeKey),
+      });
     },
     onError: (error: unknown) => Alert.alert(errorText(error)),
   };
   const saveNick = useMutation({
-    mutationFn: ({ target, text }: { target: string; text: string }) => setNickname(scope, target, text),
+    mutationFn: ({ target, text }: { target: string; text: string }) =>
+      setNickname(scope, target, text),
     ...apply,
     onSuccess: () => {
       setNickTarget(null);
-      void queryClient.invalidateQueries({ queryKey: qk.chatProfile(scopeKey) });
+      void queryClient.invalidateQueries({
+        queryKey: qk.chatProfile(scopeKey),
+      });
     },
   });
   const pickColor = useMutation({
     mutationFn: (color: ChatColorKey | null) =>
-      isAdmin ? setConversationColor(Number(scope), color) : setAccountChatColor(color).then(() => undefined),
+      isAdmin
+        ? setConversationColor(Number(scope), color)
+        : setAccountChatColor(color).then(() => undefined),
     ...apply,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: qk.chatProfile(scopeKey) });
+      void queryClient.invalidateQueries({
+        queryKey: qk.chatProfile(scopeKey),
+      });
       // Read the thread again so bubbles take the new colour.
       void queryClient.invalidateQueries({ queryKey: ["chat"] });
     },
@@ -113,11 +146,18 @@ export const ChatInfoScreen = () => {
   const peerReal = info.data?.peerName ?? "";
   const shownPeer = isAdmin
     ? peerNick || peerReal
-    : chatAdminLabel(profile.nicknames, info.data?.ptId ?? null, peerReal, true);
+    : chatAdminLabel(
+        profile.nicknames,
+        info.data?.ptId ?? null,
+        peerReal,
+        true,
+      );
   const aliasKey = isAdmin ? (userId !== null ? `user:${userId}` : "") : "pt";
   const alias = aliasKey ? aliasName(aliasKey, "") : "";
   const open = (path: string) =>
-    router.push(`${path}?cid=${scopeKey}${userId !== null ? `&userId=${userId}` : ""}` as string as Href);
+    router.push(
+      `${path}?cid=${scopeKey}${userId !== null ? `&userId=${userId}` : ""}` as string as Href,
+    );
 
   return (
     <Screen edges={["bottom"]}>
@@ -125,9 +165,14 @@ export const ChatInfoScreen = () => {
       {info.isPending ? (
         <Spinner />
       ) : info.isError ? (
-        <ErrorState message={errorText(info.error)} onRetry={() => void info.refetch()} />
+        <ErrorState
+          message={errorText(info.error)}
+          onRetry={() => void info.refetch()}
+        />
       ) : (
-        <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.lg }}>
+        <ScrollView
+          contentContainerStyle={{ padding: space.lg, gap: space.lg }}
+        >
           <View style={{ alignItems: "center", gap: space.sm }}>
             <Avatar name={shownPeer} uri={info.data.avatarUrl} size={88} />
             <Txt size={20} weight="700">
@@ -141,8 +186,16 @@ export const ChatInfoScreen = () => {
           </View>
 
           <View style={{ gap: space.xs }}>
-            <Row icon="search-outline" label={t("chatInfo.search")} onPress={() => open("/chat/search")} />
-            <Row icon="images-outline" label={t("chatInfo.gallery")} onPress={() => open("/chat/gallery")} />
+            <Row
+              icon="search-outline"
+              label={t("chatInfo.search")}
+              onPress={() => open("/chat/search")}
+            />
+            <Row
+              icon="images-outline"
+              label={t("chatInfo.gallery")}
+              onPress={() => open("/chat/gallery")}
+            />
           </View>
           <Divider />
 
@@ -171,9 +224,13 @@ export const ChatInfoScreen = () => {
           />
           <Divider />
 
-          <Txt weight="600">{isAdmin ? t("chatInfo.colorConversation") : t("chatInfo.colorOwn")}</Txt>
+          <Txt weight="600">
+            {isAdmin ? t("chatInfo.colorConversation") : t("chatInfo.colorOwn")}
+          </Txt>
           <Txt tone="muted" size={13}>
-            {isAdmin ? t("chatInfo.colorAdminHint") : t("chatInfo.colorUserHint")}
+            {isAdmin
+              ? t("chatInfo.colorAdminHint")
+              : t("chatInfo.colorUserHint")}
           </Txt>
           <View style={styles.swatches}>
             {chatColorKeys.map((key) => (
@@ -186,10 +243,15 @@ export const ChatInfoScreen = () => {
                 onPress={() => pickColor.mutate(key)}
                 style={[
                   styles.swatch,
-                  { backgroundColor: chatColorHex(key), borderColor: ownColor === key ? theme.fg : "transparent" },
+                  {
+                    backgroundColor: chatColorHex(key),
+                    borderColor: ownColor === key ? theme.fg : "transparent",
+                  },
                 ]}
               >
-                {ownColor === key ? <Ionicons name="checkmark" size={20} color="#fff" /> : null}
+                {ownColor === key ? (
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                ) : null}
               </Pressable>
             ))}
           </View>
@@ -230,7 +292,10 @@ export const ChatInfoScreen = () => {
         <Button
           label={t("common.save")}
           loading={saveNick.isPending}
-          onPress={() => nickTarget && saveNick.mutate({ target: nickTarget.key, text: nickText })}
+          onPress={() =>
+            nickTarget &&
+            saveNick.mutate({ target: nickTarget.key, text: nickText })
+          }
         />
       </Sheet>
       {aliasKey ? (
@@ -283,7 +348,12 @@ const Row = ({
 };
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 48 },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    minHeight: 48,
+  },
   swatches: { flexDirection: "row", flexWrap: "wrap", gap: space.md },
   swatch: {
     width: 44,

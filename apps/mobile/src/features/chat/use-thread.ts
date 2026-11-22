@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { useIsFocused } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 
@@ -9,6 +11,7 @@ import {
   mergeMessages,
   newestIncomingId,
 } from "@/lib/chat-model";
+import { qk } from "@/lib/query-keys";
 import { threadActionFor, type ThreadTarget } from "@/lib/realtime-events";
 import { createSyncScheduler } from "@/lib/sync-scheduler";
 
@@ -42,8 +45,9 @@ export const useThread = <Meta>({
   target: ThreadTarget;
   load: (query: ThreadQuery) => Promise<ThreadPage<Meta>>;
   enabled?: boolean;
-  // Called with the newest incoming id once it is on screen.
-  onRead?: (lastIncomingId: number) => void;
+  // Called with the newest incoming id once it is on screen and the screen is
+  // focused. Resolving refreshes the unread badges.
+  onRead?: (lastIncomingId: number) => void | Promise<void>;
 }) => {
   const [state, setState] = useState<ThreadState<Meta>>({
     messages: [],
@@ -61,6 +65,8 @@ export const useThread = <Meta>({
   const lastChangeAt = useRef(0);
   const readSent = useRef(0);
   const { state: socketState } = useRealtime();
+  const focused = useIsFocused();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     loadRef.current = load;
@@ -68,14 +74,17 @@ export const useThread = <Meta>({
     onReadRef.current = onRead;
   });
 
-  const commit = useCallback((update: (current: ThreadState<Meta>) => ThreadState<Meta>) => {
-    setState((current) => {
-      const next = update(current);
+  const commit = useCallback(
+    (update: (current: ThreadState<Meta>) => ThreadState<Meta>) => {
+      setState((current) => {
+        const next = update(current);
 
-      messagesRef.current = next.messages;
-      return next;
-    });
-  }, []);
+        messagesRef.current = next.messages;
+        return next;
+      });
+    },
+    [],
+  );
 
   const initial = useCallback(async () => {
     try {
@@ -109,7 +118,10 @@ export const useThread = <Meta>({
           changedSince: lastChangeAt.current || undefined,
         });
 
-        lastChangeAt.current = Math.max(lastChangeAt.current, page.lastChangeAt);
+        lastChangeAt.current = Math.max(
+          lastChangeAt.current,
+          page.lastChangeAt,
+        );
         commit((current) => {
           let messages = mergeChanges(
             mergeMessages(current.messages, page.messages),
@@ -119,7 +131,9 @@ export const useThread = <Meta>({
           if (page.removedIds.length > 0) {
             const removed = new Set(page.removedIds);
 
-            messages = messages.filter((m) => m.id === null || !removed.has(m.id));
+            messages = messages.filter(
+              (m) => m.id === null || !removed.has(m.id),
+            );
           }
           return {
             ...current,
@@ -180,7 +194,10 @@ export const useThread = <Meta>({
       }
     },
     onEvent: (name, data) => {
-      if (enabled && threadActionFor(targetRef.current, name, data) === "sync") {
+      if (
+        enabled &&
+        threadActionFor(targetRef.current, name, data) === "sync"
+      ) {
         void sync();
       }
     },
@@ -200,22 +217,52 @@ export const useThread = <Meta>({
     return () => clearInterval(timer);
   }, [enabled, socketState, sync]);
 
-  // Report what is on screen as read.
+  // Report what is on screen as read: on open, when the screen regains focus,
+  // when a new incoming message arrives while focused, and after an own reply
+  // is stored (the server counts the reply as the reader catching up).
   const newestIncoming = newestIncomingId(state.messages);
+  const newestOwn = state.messages.reduce(
+    (newest, m) => (m.mine && m.id !== null && m.id > newest ? m.id : newest),
+    0,
+  );
+  const ownSeen = useRef(newestOwn);
 
   useEffect(() => {
-    if (state.status === "ready" && newestIncoming > readSent.current) {
-      readSent.current = newestIncoming;
-      onReadRef.current?.(newestIncoming);
+    if (!focused) {
+      // Re-report on the next focus.
+      readSent.current = 0;
     }
-  }, [newestIncoming, state.status]);
+  }, [focused]);
+
+  useEffect(() => {
+    if (!focused || state.status !== "ready" || newestIncoming === 0) {
+      return;
+    }
+    const ownReplied = newestOwn > ownSeen.current;
+
+    ownSeen.current = newestOwn;
+    if (newestIncoming > readSent.current || ownReplied) {
+      readSent.current = newestIncoming;
+      void Promise.resolve(onReadRef.current?.(newestIncoming))
+        .then(() =>
+          Promise.all([
+            queryClient.invalidateQueries({ queryKey: qk.unread }),
+            queryClient.invalidateQueries({ queryKey: qk.groupUnread }),
+            queryClient.invalidateQueries({ queryKey: qk.inbox }),
+          ]),
+        )
+        .catch(() => undefined);
+    }
+  }, [focused, newestIncoming, newestOwn, state.status, queryClient]);
 
   // Own unconfirmed bubbles are not stored messages, so they are added and
   // updated directly.
   const putPending = useCallback(
     (message: ChatMsg) =>
       commit((current) => {
-        const rest = current.messages.filter((m) => m.clientId !== message.clientId || m.id !== null);
+        const rest = current.messages.filter(
+          (m) => m.clientId !== message.clientId || m.id !== null,
+        );
 
         return { ...current, messages: [...rest, message] };
       }),
@@ -244,7 +291,9 @@ export const useThread = <Meta>({
     (clientId: string) =>
       commit((current) => ({
         ...current,
-        messages: current.messages.filter((m) => !(m.id === null && m.clientId === clientId)),
+        messages: current.messages.filter(
+          (m) => !(m.id === null && m.clientId === clientId),
+        ),
       })),
     [commit],
   );
@@ -254,7 +303,9 @@ export const useThread = <Meta>({
       commit((current) => ({
         ...current,
         messages: current.messages.map((m) =>
-          m.id === null && m.clientId === clientId ? { ...m, delivery: "failed" as const } : m,
+          m.id === null && m.clientId === clientId
+            ? { ...m, delivery: "failed" as const }
+            : m,
         ),
       })),
     [commit],

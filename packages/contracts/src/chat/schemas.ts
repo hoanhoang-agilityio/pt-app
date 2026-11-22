@@ -336,12 +336,9 @@ export const chatUnreadResponseSchema = z.union([
     chatEnabled: z.boolean(),
     hasHistory: z.boolean(),
     latestLoudIncomingId: z.number().int().nullable(),
-    // App icon badge; absent on API versions before it was added.
-    appBadge: z.number().int().optional(),
   }),
   z.object({
     count: z.number().int(),
-    appBadge: z.number().int().optional(),
     perTrainee: z.array(
       z.object({
         userId: z.number().int(),

@@ -22,14 +22,17 @@ export const GroupChatScreen = () => {
   const groupId = Number(params.id);
   const { state } = useAuth();
   const actor = state.status === "signedIn" ? state.me.actor : null;
-  const viewerKey = actor ? `${actor.kind === "admin" ? "admin" : "user"}:${actor.id}` : "";
-  const { load, chat } = useMemo(() => groupApi(groupId, viewerKey), [groupId, viewerKey]);
+  const viewerKey = actor
+    ? `${actor.kind === "admin" ? "admin" : "user"}:${actor.id}`
+    : "";
+  const { load, chat } = useMemo(
+    () => groupApi(groupId, viewerKey),
+    [groupId, viewerKey],
+  );
   const thread = useThread<GroupMeta>({
     target: { kind: "group", groupId },
     load,
-    onRead: (id) => {
-      void chat.markRead(id).catch(() => undefined);
-    },
+    onRead: (id) => chat.markRead(id),
   });
   const meta = thread.meta;
 
@@ -63,12 +66,16 @@ export const GroupChatScreen = () => {
       isSuperAdmin={meta?.isSuperAdmin ?? false}
       canHide={(meta?.canManage ?? false) && !meta?.dissolved}
       onHide={(message, hidden) =>
-        message.id !== null && void act(() => hideGroupMessage(groupId, message.id as number, hidden))
+        message.id !== null &&
+        void act(() => hideGroupMessage(groupId, message.id as number, hidden))
       }
       onAlert={(message, choice) =>
-        message.id !== null && void act(() => resolveGroupAlert(groupId, message.id as number, choice))
+        message.id !== null &&
+        void act(() => resolveGroupAlert(groupId, message.id as number, choice))
       }
-      onOpenInfo={() => router.push(`/chat/group-info/${groupId}` as string as Href)}
+      onOpenInfo={() =>
+        router.push(`/chat/group-info/${groupId}` as string as Href)
+      }
       banner={banner}
     />
   );

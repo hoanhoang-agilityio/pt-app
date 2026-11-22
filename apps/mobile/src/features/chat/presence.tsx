@@ -16,7 +16,8 @@ const HEARTBEAT_MS = 60_000;
 export const PresenceHeartbeat = () => {
   const { state } = useAuth();
   const active =
-    state.status === "signedIn" && !(state.me.actor.kind === "admin" && state.me.actor.locked);
+    state.status === "signedIn" &&
+    !(state.me.actor.kind === "admin" && state.me.actor.locked);
 
   useEffect(() => {
     if (!active) {
@@ -46,7 +47,10 @@ export const PresenceHeartbeat = () => {
 
 // The other side of a coach chat: the PT team for a trainee (`userId` null),
 // the trainee for an admin. Refreshed every minute and on presence events.
-export const usePeerPresence = (userId: number | null, enabled: boolean): PresenceText => {
+export const usePeerPresence = (
+  userId: number | null,
+  enabled: boolean,
+): PresenceText => {
   const { t } = useTranslation();
   const query = useQuery({
     queryKey: qk.presence(userId),

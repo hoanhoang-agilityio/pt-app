@@ -1,5 +1,6 @@
 import { Redirect, Stack } from "expo-router";
 
+import { NestedBackButton } from "@/components/NestedBackButton";
 import { useAdminActor } from "@/features/admin/use-admin";
 import { useTheme } from "@/theme";
 
@@ -18,6 +19,9 @@ export default function AdminLayout() {
         headerTintColor: theme.fg,
         headerShadowVisible: false,
         headerBackButtonDisplayMode: "minimal",
+        // First screen of this nested stack: no native back, so add one.
+        headerLeft: ({ canGoBack }) =>
+          canGoBack ? undefined : <NestedBackButton fallback="/members" />,
         contentStyle: { backgroundColor: theme.bg },
       }}
     >

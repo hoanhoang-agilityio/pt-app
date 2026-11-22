@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { type Href, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ErrorState, Screen, Spinner } from "@/components/ui";
@@ -39,16 +39,33 @@ const TraineeThread = ({
     () => coachApi({ kind: "admin", adminId }, conversationId, userId),
     [adminId, conversationId, userId],
   );
+  const liveConversationId = useRef(conversationId);
   const thread = useThread<CoachMeta>({
     target: { kind: "coach", conversationId },
     load,
-    onRead: (id) => {
-      void chat.markRead(id).catch(() => undefined);
+    // The conversation may only exist after the admin's first reply, so read
+    // against the id the thread reports, not the one the screen opened with.
+    onRead: async (id) => {
+      if (liveConversationId.current === null) {
+        return;
+      }
+      await coachApi(
+        { kind: "admin", adminId },
+        liveConversationId.current,
+        userId,
+      ).chat.markRead(id);
     },
   });
+  const liveId = thread.meta?.conversationId ?? conversationId;
+
+  useEffect(() => {
+    liveConversationId.current = liveId;
+  }, [liveId]);
   const presence = usePeerPresence(userId, true);
   const isSuperAdmin =
-    state.status === "signedIn" && state.me.actor.kind === "admin" && state.me.actor.role === "super_admin";
+    state.status === "signedIn" &&
+    state.me.actor.kind === "admin" &&
+    state.me.actor.role === "super_admin";
   const nickname = thread.meta?.profile.nicknames.user;
 
   useRefreshOnFocus(() => void thread.refresh());
@@ -80,7 +97,9 @@ const TraineeThread = ({
         conversationId === null
           ? undefined
           : () =>
-              router.push(`/chat/info?cid=${conversationId}&userId=${userId}` as string as Href)
+              router.push(
+                `/chat/info?cid=${conversationId}&userId=${userId}` as string as Href,
+              )
       }
       seenMode="peer"
       peerTyping={typing.peerTyping}
@@ -111,7 +130,10 @@ export const TraineeChatScreen = () => {
   if (header.isError) {
     return (
       <Screen>
-        <ErrorState message={errorText(header.error)} onRetry={() => void header.refetch()} />
+        <ErrorState
+          message={errorText(header.error)}
+          onRetry={() => void header.refetch()}
+        />
       </Screen>
     );
   }

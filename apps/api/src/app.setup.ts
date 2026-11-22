@@ -1,0 +1,83 @@
+import {
+  BadRequestException,
+  type INestApplication,
+  StandardSchemaValidationPipe,
+} from "@nestjs/common";
+import type { NestExpressApplication } from "@nestjs/platform-express";
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter.js";
+import { APP_ENV } from "./config/app-config.module.js";
+import type { Env } from "./config/env.schema.js";
+import { RealtimeIoAdapter } from "./realtime/realtime.io-adapter.js";
+
+export const API_PREFIX = "v1";
+export const JSON_BODY_LIMIT = "256kb";
+export const RAW_BODY_LIMIT = "2mb";
+export const DOCS_PATH = `${API_PREFIX}/docs`;
+
+// Zod schemas from @pt/contracts are attached to routes (`@Body({ schema })`);
+// a failure becomes a 400 with the paths and messages, never the values.
+const validationPipe = () =>
+  new StandardSchemaValidationPipe({
+    exceptionFactory: (issues) =>
+      new BadRequestException({
+        code: "VALIDATION_FAILED",
+        message: issues
+          .map((issue) => {
+            const path = issue.path
+              ?.map((part) =>
+                String(typeof part === "object" ? part.key : part),
+              )
+              .join(".");
+
+            return path ? `${path}: ${issue.message}` : issue.message;
+          })
+          .join("; "),
+      }),
+  });
+
+export const buildOpenApiConfig = () =>
+  new DocumentBuilder()
+    .setTitle("PT App API")
+    .setDescription("REST API under /v1. Additive changes only.")
+    .setVersion("1")
+    .addBearerAuth()
+    .build();
+
+// The OpenAPI document, shared by Swagger UI, `pnpm openapi` and the test that
+// fails when apps/api/openapi.json is stale.
+export const buildOpenApiDocument = (app: INestApplication) =>
+  SwaggerModule.createDocument(app, buildOpenApiConfig());
+
+// Swagger UI is a development aid: it is never mounted in production.
+const setupSwagger = (app: INestApplication) => {
+  SwaggerModule.setup(DOCS_PATH, app, buildOpenApiDocument(app));
+};
+
+// Shared by main.ts and the e2e tests so both see the same routes.
+export const configureApp = (app: INestApplication) => {
+  const env = app.get<Env>(APP_ENV);
+
+  // Avatars arrive as data URLs (up to ~110 KB), over Express's 100 KB default.
+  // The service still answers an over-size photo with its own message.
+  (app as unknown as NestExpressApplication).useBodyParser("json", {
+    limit: JSON_BODY_LIMIT,
+  });
+  // Chat photos and personal stickers arrive as raw image bytes; the services
+  // check the real size and answer with their own message, so this only caps
+  // what is read into memory.
+  (app as unknown as NestExpressApplication).useBodyParser("raw", {
+    type: ["image/*"],
+    limit: RAW_BODY_LIMIT,
+  });
+  app.setGlobalPrefix(API_PREFIX);
+  app.useGlobalFilters(app.get(AllExceptionsFilter));
+  app.useGlobalPipes(validationPipe());
+  app.useWebSocketAdapter(new RealtimeIoAdapter(app, env.WEB_ORIGIN));
+  app.enableShutdownHooks();
+
+  if (env.NODE_ENV !== "production") {
+    setupSwagger(app);
+  }
+};

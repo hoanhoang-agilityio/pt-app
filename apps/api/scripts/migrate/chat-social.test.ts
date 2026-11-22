@@ -1,0 +1,245 @@
+import { describe, expect, it } from "vitest";
+
+import { loadTursoColumns } from "../turso-columns.js";
+import {
+  findChatSocialViolations,
+  legacyProblems,
+  REASONS,
+  repairSourceRow,
+  withoutLegacy,
+} from "./chat-social.js";
+import type { RowRef } from "./plan.js";
+
+const row = (key: string, values: RowRef["values"]): RowRef => ({
+  key,
+  values,
+});
+
+describe("withoutLegacy", () => {
+  it("removes the dropped columns and nothing else (chat_nicknames is copied again)", () => {
+    const full = loadTursoColumns();
+    const reduced = withoutLegacy(full);
+
+    expect(Object.keys(reduced.tables)).toEqual(Object.keys(full.tables));
+    expect(reduced.tables.chat_nicknames).toEqual(full.tables.chat_nicknames);
+
+    const names = reduced.tables.chat_messages.columns.map((c) => c.name);
+
+    expect(names).not.toContain("attachment_url");
+    expect(names).not.toContain("attachment_meta");
+    expect(names).toContain("sticker_url");
+    expect(names).toHaveLength(full.tables.chat_messages.columns.length - 2);
+  });
+});
+
+describe("legacyProblems", () => {
+  it("blocks per kind until its flag is given", () => {
+    const counts = { attachments: 2 };
+
+    expect(legacyProblems(counts, {})).toHaveLength(1);
+    expect(legacyProblems(counts, { attachments: true })).toEqual([]);
+    expect(legacyProblems({ attachments: 0 }, {})).toEqual([]);
+  });
+});
+
+describe("repairSourceRow", () => {
+  it("turns a NULL silent into 0 and leaves other values", () => {
+    const nullSilent: Record<string, unknown> = { silent: null };
+    const set: Record<string, unknown> = { silent: 1 };
+
+    repairSourceRow("chat_messages", nullSilent);
+    repairSourceRow("chat_messages", set);
+    repairSourceRow("dm_messages", { silent: null });
+    expect(nullSilent.silent).toBe(0);
+    expect(set.silent).toBe(1);
+  });
+});
+
+describe("findChatSocialViolations", () => {
+  it("accepts agreeing links and pairs", () => {
+    expect(
+      findChatSocialViolations({
+        chat_messages: [
+          row("1", {
+            conversation_id: 1,
+            reply_to_message_id: null,
+            photo_id: 7,
+          }),
+          row("2", {
+            conversation_id: 1,
+            reply_to_message_id: 1,
+            photo_id: null,
+          }),
+        ],
+        chat_photos: [row("7", { message_id: 1, size: 3, data_length: 3 })],
+        chat_conversations: [row("1", { last_message_id: 2 })],
+        social_friendships: [
+          row("1:2", { user_low: 1, user_high: 2, requested_by: 2 }),
+        ],
+      }),
+    ).toEqual([]);
+  });
+
+  it("flags a cover attached to another message, and accepts more photos than the cover", () => {
+    const found = findChatSocialViolations({
+      chat_messages: [
+        row("1", {
+          conversation_id: 1,
+          reply_to_message_id: null,
+          photo_id: 8,
+        }),
+        row("2", {
+          conversation_id: 1,
+          reply_to_message_id: null,
+          photo_id: 9,
+        }),
+      ],
+      chat_photos: [
+        row("7", { message_id: 1, size: 3, data_length: 3, position: 1 }),
+        row("8", { message_id: 2, size: 3, data_length: 3, position: 1 }),
+        row("9", { message_id: 2, size: 3, data_length: 3, position: 0 }),
+      ],
+    });
+
+    expect(found.map((v) => `${v.table}:${v.column}:${v.key}`).sort()).toEqual([
+      "chat_messages:photo_id:1",
+    ]);
+  });
+
+  it("flags negative and repeated positions per owner (the later id), never a NULL owner or position", () => {
+    const photo = (
+      key: string,
+      owner: number | null,
+      position: number | null,
+    ) => row(key, { post_id: owner, size: 3, data_length: 3, position });
+    const found = findChatSocialViolations({
+      social_post_photos: [
+        photo("11", 1, 0),
+        photo("10", 1, 0),
+        photo("12", 1, null),
+        photo("13", 1, null),
+        photo("14", null, 0),
+        photo("15", null, 0),
+        photo("16", 2, -1),
+        photo("17", 2, 0),
+      ],
+    });
+
+    expect(
+      found.map((v) => `${v.table}:${v.column}:${v.key}:${v.reason}`).sort(),
+    ).toEqual([
+      `social_post_photos:position:11:${REASONS.duplicatePosition}`,
+      `social_post_photos:position:16:${REASONS.negativePosition}`,
+    ]);
+  });
+
+  it("reports the other photo of a repeated position when the later id is the cover", () => {
+    const found = findChatSocialViolations({
+      chat_group_messages: [row("1", { photo_id: 11 })],
+      chat_group_photos: [
+        row("10", { message_id: 1, size: 3, data_length: 3, position: 0 }),
+        row("11", { message_id: 1, size: 3, data_length: 3, position: 0 }),
+      ],
+    });
+
+    expect(
+      found.map((v) => `${v.table}:${v.column}:${v.key}:${v.reason}`),
+    ).toEqual([`chat_group_photos:position:10:${REASONS.duplicatePosition}`]);
+  });
+
+  it("checks the group cover like the other photo links", () => {
+    const found = findChatSocialViolations({
+      chat_group_messages: [row("1", { photo_id: 8 })],
+      chat_group_photos: [
+        row("8", { message_id: 2, size: 3, data_length: 3, position: 0 }),
+      ],
+    });
+
+    expect(
+      found.map((v) => `${v.table}:${v.column}:${v.key}:${v.reason}`),
+    ).toEqual([`chat_group_messages:photo_id:1:${REASONS.photoLinkMismatch}`]);
+  });
+
+  it("keeps the first open report and flags the later duplicates", () => {
+    const open = {
+      status: "open",
+      resolution: null,
+      resolved_at: null,
+      resolved_by: null,
+    };
+    const found = findChatSocialViolations({
+      social_reports: [
+        row("10", {
+          ...open,
+          reporter_key: "user:1",
+          target_kind: "post",
+          target_id: 4,
+        }),
+        row("9", {
+          ...open,
+          reporter_key: "user:1",
+          target_kind: "post",
+          target_id: 4,
+        }),
+        row("11", {
+          ...open,
+          reporter_key: "user:1",
+          target_kind: "comment",
+          target_id: 4,
+        }),
+      ],
+    });
+
+    expect(found.map((v) => v.key)).toEqual(["10"]);
+  });
+
+  it("flags DM rows whose user is not one of the conversation's two people", () => {
+    const found = findChatSocialViolations({
+      dm_conversations: [
+        row("1", { user_low: 1, user_high: 2, last_message_id: null }),
+      ],
+      dm_messages: [
+        row("10", { conversation_id: 1, sender_id: 2, photo_id: null }),
+        row("11", { conversation_id: 1, sender_id: 3, photo_id: null }),
+      ],
+      dm_photos: [
+        row("20", {
+          conversation_id: 1,
+          uploader_id: 1,
+          message_id: null,
+          size: 3,
+          data_length: 3,
+        }),
+        row("21", {
+          conversation_id: 1,
+          uploader_id: 9,
+          message_id: null,
+          size: 3,
+          data_length: 3,
+        }),
+      ],
+      dm_reads: [
+        row("1:1", { conversation_id: 1, user_id: 1 }),
+        row("1:4", { conversation_id: 1, user_id: 4 }),
+      ],
+    });
+
+    expect(
+      found.map((v) => `${v.table}:${v.column}:${v.key}:${v.reason}`).sort(),
+    ).toEqual([
+      "dm_messages:sender_id:11:not_conversation_member",
+      "dm_photos:uploader_id:21:not_conversation_member",
+      "dm_reads:user_id:1:4:not_conversation_member",
+    ]);
+  });
+
+  it("leaves a DM row with a missing conversation to the foreign key report", () => {
+    expect(
+      findChatSocialViolations({
+        dm_messages: [
+          row("10", { conversation_id: 5, sender_id: 2, photo_id: null }),
+        ],
+      }),
+    ).toEqual([]);
+  });
+});

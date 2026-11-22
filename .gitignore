@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -11,15 +11,15 @@
 !.yarn/versions
 
 # testing
-/coverage
+coverage
 .playwright-mcp/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build/
 
 # misc
 .DS_Store
@@ -52,9 +52,12 @@ next-env.d.ts
 .claude/fix-mode
 
 # playwright
-/e2e/.tmp/
-/playwright-report/
-/test-results/
+e2e/.tmp/
+playwright-report/
+test-results/
 
-# self-hosted emoji data (scripts/copy-emojibase.mjs)
-/public/emojibase/
+# build output (packages and apps)
+dist/
+
+# Playwright e2e scratch files (temporary SQLite and API state)
+apps/web/e2e/.tmp/

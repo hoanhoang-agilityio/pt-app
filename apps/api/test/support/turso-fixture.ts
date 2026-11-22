@@ -1,0 +1,1516 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+import { type Client, createClient } from "@libsql/client";
+
+import { loadTursoSchemaStatements } from "../../scripts/turso-schema.js";
+
+// A throwaway SQLite file with the frozen production DDL (scripts/turso-schema.sql)
+// and invented rows. No production data is ever involved. Test tooling only: it
+// goes away with the migration script.
+
+const S = 1_700_000_000; // seconds-mode timestamps
+const MS = 1_700_000_000_000; // millisecond-mode timestamps
+
+// The scrypt$N$salt$hash format of services/password.ts, with fake values.
+export const SCRYPT_HASH =
+  "scrypt$16384$c2FsdC1mb3ItdGVzdA$q9Yk3x0Zr1p7mN2vB5tL8wE4aU6dH0jF3cG1sR9oIiKxVyPz7TnMbQe2WuAl5DhOjCfS8gXr4Vt1YkNz6BqLm0Pw";
+
+export const PNG_BYTES = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0xff, 0xfe, 0x00,
+  0x01, 0x80,
+]);
+export const WEBP_BYTES = Buffer.concat([
+  Buffer.from("RIFF"),
+  Buffer.alloc(300, 0xab),
+  Buffer.from([0x00, 0x00, 0xff]),
+]);
+
+// A webp header the API accepts as an avatar (RIFF....WEBP).
+export const AVATAR_WEBP_BYTES = Buffer.concat([
+  Buffer.from("RIFF"),
+  Buffer.from([0x20, 0x01, 0x00, 0x00]),
+  Buffer.from("WEBPVP8 "),
+  Buffer.alloc(40, 0x5a),
+]);
+export const dataUrl = (mime: string, bytes: Buffer) =>
+  `data:${mime};base64,${bytes.toString("base64")}`;
+
+type Row = Record<string, string | number | Buffer | null>;
+type Entry = [table: string, row: Row];
+
+const insert = async (client: Client, [table, row]: Entry) => {
+  const columns = Object.keys(row);
+
+  await client.execute({
+    sql: `INSERT INTO "${table}" (${columns.map((c) => `"${c}"`).join(", ")}) VALUES (${columns.map(() => "?").join(", ")})`,
+    args: columns.map((c) => row[c]) as never,
+  });
+};
+
+// One row (several for some tables) in each of the 44 tables. Ids have gaps
+// (admins 1 and 3, users 1, 2 and 5) so sequences must follow max(id).
+const baseRows = (): Entry[] => [
+  [
+    "admins",
+    {
+      id: 1,
+      username: "Hoàng PT",
+      username_key: "hoang pt",
+      password_hash: SCRYPT_HASH,
+      last_seen_at: S + 10,
+      chat_color: "blue",
+      avatar: dataUrl("image/webp", AVATAR_WEBP_BYTES),
+      avatar_updated_at: S + 11,
+      passcode_hash: SCRYPT_HASH,
+      passcode_failed_count: 2,
+      presence_hidden: 1,
+      role: null,
+      verified_at: S + 12,
+      bio: "Huấn luyện viên",
+      locale: "vi",
+      accent_color: "#ff8800",
+      created_at: S,
+    },
+  ],
+  [
+    "admins",
+    {
+      id: 3,
+      username: "Trần Thị Mai",
+      username_key: "tran thi mai",
+      password_hash: SCRYPT_HASH,
+      presence_hidden: 0,
+      role: "pt",
+      created_at: S + 1,
+    },
+  ],
+  [
+    "users",
+    {
+      id: 1,
+      name: "Nguyễn Văn Đạt",
+      locale: "vi",
+      accent_color: "#3366cc",
+      name_key: "nguyen van dat",
+      preferred_meal_count: 4,
+      food_note: "Không ăn hải sản, thích gà",
+      email: "dat@example.com",
+      email_key: "dat@example.com",
+      password_hash: SCRYPT_HASH,
+      password_changed_at: S + 20,
+      chat_enabled: 1,
+      chat_enabled_changed_at: S + 21,
+      chat_enabled_by_admin_id: 1,
+      last_seen_at: S + 22,
+      chat_color: "green",
+      avatar: dataUrl("image/png", PNG_BYTES),
+      avatar_updated_at: S + 24,
+      pt_admin_id: 3,
+      bio: "Tập mỗi ngày",
+      terms_version: 1,
+      terms_accepted_at: S + 23,
+      post_privacy_default: "friends",
+      created_at: S + 2,
+    },
+  ],
+  [
+    "users",
+    {
+      id: 2,
+      name: "Lê Hoàng Yến",
+      name_key: "le hoang yen",
+      chat_enabled: 0,
+      created_at: S + 3,
+    },
+  ],
+  [
+    "users",
+    {
+      id: 5,
+      name: "Phạm Quốc Bảo",
+      locale: "en",
+      name_key: "pham quoc bao",
+      created_at: S + 4,
+    },
+  ],
+  [
+    "workout_days",
+    {
+      id: 1,
+      user_id: 1,
+      date: "2026-11-10",
+      title: "Ngày tập ngực",
+      note: "Khởi động kỹ",
+      source: "manual",
+      created_at: S + 30,
+    },
+  ],
+  [
+    "exercises",
+    {
+      id: 1,
+      day_id: 1,
+      title: "Đẩy ngực",
+      description: "3 hiệp",
+      sets: 3,
+      reps: "8-12",
+      youtube_id: "dQw4w9WgXcQ",
+      position: 0,
+      created_at: S + 31,
+    },
+  ],
+  [
+    "exercises",
+    {
+      id: 2,
+      day_id: 1,
+      title: "Kéo xà",
+      sets: null,
+      reps: "",
+      youtube_id: "abc",
+      position: 1,
+      created_at: S + 32,
+    },
+  ],
+  [
+    "exercise_completions",
+    { id: 1, exercise_id: 1, user_id: 1, completed_at: MS + 1500 },
+  ],
+  [
+    "exercise_sets",
+    {
+      id: 1,
+      exercise_id: 1,
+      user_id: 1,
+      position: 0,
+      weight_kg: 52.5,
+      reps: 10,
+      created_at: S + 33,
+    },
+  ],
+  [
+    "exercise_sets",
+    {
+      id: 2,
+      exercise_id: 1,
+      user_id: 1,
+      position: 1,
+      weight_kg: null,
+      reps: 12,
+      created_at: S + 34,
+    },
+  ],
+  [
+    "nutrition_targets",
+    {
+      id: 1,
+      user_id: 1,
+      effective_from: "2026-11-01",
+      carbs: 250,
+      protein: 150,
+      fat: 60,
+      note: "Giảm mỡ",
+      source: "tdee",
+      created_at: S + 40,
+    },
+  ],
+  [
+    "food_entries",
+    {
+      id: 1,
+      user_id: 1,
+      date: "2026-11-10",
+      meal: "lunch",
+      description: "Cơm gà",
+      carbs: 60,
+      protein: 35,
+      fat: null,
+      created_at: S + 41,
+    },
+  ],
+  [
+    "body_profiles",
+    {
+      id: 1,
+      user_id: 1,
+      sex: "male",
+      birth_year: 1995,
+      height_cm: 172.5,
+      weight_kg: 68.4,
+      activity_level: "moderate",
+      goal: "maintain",
+      kcal_adjustment: -300,
+      protein_per_kg: 2,
+      updated_at: S + 42,
+    },
+  ],
+  [
+    "weight_logs",
+    {
+      id: 1,
+      user_id: 1,
+      date: "2026-11-10",
+      weight_kg: 68.25,
+      created_at: S + 43,
+    },
+  ],
+  [
+    "foods",
+    {
+      id: 1,
+      name: "Ức gà",
+      name_key: "uc ga",
+      name_en: "Chicken breast",
+      group: "meat",
+      state: "cooked",
+      kcal: 165,
+      protein: 31,
+      carbs: 0,
+      fat: 3.6,
+      fiber: null,
+      serving_label: "1 miếng",
+      serving_grams: 120.5,
+      source: "USDA FDC 171477",
+      created_at: S + 50,
+      updated_at: S + 51,
+    },
+  ],
+  [
+    "foods",
+    {
+      id: 2,
+      name: "Đậu hũ",
+      name_key: "dau hu",
+      group: "legume_nut",
+      state: null,
+      kcal: 76,
+      protein: 8,
+      carbs: 1.9,
+      fat: 4.8,
+      fiber: 0.3,
+      archived_at: S + 52,
+      created_at: S + 53,
+      updated_at: S + 54,
+    },
+  ],
+  [
+    "meal_plan_days",
+    { id: 1, user_id: 1, date: "2026-11-10", created_at: S + 60 },
+  ],
+  [
+    "meal_plan_meals",
+    {
+      id: 1,
+      day_id: 1,
+      position: 0,
+      name: "Bữa sáng",
+      share_percent: 33.5,
+      created_at: S + 61,
+    },
+  ],
+  [
+    "meal_plan_items",
+    { id: 1, meal_id: 1, food_id: 1, grams: 150.5, created_at: S + 62 },
+  ],
+  [
+    "meal_logs",
+    {
+      id: 1,
+      user_id: 1,
+      meal_id: 1,
+      food_id: null,
+      custom_name: "Phở bò",
+      grams: 0,
+      kcal: 450.5,
+      protein: 25,
+      carbs: 60,
+      fat: 10,
+      created_at: S + 63,
+      updated_at: S + 64,
+    },
+  ],
+  [
+    "meal_marks",
+    {
+      id: 1,
+      meal_id: 1,
+      user_id: 1,
+      achieved: 1,
+      note: "Đạt",
+      updated_at: S + 65,
+    },
+  ],
+  [
+    "meal_mark_items",
+    {
+      id: 1,
+      mark_id: 1,
+      meal_id: 1,
+      food_id: 1,
+      grams: 150.5,
+      protein: 46.7,
+      carbs: 0,
+      fat: 5.4,
+      kcal: 248.3,
+    },
+  ],
+  [
+    "chat_conversations",
+    {
+      id: 1,
+      user_id: 1,
+      last_message_id: 2,
+      last_message_at: MS + 2000,
+      last_change_at: MS + 2500,
+      created_at: S + 70,
+    },
+  ],
+  [
+    "chat_messages",
+    {
+      id: 1,
+      conversation_id: 1,
+      sender_role: "user",
+      sender_admin_id: null,
+      body: "Chào huấn luyện viên 💪 đạt đây",
+      client_id: "11111111-1111-4111-8111-111111111111",
+      created_at: MS + 1000,
+    },
+  ],
+  [
+    "chat_messages",
+    {
+      id: 2,
+      conversation_id: 1,
+      sender_role: "admin",
+      sender_admin_id: 1,
+      body: "",
+      attachment_url: "/api/chat-photo/1",
+      attachment_meta: '{"width":640,"height":480,"alt":"ảnh"}',
+      client_id: "22222222-2222-4222-8222-222222222222",
+      deleted_at: null,
+      hidden_by_admin_id: 3,
+      reply_to_message_id: 1,
+      sticker_ref: "pack:1",
+      sticker_url: "/stickers/1.webp",
+      photo_id: 1,
+      reply_post_id: 1,
+      silent: 1,
+      edited_at: MS + 2100,
+      updated_at: MS + 2200,
+      created_at: MS + 2000,
+    },
+  ],
+  [
+    "chat_photos",
+    {
+      id: 1,
+      conversation_id: 1,
+      message_id: 2,
+      uploader_key: "admin:1",
+      mime: "image/webp",
+      width: 640,
+      height: 480,
+      data: WEBP_BYTES,
+      size: WEBP_BYTES.length,
+      created_at: MS + 1900,
+    },
+  ],
+  [
+    "chat_custom_stickers",
+    {
+      id: 1,
+      owner_kind: "user",
+      owner_id: 1,
+      mime: "image/png",
+      data: PNG_BYTES,
+      size: PNG_BYTES.length,
+      deleted_at: MS + 3000,
+      created_at: MS + 2900,
+    },
+  ],
+  [
+    "chat_reactions",
+    {
+      message_id: 1,
+      reactor_key: "admin:1",
+      emoji: "👍",
+      created_at: MS + 2300,
+    },
+  ],
+  [
+    "chat_message_edits",
+    {
+      id: 1,
+      message_id: 2,
+      previous_body: "Nội dung cũ",
+      edited_at: MS + 2100,
+    },
+  ],
+  [
+    "chat_nicknames",
+    {
+      conversation_id: 1,
+      target_key: "user",
+      nickname: "Đạt béo",
+      set_by_key: "admin:1",
+      updated_at: MS + 2400,
+    },
+  ],
+  [
+    "contact_aliases",
+    {
+      owner_key: "admin:1",
+      target_key: "user:1",
+      alias: "Anh Đạt",
+      updated_at: MS + 2410,
+    },
+  ],
+  ["chat_color_overrides", { conversation_id: 1, admin_id: 1, color: "red" }],
+  [
+    "chat_hidden_conversations",
+    { admin_id: 1, conversation_id: 1, hidden_at: S + 71 },
+  ],
+  ["admin_hidden_users", { admin_id: 1, user_id: 1, hidden_at: S + 72 }],
+  [
+    "chat_reads",
+    {
+      conversation_id: 1,
+      reader_key: "user",
+      last_read_message_id: 2,
+      updated_at: S + 73,
+    },
+  ],
+  [
+    "login_attempts",
+    {
+      key: "user:dat@example.com",
+      failed_count: 3,
+      window_started_at: S + 80,
+      locked_until: S + 900,
+    },
+  ],
+  [
+    "rate_limits",
+    { key: "chat:user:1", count: 7, window_started_at: MS + 3100 },
+  ],
+  [
+    "push_subscriptions",
+    {
+      id: 1,
+      owner_key: "user:1",
+      endpoint: "https://push.example.com/send/abc",
+      p256dh: "BNc-p256dh",
+      auth: "auth-secret",
+      user_agent: "Mozilla/5.0 (iPhone)",
+      created_at: S + 90,
+      last_success_at: S + 91,
+    },
+  ],
+  [
+    "social_posts",
+    {
+      id: 1,
+      author_kind: "user",
+      author_id: 1,
+      caption: "Buổi tập hôm nay 🔥",
+      privacy: "friends",
+      photo_id: 1,
+      created_at: MS + 4000,
+      updated_at: MS + 4001,
+      deleted_at: null,
+    },
+  ],
+  [
+    "social_post_photos",
+    {
+      id: 1,
+      uploader_key: "user:1",
+      post_id: 1,
+      mime: "image/jpeg",
+      width: 1080,
+      height: 1080,
+      data: PNG_BYTES,
+      size: PNG_BYTES.length,
+      created_at: MS + 3900,
+    },
+  ],
+  [
+    "social_reactions",
+    {
+      post_id: 1,
+      reactor_key: "user:2",
+      emoji: "❤️",
+      created_at: MS + 4100,
+    },
+  ],
+  [
+    "social_comments",
+    {
+      id: 1,
+      post_id: 1,
+      author_key: "user:2",
+      body: "Tuyệt vời!",
+      created_at: MS + 4200,
+      updated_at: null,
+    },
+  ],
+  [
+    "social_notifications",
+    {
+      id: 1,
+      recipient_key: "user:1",
+      kind: "post_comment",
+      actor_key: "user:2",
+      post_id: 1,
+      created_at: MS + 4300,
+      read_at: MS + 4400,
+      pushed_at: null,
+    },
+  ],
+  [
+    "social_friendships",
+    {
+      user_low: 1,
+      user_high: 2,
+      status: "accepted",
+      requested_by: 1,
+      created_at: MS + 4500,
+      accepted_at: MS + 4600,
+    },
+  ],
+  ["social_blocks", { blocker_id: 2, blocked_id: 5, created_at: MS + 4700 }],
+  [
+    "social_reports",
+    {
+      id: 1,
+      reporter_key: "user:2",
+      target_kind: "post",
+      target_id: 1,
+      reason: "Spam",
+      status: "resolved",
+      created_at: MS + 4800,
+      resolved_by: 1,
+      resolved_at: MS + 4900,
+      resolution: "kept",
+    },
+  ],
+  [
+    "dm_conversations",
+    {
+      id: 1,
+      user_low: 1,
+      user_high: 2,
+      last_message_id: 1,
+      last_message_at: MS + 5000,
+      created_at: MS + 4950,
+    },
+  ],
+  [
+    "dm_messages",
+    {
+      id: 1,
+      conversation_id: 1,
+      sender_id: 1,
+      body: "Mai tập chung nhé",
+      photo_id: 1,
+      reply_post_id: 1,
+      client_id: "33333333-3333-4333-8333-333333333333",
+      created_at: MS + 5000,
+      deleted_at: null,
+    },
+  ],
+  [
+    "dm_photos",
+    {
+      id: 1,
+      conversation_id: 1,
+      message_id: 1,
+      uploader_id: 1,
+      mime: "image/png",
+      width: 100,
+      height: 50,
+      data: PNG_BYTES,
+      size: PNG_BYTES.length,
+      created_at: MS + 4990,
+    },
+  ],
+  ["dm_reads", { conversation_id: 1, user_id: 1, last_read_message_id: 1 }],
+  ...companyRows(),
+];
+
+// The tables production gained after the API branched (company/main 8f0e085):
+// group chat, accent color, user restrictions. A group with a system line, a
+// message with two photos (cover = position 0), a reply, an edit, a reaction,
+// a current and a removed member.
+function companyRows(): Entry[] {
+  return [
+    [
+      "chat_groups",
+      {
+        id: 1,
+        name: "Nhóm giảm cân",
+        avatar: null,
+        created_by_key: "admin:1",
+        managers_only: null,
+        last_message_id: 2,
+        last_message_at: MS + 7010,
+        last_change_at: MS + 7020,
+        created_at: MS + 7000,
+      },
+    ],
+    [
+      "chat_group_members",
+      {
+        group_id: 1,
+        member_key: "user:1",
+        added_by_key: "admin:1",
+        joined_at: MS + 7000,
+        muted_at: MS + 7005,
+        last_read_message_id: 2,
+      },
+    ],
+    [
+      "chat_group_members",
+      {
+        group_id: 1,
+        member_key: "admin:3",
+        added_by_key: "admin:1",
+        joined_at: MS + 7000,
+        left_at: MS + 7030,
+        removed_by_key: "admin:1",
+      },
+    ],
+    [
+      "chat_group_messages",
+      {
+        id: 1,
+        group_id: 1,
+        kind: "system",
+        body: "",
+        system_event: '{"type":"created"}',
+        created_at: MS + 7000,
+      },
+    ],
+    [
+      "chat_group_messages",
+      {
+        id: 2,
+        group_id: 1,
+        kind: "message",
+        sender_key: "user:1",
+        body: "Chào cả nhóm",
+        client_id: "70707070-7070-4070-8070-707070707070",
+        reply_to_message_id: 1,
+        photo_id: 1,
+        silent: null,
+        hidden_by_key: "admin:1",
+        hidden_at: MS + 7040,
+        edited_at: MS + 7015,
+        created_at: MS + 7010,
+      },
+    ],
+    [
+      "chat_group_photos",
+      {
+        id: 1,
+        group_id: 1,
+        message_id: 2,
+        uploader_key: "user:1",
+        position: 0,
+        mime: "image/webp",
+        width: 640,
+        height: 480,
+        data: WEBP_BYTES,
+        size: WEBP_BYTES.length,
+        created_at: MS + 7008,
+      },
+    ],
+    [
+      "chat_group_photos",
+      {
+        id: 2,
+        group_id: 1,
+        message_id: 2,
+        uploader_key: "user:1",
+        position: 1,
+        mime: "image/png",
+        width: 1,
+        height: 1,
+        data: PNG_BYTES,
+        size: PNG_BYTES.length,
+        created_at: MS + 7009,
+      },
+    ],
+    [
+      "chat_group_reactions",
+      {
+        message_id: 2,
+        reactor_key: "admin:1",
+        emoji: "❤️",
+        created_at: MS + 7012,
+      },
+    ],
+    [
+      "chat_group_message_edits",
+      {
+        id: 1,
+        message_id: 2,
+        previous_body: "Chào",
+        edited_at: MS + 7015,
+      },
+    ],
+    [
+      "theme_settings",
+      {
+        scope: "all",
+        accent: "#ff8800",
+        updated_at: S + 700,
+        updated_by_admin_id: 1,
+      },
+    ],
+    [
+      "theme_locks",
+      {
+        scope: "trainee",
+        locked: 1,
+        updated_at: S + 701,
+        updated_by_admin_id: 1,
+      },
+    ],
+    [
+      "user_restrictions",
+      {
+        id: 1,
+        user_id: 1,
+        level: "restricted",
+        until: MS + 9000,
+        reason: "spam",
+        created_by_admin_id: 1,
+        created_at: MS + 7100,
+        lifted_at: MS + 7200,
+        lifted_by_admin_id: 1,
+      },
+    ],
+  ];
+}
+
+// Rows whose FK parent does not exist (SQLite never enforced FKs).
+const requiredOrphans = (): Entry[] => [
+  [
+    "exercise_sets",
+    {
+      id: 99,
+      exercise_id: 999,
+      user_id: 1,
+      position: 0,
+      weight_kg: 10,
+      reps: 5,
+      created_at: S + 100,
+    },
+  ],
+  // A meal of a deleted day, and an item of that meal: skipping the meal
+  // must take the item with it.
+  [
+    "meal_plan_meals",
+    {
+      id: 9,
+      day_id: 999,
+      position: 0,
+      name: "Bữa mồ côi",
+      created_at: S + 101,
+    },
+  ],
+  [
+    "meal_plan_items",
+    { id: 9, meal_id: 9, food_id: 1, grams: 50, created_at: S + 102 },
+  ],
+];
+
+const nullableOrphans = (): Entry[] => [
+  [
+    "users",
+    {
+      id: 6,
+      name: "Võ Thị Hạnh",
+      name_key: "vo thi hanh",
+      pt_admin_id: 77,
+      created_at: S + 110,
+    },
+  ],
+];
+
+// Rows that break the db-constraints migration: a day that does not exist, an
+// owner that differs from the parent's, numbers out of range, a duplicate
+// position, a meal log with neither food nor name, a mark item for another
+// meal than its mark's. Skipping the bad day must take its exercise and set.
+const constraintViolations = (): Entry[] => [
+  [
+    "workout_days",
+    { id: 20, user_id: 2, date: "2026-02-30", created_at: S + 120 },
+  ],
+  [
+    "exercises",
+    {
+      id: 20,
+      day_id: 20,
+      title: "Của ngày hỏng",
+      youtube_id: "x",
+      position: 0,
+      created_at: S + 121,
+    },
+  ],
+  [
+    "exercise_sets",
+    {
+      id: 30,
+      exercise_id: 20,
+      user_id: 2,
+      position: 0,
+      weight_kg: 10,
+      reps: 5,
+      created_at: S + 122,
+    },
+  ],
+  [
+    "exercises",
+    {
+      id: 21,
+      day_id: 1,
+      title: "Trùng vị trí",
+      youtube_id: "y",
+      position: 0,
+      created_at: S + 123,
+    },
+  ],
+  [
+    "exercise_sets",
+    {
+      id: 21,
+      exercise_id: 1,
+      user_id: 2,
+      position: 2,
+      weight_kg: 10,
+      reps: 5,
+      created_at: S + 124,
+    },
+  ],
+  [
+    "exercise_sets",
+    {
+      id: 22,
+      exercise_id: 1,
+      user_id: 1,
+      position: 3,
+      weight_kg: 10,
+      reps: 101,
+      created_at: S + 125,
+    },
+  ],
+  [
+    "meal_logs",
+    {
+      id: 21,
+      user_id: 1,
+      meal_id: 1,
+      custom_name: "Quá nặng",
+      grams: 5000,
+      created_at: S + 126,
+      updated_at: S + 126,
+    },
+  ],
+  [
+    "meal_logs",
+    {
+      id: 22,
+      user_id: 1,
+      meal_id: 1,
+      grams: 10,
+      created_at: S + 127,
+      updated_at: S + 127,
+    },
+  ],
+  [
+    "meal_plan_meals",
+    { id: 2, day_id: 1, position: 1, name: "Bữa trưa", created_at: S + 128 },
+  ],
+  [
+    "meal_mark_items",
+    {
+      id: 21,
+      mark_id: 1,
+      meal_id: 2,
+      food_id: 1,
+      grams: 10,
+      protein: 1,
+      carbs: 1,
+      fat: 1,
+      kcal: 1,
+    },
+  ],
+  [
+    "weight_logs",
+    {
+      id: 21,
+      user_id: 1,
+      date: "2026-11-02",
+      weight_kg: 20,
+      created_at: S + 129,
+    },
+  ],
+];
+
+// Rows the DbIntegrity foreign keys, CHECK and unique indexes would reject:
+// text keys of accounts that do not exist, a user message with an admin id, a
+// (The unique client_id rules need no fixture: SQLite already had a stricter
+// UNIQUE (conversation_id, client_id).)
+const dirtyKeys = (): Entry[] => [
+  // Malformed keys: the format CHECKs refuse them (a key like this was never
+  // checked in SQLite).
+  [
+    "social_comments",
+    {
+      id: 95,
+      post_id: 1,
+      author_key: "user:abc",
+      body: "Khóa sai định dạng",
+      created_at: MS + 4210,
+    },
+  ],
+  [
+    "chat_reads",
+    {
+      conversation_id: 1,
+      reader_key: "admin:x",
+      last_read_message_id: 0,
+      updated_at: S + 74,
+    },
+  ],
+  [
+    "social_comments",
+    {
+      id: 90,
+      post_id: 1,
+      author_key: "user:9999",
+      body: "Của tài khoản đã xóa",
+      created_at: MS + 4200,
+    },
+  ],
+  [
+    "social_reactions",
+    {
+      post_id: 1,
+      reactor_key: "admin:9999",
+      emoji: "👍",
+      created_at: MS + 4100,
+    },
+  ],
+  [
+    "social_reports",
+    {
+      id: 90,
+      reporter_key: "user:1",
+      target_kind: "user",
+      target_id: 9999,
+      status: "open",
+      created_at: MS + 4500,
+    },
+  ],
+  [
+    "chat_messages",
+    {
+      id: 91,
+      conversation_id: 1,
+      sender_role: "user",
+      sender_admin_id: 1,
+      body: "Tin của học viên mang id admin",
+      client_id: "91919191-9191-4191-8191-919191919191",
+      created_at: MS + 3000,
+    },
+  ],
+  [
+    "chat_reactions",
+    {
+      message_id: 91,
+      reactor_key: "admin:1",
+      emoji: "👍",
+      created_at: MS + 3100,
+    },
+  ],
+];
+
+// Rows the DbChatSocial constraints would reject (and a NULL silent, which is
+// repaired to false instead): a reply across conversations, a last message of
+// another conversation, a photo attached to a message that does not point back,
+// a size that is not the byte length, unordered pairs, a requester outside the
+// pair, a duplicate open report and a resolved report without a resolution.
+const chatSocialDirty = (): Entry[] => [
+  ["chat_conversations", { id: 2, user_id: 2, created_at: S + 600 }],
+  [
+    "chat_conversations",
+    { id: 3, user_id: 5, last_message_id: 2, created_at: S + 601 },
+  ],
+  [
+    "chat_messages",
+    {
+      id: 92,
+      conversation_id: 2,
+      sender_role: "user",
+      body: "Trả lời tin của cuộc trò chuyện khác",
+      client_id: "92929292-9292-4292-8292-929292929292",
+      reply_to_message_id: 1,
+      photo_id: 92,
+      created_at: MS + 6010,
+    },
+  ],
+  [
+    "chat_messages",
+    {
+      id: 93,
+      conversation_id: 1,
+      sender_role: "user",
+      body: "silent không có giá trị",
+      client_id: "93939393-9393-4393-8393-939393939393",
+      silent: null,
+      created_at: MS + 6020,
+    },
+  ],
+  [
+    "chat_photos",
+    {
+      id: 92,
+      conversation_id: 1,
+      message_id: 1,
+      position: -1,
+      uploader_key: "user",
+      mime: "image/png",
+      width: 1,
+      height: 1,
+      data: PNG_BYTES,
+      size: PNG_BYTES.length,
+      created_at: MS + 6030,
+    },
+  ],
+  [
+    "chat_custom_stickers",
+    {
+      id: 92,
+      owner_kind: "user",
+      owner_id: 1,
+      mime: "image/png",
+      data: PNG_BYTES,
+      size: 1,
+      created_at: MS + 6040,
+    },
+  ],
+  [
+    "social_friendships",
+    {
+      user_low: 5,
+      user_high: 2,
+      status: "pending",
+      requested_by: 5,
+      created_at: MS + 6050,
+    },
+  ],
+  [
+    "social_friendships",
+    {
+      user_low: 2,
+      user_high: 5,
+      status: "pending",
+      requested_by: 1,
+      created_at: MS + 6051,
+    },
+  ],
+  [
+    "dm_conversations",
+    { id: 92, user_low: 5, user_high: 2, created_at: MS + 6060 },
+  ],
+  [
+    "dm_messages",
+    {
+      id: 92,
+      conversation_id: 1,
+      sender_id: 5,
+      body: "outsider",
+      client_id: "92929292-9292-4929-8929-929292929292",
+      created_at: MS + 6061,
+    },
+  ],
+  [
+    "dm_photos",
+    {
+      id: 92,
+      conversation_id: 1,
+      uploader_id: 5,
+      mime: "image/png",
+      width: 1,
+      height: 1,
+      data: PNG_BYTES,
+      size: PNG_BYTES.length,
+      created_at: MS + 6062,
+    },
+  ],
+  ["dm_reads", { conversation_id: 1, user_id: 5, last_read_message_id: 0 }],
+  [
+    "social_reports",
+    {
+      id: 92,
+      reporter_key: "user:5",
+      target_kind: "post",
+      target_id: 1,
+      status: "open",
+      created_at: MS + 6070,
+    },
+  ],
+  [
+    "social_reports",
+    {
+      id: 93,
+      reporter_key: "user:5",
+      target_kind: "post",
+      target_id: 1,
+      status: "open",
+      created_at: MS + 6071,
+    },
+  ],
+  [
+    "social_reports",
+    {
+      id: 94,
+      reporter_key: "user:1",
+      target_kind: "post",
+      target_id: 1,
+      status: "resolved",
+      created_at: MS + 6072,
+    },
+  ],
+];
+
+// One row per company-features rule (scripts/migrate/company-features.ts),
+// on top of the base rows. Ids 90+ so the base rows stay untouched.
+const companyDirty = (): Entry[] => [
+  [
+    "users",
+    {
+      id: 90,
+      name: "Màu sai",
+      name_key: "mau sai",
+      accent_color: "#FF8800",
+      created_at: S + 800,
+    },
+  ],
+  ["theme_settings", { scope: "pt", accent: "cam", updated_at: S + 801 }],
+  // Trainee 5's only active block, with a lifter but no lift time.
+  [
+    "user_restrictions",
+    {
+      id: 90,
+      user_id: 5,
+      level: "suspended",
+      created_by_admin_id: 1,
+      created_at: MS + 8000,
+      lifted_by_admin_id: 1,
+    },
+  ],
+  // An active block whose admin was deleted in SQLite (no FKs there).
+  [
+    "user_restrictions",
+    {
+      id: 91,
+      user_id: 1,
+      level: "restricted",
+      created_by_admin_id: 99,
+      created_at: MS + 8001,
+    },
+  ],
+  // Trainee 2: four active blocks (GroupChatRestrictionKeys). 94 stays; 93 is
+  // lifted when 94 replaced it, 92 at its own until (it ended before 93 came),
+  // 96 when 92 replaced it, keeping its lifter (it now has a lift time).
+  [
+    "user_restrictions",
+    {
+      id: 96,
+      user_id: 2,
+      level: "restricted",
+      created_by_admin_id: 1,
+      created_at: MS + 8050,
+      lifted_by_admin_id: 1,
+    },
+  ],
+  [
+    "user_restrictions",
+    {
+      id: 92,
+      user_id: 2,
+      level: "restricted",
+      until: MS + 8150,
+      created_by_admin_id: 1,
+      created_at: MS + 8100,
+    },
+  ],
+  [
+    "user_restrictions",
+    {
+      id: 93,
+      user_id: 2,
+      level: "suspended",
+      created_by_admin_id: 1,
+      created_at: MS + 8200,
+    },
+  ],
+  [
+    "user_restrictions",
+    {
+      id: 94,
+      user_id: 2,
+      level: "restricted",
+      until: MS + 9999,
+      created_by_admin_id: 1,
+      created_at: MS + 8300,
+    },
+  ],
+  // Lifted before it was created: lifted at created_at instead.
+  [
+    "user_restrictions",
+    {
+      id: 95,
+      user_id: 5,
+      level: "restricted",
+      created_by_admin_id: 1,
+      created_at: MS + 8400,
+      lifted_at: MS + 8350,
+    },
+  ],
+  [
+    "chat_groups",
+    { id: 90, name: "", created_by_key: "admin:1", created_at: MS + 8010 },
+  ],
+  [
+    "chat_groups",
+    {
+      id: 91,
+      name: "Nhóm khác",
+      created_by_key: "admin:1",
+      last_message_id: 2,
+      created_at: MS + 8011,
+    },
+  ],
+  [
+    "chat_group_members",
+    {
+      group_id: 1,
+      member_key: "user:2",
+      added_by_key: "admin:1",
+      joined_at: MS + 8020,
+      removed_by_key: "admin:1",
+    },
+  ],
+  [
+    "chat_group_members",
+    {
+      group_id: 1,
+      member_key: "user",
+      added_by_key: "admin:1",
+      joined_at: MS + 8021,
+    },
+  ],
+  // Read cursors naming no message of their group (SQLite had no FK): a
+  // missing message and another group's. Cleared; the members stay.
+  [
+    "chat_group_members",
+    {
+      group_id: 1,
+      member_key: "user:5",
+      added_by_key: "admin:1",
+      joined_at: MS + 8022,
+      last_read_message_id: 999,
+    },
+  ],
+  [
+    "chat_group_members",
+    {
+      group_id: 1,
+      member_key: "admin:1",
+      added_by_key: "admin:1",
+      joined_at: MS + 8023,
+      last_read_message_id: 91,
+    },
+  ],
+  [
+    "chat_group_messages",
+    {
+      id: 90,
+      group_id: 1,
+      kind: "system",
+      sender_key: "user:1",
+      created_at: MS + 8030,
+    },
+  ],
+  [
+    "chat_group_messages",
+    {
+      id: 91,
+      group_id: 91,
+      kind: "message",
+      sender_key: "user:1",
+      client_id: "91919191-9191-4191-8191-919191919191",
+      reply_to_message_id: 2,
+      created_at: MS + 8031,
+    },
+  ],
+  [
+    "chat_group_messages",
+    {
+      id: 92,
+      group_id: 1,
+      kind: "message",
+      sender_key: "user:1",
+      client_id: "92929292-9292-4292-8292-929292929292",
+      photo_id: 2,
+      hidden_by_key: "admin:1",
+      created_at: MS + 8032,
+    },
+  ],
+  [
+    "chat_group_photos",
+    {
+      id: 90,
+      group_id: 1,
+      message_id: 2,
+      uploader_key: "user:1",
+      position: 1,
+      mime: "image/png",
+      width: 1,
+      height: 1,
+      data: PNG_BYTES,
+      size: 1,
+      created_at: MS + 8040,
+    },
+  ],
+];
+
+export type FixtureVariant =
+  | "base"
+  | "required-orphans"
+  | "nullable-orphans"
+  | "sparse"
+  | "invalid-enum"
+  | "constraint-violations"
+  | "dirty-keys"
+  | "chat-social-dirty"
+  | "company-dirty"
+  | "bad-avatars";
+
+export type TursoFixture = {
+  url: string;
+  client: Client;
+  cleanup: () => void;
+};
+
+export const createTursoFixture = async (
+  variant: FixtureVariant = "base",
+): Promise<TursoFixture> => {
+  const dir = mkdtempSync(join(tmpdir(), "pt-turso-fixture-"));
+  const url = pathToFileURL(join(dir, "source.db")).href;
+  const client = createClient({ url });
+
+  // Production never enabled foreign keys, which is why orphans can exist.
+  await client.execute("PRAGMA foreign_keys = OFF");
+
+  for (const statement of loadTursoSchemaStatements()) {
+    await client.execute(statement);
+  }
+
+  const entries =
+    variant === "sparse"
+      ? baseRows().filter(([table]) => table === "admins" || table === "users")
+      : baseRows();
+
+  for (const entry of entries) {
+    await insert(client, entry);
+  }
+
+  if (variant === "required-orphans") {
+    for (const entry of requiredOrphans()) {
+      await insert(client, entry);
+    }
+  }
+
+  if (variant === "constraint-violations") {
+    for (const entry of constraintViolations()) {
+      await insert(client, entry);
+    }
+  }
+
+  if (variant === "dirty-keys") {
+    for (const entry of dirtyKeys()) {
+      await insert(client, entry);
+    }
+  }
+
+  if (variant === "chat-social-dirty") {
+    for (const entry of chatSocialDirty()) {
+      await insert(client, entry);
+    }
+  }
+
+  if (variant === "company-dirty") {
+    for (const entry of companyDirty()) {
+      await insert(client, entry);
+    }
+  }
+
+  if (variant === "nullable-orphans") {
+    for (const entry of nullableOrphans()) {
+      await insert(client, entry);
+    }
+  }
+
+  if (variant === "invalid-enum") {
+    await client.execute(
+      "UPDATE users SET post_privacy_default = 'bogus' WHERE id = 1",
+    );
+    await client.execute(
+      "UPDATE users SET bio = 'nul' || char(0) || 'byte' WHERE id = 2",
+    );
+  }
+
+  if (variant === "bad-avatars") {
+    // users 2: not base64; users 5: base64 of something that is not an image;
+    // admins 3: an image without avatar_updated_at; users 1 keeps a good one.
+    await client.execute(
+      "UPDATE users SET avatar = 'data:image/png;base64,@@@@', avatar_updated_at = 1700000000 WHERE id = 2",
+    );
+    await client.execute(
+      `UPDATE users SET avatar = 'data:image/png;base64,${Buffer.from("<script>").toString("base64")}', avatar_updated_at = 1700000000 WHERE id = 5`,
+    );
+    await client.execute({
+      sql: "UPDATE admins SET avatar = ? WHERE id = 3",
+      args: [dataUrl("image/png", PNG_BYTES)],
+    });
+  }
+
+  return {
+    url,
+    client,
+    cleanup: () => {
+      client.close();
+      try {
+        rmSync(dir, {
+          recursive: true,
+          force: true,
+          maxRetries: 5,
+          retryDelay: 100,
+        });
+      } catch {
+        // Windows keeps the SQLite file locked until the process exits; it is
+        // a temp file with invented rows.
+      }
+    },
+  };
+};

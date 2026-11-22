@@ -1,0 +1,148 @@
+import { addDays } from "@pt/contracts";
+import { Eye } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+
+import { AppHeader } from "@/components/layout/AppHeader";
+import { MemberSectionTabs } from "@/components/layout/MemberSectionTabs";
+import { ROUTES } from "@/constants/routes";
+import { ICON_BUTTON, PAGE_CONTAINER, SECTION_TITLE } from "@/constants/styles";
+import { TIME_ZONE } from "@/constants/time";
+import { RecentActivityList } from "@/features/dashboard/components/RecentActivityList";
+import { MEMBER_ACTIVITY_LIMIT } from "@/features/dashboard/constants/dashboard";
+import { getRecentActivity } from "@/features/dashboard/services/dashboard-api";
+import { DeleteMemberButton } from "@/features/members/components/DeleteMemberButton";
+import { HideUserButton } from "@/features/members/components/HideUserButton";
+import { MemberLoginCard } from "@/features/members/components/MemberLoginCard";
+import {
+  getTrainee,
+  listMembers,
+} from "@/features/members/services/member-queries";
+import { PtAssignSelect } from "@/features/pts/components/PtAssignSelect";
+import { listPtOptions } from "@/features/pts/services/pt-queries";
+import { BlockUserControl } from "@/features/restrictions/components/BlockUserControl";
+import { getTraineeRestriction } from "@/features/restrictions/services/restriction-queries";
+import { CopyWeekButton } from "@/features/workouts/components/CopyWeekButton";
+import { WorkoutWeekEditor } from "@/features/workouts/components/WorkoutWeekEditor";
+import { getTraineeWeekSchedule } from "@/features/workouts/services/workout-api";
+import { requireAdmin } from "@/services/auth-guard";
+import { isSuperAdmin } from "@/utils/admin-role";
+import { getAdminPreviewPath, getAdminUserPath } from "@/utils/routes";
+import { readSearchParam } from "@/utils/search-params";
+import { getRequestTime } from "@/utils/time";
+import { buildScheduleHref, getTodayDate, resolveSchedule } from "@/utils/week";
+
+export const generateMetadata = async (): Promise<Metadata> => {
+  const t = await getTranslations("adminPages.userPage");
+
+  return { title: t("metaTitle") };
+};
+
+const AdminUserPage = async ({
+  params,
+  searchParams,
+}: PageProps<"/admin/users/[id]">) => {
+  const admin = await requireAdmin();
+  const t = await getTranslations("adminPages.userPage");
+
+  const { id } = await params;
+  // Scope, hiding and nicknames are the API's: it answers 404 for a trainee
+  // this admin may not see.
+  const user = await getTrainee(Number(id));
+
+  if (!user) {
+    notFound();
+  }
+  const { displayName } = user;
+
+  const query = await searchParams;
+  const today = getTodayDate(TIME_ZONE);
+  const schedule = resolveSchedule(
+    { week: readSearchParam(query.week), day: readSearchParam(query.day) },
+    today,
+  );
+  const ptOptions = isSuperAdmin(admin) ? await listPtOptions() : [];
+  const [days, members, activity, restriction] = await Promise.all([
+    getTraineeWeekSchedule(user.id, schedule.weekStart),
+    listMembers(admin.id, user.id),
+    getRecentActivity({ userId: user.id, limit: MEMBER_ACTIVITY_LIMIT }),
+    // Only a super admin sees (and can change) a block; a PT sees nothing.
+    isSuperAdmin(admin) ? getTraineeRestriction(user.id) : null,
+  ]);
+
+  return (
+    <>
+      <AppHeader
+        eyebrow={t("eyebrow")}
+        title={displayName}
+        backHref={`${ROUTES.ADMIN}?${new URLSearchParams({ week: schedule.weekStart })}`}
+        actions={
+          <Link
+            href={buildScheduleHref(getAdminPreviewPath(user.id), schedule)}
+            className={`${ICON_BUTTON} text-fg`}
+            aria-label={t("preview")}
+          >
+            <Eye className="size-5" />
+          </Link>
+        }
+      />
+      <MemberSectionTabs
+        userId={user.id}
+        active="workouts"
+        weekStart={schedule.weekStart}
+      />
+      {/* Bottom padding clears the fixed "Thêm bài tập" bar. */}
+      <main
+        className={`${PAGE_CONTAINER} space-y-8 pt-4 pb-[calc(env(safe-area-inset-bottom)+7rem)]`}
+      >
+        <WorkoutWeekEditor
+          userId={user.id}
+          basePath={getAdminUserPath(user.id)}
+          days={days}
+          weekStart={schedule.weekStart}
+          selectedDate={schedule.selectedDate}
+          today={today}
+        />
+        <section className="space-y-2 border-t border-line pt-6">
+          <h2 className={SECTION_TITLE}>{t("history")}</h2>
+          <RecentActivityList
+            items={activity}
+            isUserShown={false}
+            now={getRequestTime()}
+          />
+        </section>
+        <MemberLoginCard userId={user.id} name={user.name} email={user.email} />
+        <section className="space-y-3">
+          <h2 className={SECTION_TITLE}>{t("tools")}</h2>
+          <CopyWeekButton
+            userId={user.id}
+            weekStart={schedule.weekStart}
+            defaultTargetDate={addDays(schedule.weekStart, 7)}
+            today={today}
+            members={members}
+          />
+          {isSuperAdmin(admin) && (
+            <PtAssignSelect
+              userId={user.id}
+              currentPtId={user.ptAdminId}
+              options={ptOptions}
+            />
+          )}
+          <HideUserButton
+            userId={user.id}
+            isHidden={user.hidden}
+            hasPasscode={admin.hasPasscode}
+          />
+          {isSuperAdmin(admin) && (
+            <BlockUserControl userId={user.id} restriction={restriction} />
+          )}
+          <DeleteMemberButton userId={user.id} />
+        </section>
+      </main>
+    </>
+  );
+};
+
+export default AdminUserPage;

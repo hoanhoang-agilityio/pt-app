@@ -2,22 +2,29 @@
 
 # PT App
 
-Weekly PT workout app: admins (PTs) assign daily workouts, users log in by name. Next.js 16 App Router + React 19, Drizzle ORM on libSQL (SQLite locally, Turso on Vercel), Tailwind 4, Zod, Vitest. Mobile-first. The README (Vietnamese) has the full feature list.
+pnpm monorepo (`apps/web`, `apps/api`, `packages/contracts`). Weekly PT workout app: admins (PTs) assign daily workouts, users log in by name. Next.js 16 App Router + React 19 as a BFF over the NestJS 12 API (TypeORM + PostgreSQL 17 in `apps/api`; the web has no database or database driver), Tailwind 4, Zod, Vitest. Mobile-first. The README (Vietnamese) has the full feature list.
 
 ## Commands
 
-- Install (Node 24, same as Vercel via `engines`): `pnpm install`, then `cp .env.example .env.local`, `pnpm db:push`, `pnpm admin:create`
-- Dev: `pnpm dev` (http://localhost:3000, admin at `/admin/login`)
-- Check everything: `pnpm verify` (runs `pnpm test && pnpm lint && pnpm typecheck`); run it before every PR
+- Install (Node 24, same as Vercel via `engines` and `.nvmrc`; Docker must be running): `pnpm install --frozen-lockfile`, then `cp apps/web/.env.example apps/web/.env.local` and `cp apps/api/.env.example apps/api/.env` (uncomment `SUPER_ADMIN_USERNAME` / `SUPER_ADMIN_PASSWORD` there). `DB_PORT` / `API_PORT` move the compose host ports when 5432 or 4000 is taken; then change `DATABASE_URL` (apps/api/.env) and `API_URL` / `NEXT_PUBLIC_API_URL` (apps/web/.env.local) to match.
+- Dev: the web signs in through the API, so start it first: `docker compose up -d --build db api` (PostgreSQL 17 + API on :4000, `pnpm dev:db`), create the admin once with `pnpm admin:create` (needs `DATABASE_URL`, `SUPER_ADMIN_USERNAME`, `SUPER_ADMIN_PASSWORD` in apps/api/.env; the migrations run when the `api` container starts, or by hand with `pnpm db:migrate`), then `pnpm dev` (builds `@pt/contracts`, then the web app at http://localhost:3000, admin at `/admin/login`). `pnpm dev:all` does both. `API_URL` (apps/web/.env.local) defaults to http://localhost:4000. API alone: `pnpm dev:api`.
+- E2E: `pnpm test:e2e` runs Playwright against web + API + PostgreSQL (Docker starts a throwaway postgres:17 on :55432; set `E2E_DATABASE_URL` to use another e2e database; `E2E_BROWSER_CHANNEL=chrome` uses an installed browser). Several suites can run side by side with `E2E_PORT`, `E2E_API_PORT`, `E2E_PG_PORT` (e.g. 3305/4305/55305); remove a leftover container with `docker rm -f pt-e2e-pg-<port>`. CI shards it in 3 (`--shard=N/3`). Details: `apps/web/e2e/api-server.mjs`.
+- After an API route change: `pnpm --filter @pt/api openapi`, then `pnpm --filter @pt/web api:types` and commit both generated files.
+- Check everything: `pnpm verify` (builds `@pt/contracts`, then runs `verify` in every workspace and the `.claude` hook tests); run it before every PR. One workspace: `pnpm --filter @pt/web verify` (also `@pt/api`, `@pt/contracts`)
+- Root `test`, `lint`, `typecheck` delegate to the workspaces; `db:migrate`, `db:seed-foods`, `db:seed-demo` (local-only demo trainee) and `admin:create` delegate to `@pt/api` (`migration:run`, `foods:seed`, `demo:seed`, `admin:create`); `@pt/contracts` must be built (`pnpm build:contracts`) before running a workspace script directly
 - Format: `pnpm format` (Prettier; a hook runs `eslint --fix` + Prettier on each file Claude edits)
-- Cloud sessions set themselves up (`scripts/cloud-session-setup.sh` via `SessionStart`: install, local `.env.local`, local SQLite); local-only steps (GitHub app, notifications, exercises): `docs/claude-code-setup.md`
+- Cloud sessions set themselves up (`scripts/cloud-session-setup.sh` via `SessionStart`: install, build contracts, local `apps/web/.env.local`; no database); local-only steps (GitHub app, notifications, exercises): `docs/claude-code-setup.md`
 
 ## Layout
 
-- `app/`: routes only, thin; compose features. `(user)/(protected)` and `admin/(protected)` layouts guard access.
-- `features/<name>/{components,hooks,services,utils,constants,types}`: auth, members, workouts, dashboard, nutrition.
-- `components/` shared UI, `services/` session/guards/env/logger, `db/schema.ts` Drizzle schema, `utils/` pure helpers.
-- Tests: `__tests__/*.test.ts` next to the code they cover (pure utils and services).
+- `apps/web/` (`@pt/web`, Next.js; the `@/` alias points here):
+  - `app/`: routes only, thin; compose features. `(user)/(protected)` and `admin/(protected)` layouts guard access.
+  - `features/<name>/{components,hooks,services,utils,constants,types}`: auth, members, workouts, dashboard, nutrition.
+  - `components/` shared UI, `services/` session/guards/env/logger, `utils/` pure helpers. The web is a BFF: every read and write goes through the API (server components and actions call `callApi`/`tryApi`; the browser only talks to this app, plus the Socket.IO realtime connection to the API at `NEXT_PUBLIC_API_URL`).
+  - `services/api/`: server-only helpers that call the NestJS API (typed client from `schema.d.ts`, `callApi`/`tryApi`, file proxy, error mapping); read `services/api/README.md` before calling the API. The session cookie holds the opaque API token; `services/auth-guard.ts` asks `GET /v1/auth/me`.
+- `apps/api/` (`@pt/api`): NestJS 12 skeleton (ESM, `/v1` prefix, `GET /v1/health`), Zod env in `src/config/env.schema.ts`, Dockerfile; built from the repo root by `docker-compose.yml`. Schema changes are TypeORM migrations in `src/migrations/`. One-time Turso to PostgreSQL copy in `scripts/` (frozen SQLite DDL: `scripts/turso-schema.sql`) (`pnpm --filter @pt/api data:migrate`, runbook `docs/backend/cutover-runbook.md`). Plan: `docs/backend/`.
+- `packages/contracts/` (`@pt/contracts`): framework-free Zod schemas (`*-schemas.ts`), limits and the pure helpers they need; built with `tsc` to `dist/` and imported by web and API as `@pt/contracts`. No Next, Nest, React or Node-only imports here.
+- Tests: `__tests__/*.test.ts` next to the code they cover (pure utils and services); `.claude/hooks` tests run from the root (`pnpm test:tools`).
 
 ## Conventions
 
@@ -29,7 +36,7 @@ Weekly PT workout app: admins (PTs) assign daily workouts, users log in by name.
 - UI copy is Vietnamese; code, comments, commits, PRs and Jira tickets are English.
 - Branches: `stag` is the integration branch. Every task branch starts from `stag` and its PR targets `stag`; `main` is production (Vercel) and only takes the release PR `stag` -> `main`, then a tag (`docs/release.md`).
 - One KAN ticket per branch, key in the branch name and commit subject, e.g. `fix(KAN-14): ...`.
-- CI (`.github/workflows/ci.yml`) runs only what a task PR touches (related unit tests, lint on changed files, typecheck on code changes, e2e on app/e2e changes) and the full suite plus `pnpm build` once on the release PR into `main`; the `checks` gate job is the required check. Keep it green; `pnpm verify` locally still runs everything.
+- CI is one workflow per workspace, started by its own paths (`packages/contracts/**` also starts web and api): `ci-web.yml` runs only what a task PR touches (related unit tests, lint on changed files, typecheck on code changes, e2e on app/e2e changes) and the full suite plus `pnpm build` once on the release PR into `main`; `ci-api.yml` and `ci-contracts.yml` run lint, typecheck and tests. The e2e job is sharded in 3 and gates `checks-web` only on the release PR into `main` and manual runs. Each ends in a gate job (`checks-web`, `checks-api`, `checks-contracts`). Keep them green; `pnpm verify` locally still runs everything.
 - `.github/workflows/jira-sync.yml` moves the KAN keys in a PR title or branch to In Review when the PR opens and to Done when it merges into `stag` (the release PR from `stag` moves nothing) (secrets `JIRA_EMAIL`, `JIRA_API_TOKEN`); moving a ticket to In Progress stays manual.
 
 ## Verifying your work
@@ -44,7 +51,7 @@ Weekly PT workout app: admins (PTs) assign daily workouts, users log in by name.
 - Specs live in `docs/specs/<feature>.md` (decisions, open questions, test matrix); the Jira ticket links to it.
 - Ask every question as a comment on the Jira ticket, never in chat; update the ticket and spec when it is answered.
 - One Story per worktree session and per PR, plan mode first. Run `/grill-me` before planning a feature, file tickets with `actionable-ticket`.
-- Schema changes must be additive (new tables, nullable columns): the Vercel build runs `drizzle-kit push` against production.
+- Schema changes are TypeORM migrations in `apps/api/src/migrations/` (`pnpm --filter @pt/api migration:generate`, review the SQL, then `migration:check`), and additive (new tables, nullable columns or columns with defaults), so the previous API version keeps working during a deploy. The API runs pending migrations on start; the web has no schema.
 
 ## Skills: hoan-dev-skills (`.claude/skills/`)
 
@@ -82,4 +89,4 @@ Two strikes: when Claude makes the same mistake twice, add it here.
 - Never push to `stag` or `main`, never force-push; open a PR into `stag`.
 - Never read, print or commit `.env*` files (only `.env.example`) or any secret.
 - Never skip, delete or `.skip` a failing test to get green; fix the cause.
-- Never run `db:push`, `db:setup` or scripts against a Turso/production URL.
+- Never run migrations, seed scripts or `data:migrate` against a production URL, and never run the Turso data script against a remote Turso URL (rehearse on a local SQLite file, `docs/backend/cutover-runbook.md`).

@@ -1,0 +1,95 @@
+import {
+  Check,
+  Column,
+  Entity,
+  ForeignKey,
+  Index,
+  PrimaryGeneratedColumn,
+} from "typeorm";
+
+import {
+  adminKeyId,
+  GeneratedId,
+  socialKeyCheck,
+  userKeyId,
+} from "./actor-ids.js";
+import { Admin } from "./admin.entity.js";
+import { SocialPost } from "./social-post.entity.js";
+import { User } from "./user.entity.js";
+
+@Entity("social_post_photos")
+@Check("social_post_photos_uploader_key_format", socialKeyCheck("uploader_key"))
+@Index("social_post_photos_uploader_key_idx", ["uploaderKey"])
+@ForeignKey(() => User, ["uploaderUserId"], ["id"], {
+  name: "fk_social_post_photos_uploader_user_id",
+  onDelete: "CASCADE",
+})
+@Index("social_post_photos_uploader_user_id_idx", ["uploaderUserId"], {
+  where: `"uploader_user_id" IS NOT NULL`,
+})
+@ForeignKey(() => Admin, ["uploaderAdminId"], ["id"], {
+  name: "fk_social_post_photos_uploader_admin_id",
+  onDelete: "CASCADE",
+})
+@Index("social_post_photos_uploader_admin_id_idx", ["uploaderAdminId"], {
+  where: `"uploader_admin_id" IS NOT NULL`,
+})
+@Index("social_post_photos_post_photo", ["postId", "id"], { unique: true })
+// Up to 10 photos per post; position is the order (0 = cover, also
+// social_posts.photo_id).
+@ForeignKey(() => SocialPost, ["postId"], ["id"], {
+  name: "fk_social_post_photos_post",
+  onDelete: "CASCADE",
+  deferrable: "INITIALLY DEFERRED",
+})
+@Check(
+  "social_post_photos_position_nonnegative",
+  `"position" IS NULL OR "position" >= 0`,
+)
+@Index("social_post_photos_post_position", ["postId", "position"], {
+  unique: true,
+  where: `"post_id" IS NOT NULL AND "position" IS NOT NULL`,
+})
+@Check(
+  "social_post_photos_size_matches_data",
+  `"size" = octet_length("data")`,
+)
+@Check(`"mime" IN ('image/webp', 'image/jpeg', 'image/png')`)
+export class SocialPostPhoto {
+  @PrimaryGeneratedColumn("identity", { generatedIdentity: "ALWAYS" })
+  id!: number;
+
+  @Column({ type: "text" })
+  uploaderKey!: string;
+
+  @Column({ type: "integer", nullable: true })
+  postId!: number | null;
+
+  // Order inside the post (0 = cover); null counts as 0.
+  @Column({ type: "integer", nullable: true })
+  position!: number | null;
+
+  @Column({ type: "text" })
+  mime!: "image/webp" | "image/jpeg" | "image/png";
+
+  @Column({ type: "integer" })
+  width!: number;
+
+  @Column({ type: "integer" })
+  height!: number;
+
+  @Column({ type: "bytea" })
+  data!: Buffer;
+
+  @Column({ type: "integer" })
+  size!: number;
+
+  @Column({ type: "timestamptz" })
+  createdAt!: Date;
+
+  @GeneratedId(userKeyId("uploader_key"))
+  uploaderUserId!: number | null;
+
+  @GeneratedId(adminKeyId("uploader_key"))
+  uploaderAdminId!: number | null;
+}

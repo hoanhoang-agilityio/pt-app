@@ -1,0 +1,48 @@
+# Local backend stack: PostgreSQL 17 and the API. The web app runs on the host
+# (`pnpm dev`) and calls the API at http://localhost:4000.
+#   docker compose up -d --build db api
+#   docker compose --profile tools up -d   # adds Adminer and pgAdmin
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: pt
+      POSTGRES_PASSWORD: pt_local_only
+      POSTGRES_DB: ptapp
+    # DB_PORT / API_PORT move the host ports when 5432 or 4000 is taken (e.g. a
+    # Homebrew PostgreSQL). Update DATABASE_URL and API_URL to match.
+    ports: ["${DB_PORT:-5432}:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pt -d ptapp"]
+      interval: 5s
+      retries: 10
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    environment:
+      DATABASE_URL: postgres://pt:pt_local_only@db:5432/ptapp
+      WEB_ORIGIN: http://localhost:3000
+      PORT: "4000"
+      # Signs avatar URLs; required when NODE_ENV is production (the default). Local value only.
+      AVATAR_URL_SECRET: local-only-avatar-url-secret-0123456789
+      # Web push (empty = push switched off). Keys: npx web-push generate-vapid-keys
+      VAPID_PUBLIC_KEY: ""
+      VAPID_PRIVATE_KEY: ""
+      VAPID_SUBJECT: ""
+    # Migrations run on every start (a no-op when the schema is current), then
+    # the API starts. Nothing to run by hand.
+    command: ["sh", "-c", "node dist/migrate.js && node dist/main.js"]
+    depends_on: { db: { condition: service_healthy } }
+    ports: ["${API_PORT:-4000}:4000"]
+  adminer: # optional: docker compose --profile tools up
+    image: adminer
+    profiles: ["tools"]
+    ports: ["8080:8080"]
+  pgadmin: # optional alternative to adminer
+    image: dpage/pgadmin4
+    profiles: ["tools"]
+    environment:
+      { PGADMIN_DEFAULT_EMAIL: dev@local.test, PGADMIN_DEFAULT_PASSWORD: dev }
+    ports: ["5050:80"]
+volumes:
+  pgdata:

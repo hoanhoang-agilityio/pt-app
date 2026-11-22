@@ -1,0 +1,108 @@
+import { unstable_rethrow } from "next/navigation";
+
+import {
+  ERROR_REFERENCE_LENGTH,
+  GENERIC_ERROR_MESSAGE,
+} from "@/constants/errors";
+import { ApiError } from "@/services/api/errors";
+import { localizeResult } from "@/services/localize-message";
+import { logServerError } from "@/services/logger";
+import type { ActionErrorResult, ActionResult } from "@/types/error";
+import type { FormState } from "@/types/form";
+import { getErrorMessage } from "@/utils/errors";
+import { createErrorState, getFormValues } from "@/utils/form";
+
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+
+// Never send a typed password back to the browser.
+const SECRET_FIELD_PATTERN = /password/i;
+
+const omitSecrets = (values: Record<string, string>) =>
+  Object.fromEntries(
+    Object.entries(values).filter(([key]) => !SECRET_FIELD_PATTERN.test(key)),
+  );
+
+// Logs the real cause and returns what the user may see: in production only a
+// generic message plus a reference id to find the log line; in development
+// the readable cause and its code, to debug without opening the logs.
+const toPublicError = (context: string, error: unknown) => {
+  // redirect()/notFound() are thrown on purpose and must reach Next.js.
+  unstable_rethrow(error);
+
+  const referenceId = crypto.randomUUID().slice(0, ERROR_REFERENCE_LENGTH);
+  const classified = logServerError(context, error, { referenceId });
+
+  // A request the API refused (4xx) carries text it chose for the user, plus
+  // its own reference. Nothing internal is in it, so it is shown as is, in
+  // production too. 5xx, timeouts and unreachable API fall through to the
+  // generic text below.
+  if (error instanceof ApiError && error.isClientError) {
+    return { message: error.message, reference: error.ref ?? referenceId };
+  }
+
+  return IS_PRODUCTION
+    ? { message: GENERIC_ERROR_MESSAGE, reference: referenceId }
+    : {
+        message: getErrorMessage(classified),
+        reference: `${classified.code} · ${referenceId}`,
+      };
+};
+
+// Wraps a form action so an unexpected failure (database down, missing env
+// var…) comes back as an error message in the form instead of a 500 page.
+// Messages are Vietnamese in the code; the result is localized on the way out.
+export const withFormErrorHandling =
+  <Args extends unknown[]>(
+    context: string,
+    action: (...args: Args) => Promise<FormState>,
+  ) =>
+  async (...args: Args): Promise<FormState> => {
+    try {
+      return await localizeResult(await action(...args));
+    } catch (error) {
+      const { message, reference } = toPublicError(context, error);
+      const formData = args.find(
+        (arg): arg is FormData => arg instanceof FormData,
+      );
+
+      return localizeResult(
+        createErrorState(message, {
+          errorReference: reference,
+          // Keep what was typed so the user can simply retry.
+          values: formData ? omitSecrets(getFormValues(formData)) : undefined,
+        }),
+      );
+    }
+  };
+
+// An action typed Promise<void> infers Result as never: it means plain success.
+type ResolvedResult<Result> = [Result] extends [never] ? ActionResult : Result;
+
+// Same for actions called directly from event handlers. An action may return
+// a richer success result (e.g. SaveSetsResult); `void` means plain success.
+export const withResultErrorHandling =
+  <
+    Args extends unknown[],
+    Result extends { status: "success" | "needs-confirm" } | ActionErrorResult =
+      ActionResult,
+  >(
+    context: string,
+    action: (...args: Args) => Promise<Result | void>,
+  ) =>
+  async (
+    ...args: Args
+  ): Promise<ResolvedResult<Result> | ActionErrorResult> => {
+    try {
+      const result = await action(...args);
+
+      // Only void actions return nothing, and their result is ActionResult.
+      return await localizeResult(
+        (result ?? { status: "success" }) as ResolvedResult<Result>,
+      );
+    } catch (error) {
+      return localizeResult({
+        status: "error" as const,
+        ...toPublicError(context, error),
+      });
+    }
+  };

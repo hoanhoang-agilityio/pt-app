@@ -1,0 +1,346 @@
+name: CI web
+
+# Two modes (KAN-110):
+# - Task PRs (base `stag` or any branch but `main`): run only what the diff
+#   touches. Lint the changed files, run the unit tests related to them,
+#   typecheck when code changed, e2e when the app or e2e files changed.
+#   A docs-only PR runs nothing but `changes` and the `checks-web` gate.
+# - Release PR (base `main`) and manual runs: the full suite once (all unit
+#   tests, full lint, typecheck, build, e2e).
+# The e2e job (Playwright on web + API + PostgreSQL) is sharded in 3, each
+# shard on its own runner with its own PostgreSQL service container, and a
+# `e2e-report` job merges the shard reports. It is part of the `checks-web`
+# gate only for the full-suite runs a release needs (base `main` and manual
+# runs, output `gate_e2e`): a task PR still runs e2e when its diff touches the
+# app, and shows the result, but a red e2e does not block it. Release PRs
+# cannot merge on a red suite.
+# Changes to this workflow, the root package.json, the lockfile, the workspace
+# file or any workspace package.json also force the full suite, because the
+# affected-only rules cannot see their impact.
+#
+# One workflow per workspace (ci-web, ci-api, ci-contracts), each started only
+# by the paths it owns. packages/contracts also starts ci-web and ci-api, and
+# apps/api/openapi.json (input of the typed API client, apps/web/services/api/
+# schema.d.ts, which a unit test keeps in sync) starts ci-web too. So do API
+# code and migrations (apps/api/src/**): the Playwright suite runs the web on
+# that API and database, and is the only check of the two together (a schema
+# change once broke e2e without touching the web). The
+# required status check is `checks-web`. The web app imports @pt/contracts from
+# its dist/ folder, so every job builds contracts first, and a contracts change
+# runs every web unit test (the affected-only mode cannot follow the package
+# boundary).
+#
+# Only `pull_request` triggers the workflow, so a commit never runs twice
+# (PR + push). Merges into `stag` are covered by the PR that was merged.
+
+on:
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "apps/api/openapi.json"
+      - "apps/api/src/**"
+      - "packages/contracts/**"
+      - ".claude/**"
+      - "vitest.config.mjs"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/ci-web.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-web-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+      code: ${{ steps.scope.outputs.code }}
+      e2e: ${{ steps.scope.outputs.e2e }}
+      lint_files: ${{ steps.scope.outputs.lint_files }}
+      contracts: ${{ steps.scope.outputs.contracts }}
+      tools: ${{ steps.scope.outputs.tools }}
+      gate_e2e: ${{ steps.scope.outputs.gate_e2e }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT" != "pull_request" ] || [ "$BASE_REF" = "main" ]; then
+            echo "Full suite: event=$EVENT base=$BASE_REF"
+            { echo "full=true"; echo "code=true"; echo "e2e=true"; echo "lint_files="; echo "contracts=true"; echo "tools=true"; echo "gate_e2e=true"; } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed=$(git diff --name-only --diff-filter=ACMR "$BASE_SHA...$HEAD_SHA")
+          echo "Changed files:"
+          echo "$changed"
+
+          full=false
+          code=false
+          e2e=false
+          contracts=false
+          tools=false
+
+          if echo "$changed" | grep -qE '^(\.github/workflows/ci-web\.yml|package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|(apps|packages)/[^/]+/package\.json)$'; then
+            full=true
+          fi
+          if echo "$changed" | grep -qE '\.(ts|tsx|js|jsx|mjs|cjs)$|^apps/api/openapi\.json$|^apps/web/(tsconfig\.json|next\.config\.ts|eslint\.config\.mjs|vitest\.config\.ts)$|^packages/contracts/(tsconfig(\.build)?\.json|eslint\.config\.mjs|vitest\.config\.ts)$'; then
+            code=true
+          fi
+          if echo "$changed" | grep -qE '^apps/web/(app|components|constants|db|e2e|features|hooks|public|services|types|utils)/|^apps/web/(proxy\.ts|instrumentation\.ts|next\.config\.ts|playwright\.config\.ts|postcss\.config\.mjs|tsconfig\.json)$|^packages/contracts/src/|^apps/api/openapi\.json$|^apps/api/src/'; then
+            e2e=true
+          fi
+          if echo "$changed" | grep -qE '^packages/contracts/'; then
+            contracts=true
+          fi
+          if echo "$changed" | grep -qE '^(\.claude/|vitest\.config\.mjs$)'; then
+            tools=true
+          fi
+          if [ "$full" = "true" ]; then
+            code=true
+            e2e=true
+            contracts=true
+            tools=true
+          fi
+          # A contracts change can break the web app without touching its files.
+          if [ "$contracts" = "true" ]; then
+            code=true
+          fi
+
+          # Only web files are linted file by file; contracts lints whole.
+          lint_files=$(echo "$changed" | grep -E '^apps/web/.*\.(ts|tsx|js|jsx|mjs|cjs)$' | sed 's#^apps/web/##' | tr '\n' ' ' || true)
+
+          echo "full=$full code=$code e2e=$e2e contracts=$contracts tools=$tools"
+          {
+            echo "full=$full"
+            echo "code=$code"
+            echo "e2e=$e2e"
+            echo "lint_files=$lint_files"
+            echo "contracts=$contracts"
+            echo "tools=$tools"
+            echo "gate_e2e=false"
+          } >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    env:
+      FULL: ${{ needs.changes.outputs.full }}
+      CONTRACTS: ${{ needs.changes.outputs.contracts }}
+      TOOLS: ${{ needs.changes.outputs.tools }}
+      LINT_FILES: ${{ needs.changes.outputs.lint_files }}
+      BASE_SHA: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `vitest --changed` diffs against the PR base commit.
+          fetch-depth: 0
+
+      # Reads the version from packageManager in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # The web app imports @pt/contracts from its dist/ folder.
+      - name: Build contracts
+        run: pnpm build:contracts
+
+      - name: Unit tests
+        run: |
+          if [ "$FULL" = "true" ] || [ "$CONTRACTS" = "true" ]; then
+            pnpm --filter @pt/contracts test
+            pnpm --filter @pt/web test
+          else
+            # Tests whose module graph touches a changed file.
+            pnpm --filter @pt/web exec vitest run --changed "$BASE_SHA" --passWithNoTests
+            # Reads apps/api/openapi.json from disk, so --changed cannot see it.
+            pnpm --filter @pt/web exec vitest run services/api/__tests__/schema.test.ts
+          fi
+          if [ "$FULL" = "true" ] || [ "$TOOLS" = "true" ]; then
+            pnpm test:tools
+          fi
+
+      - name: Lint
+        run: |
+          if [ "$FULL" = "true" ]; then
+            pnpm --filter @pt/web --filter @pt/contracts lint
+          else
+            if [ "$CONTRACTS" = "true" ]; then
+              pnpm --filter @pt/contracts lint
+            fi
+            if [ -n "${LINT_FILES// /}" ]; then
+              # shellcheck disable=SC2086 # word splitting is intended
+              pnpm --filter @pt/web exec eslint --max-warnings 0 --no-warn-ignored $LINT_FILES
+            else
+              echo "No lintable web files changed."
+            fi
+          fi
+
+      # tsc cannot check a subset of files with the project config, so any
+      # code change typechecks the whole project.
+      - name: Typecheck
+        run: |
+          pnpm --filter @pt/contracts typecheck
+          pnpm --filter @pt/web typecheck
+
+      - name: Build
+        if: env.FULL == 'true'
+        run: pnpm build
+
+  # Pinned: ubuntu-latest moved to 26.04, which Playwright 1.56 cannot install
+  # Chromium deps on ("Playwright does not support chromium on ubuntu26.04").
+  # Playwright e2e against web + API + PostgreSQL. The API runs from this
+  # checkout (e2e/api-server.mjs builds and starts it) on the PostgreSQL service
+  # container below, which it empties first; the specs' data is created through
+  # the API (e2e/global-setup.ts).
+  # The whole suite does not fit one 15-minute job (it was cancelled at the
+  # limit), so it is split with `--shard=N/3`. A shard is a runner of its own:
+  # its own service container, API, web server and seed, so the specs, which
+  # share one seeded database and own their trainees, never meet across shards.
+  # `playwright install --with-deps` can spend minutes on apt, hence 25.
+  e2e:
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: pt
+          POSTGRES_PASSWORD: pt_ci_only
+          POSTGRES_DB: ptapp_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pt -d ptapp_e2e"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgres://pt:pt_ci_only@localhost:5432/ptapp_e2e
+      # Each shard writes a blob report that the `e2e-report` job merges.
+      PLAYWRIGHT_BLOB_OUTPUT_DIR: blob-report
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @pt/web exec playwright install --with-deps chromium
+
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @pt/web exec playwright install-deps chromium
+
+      - run: pnpm build:contracts
+
+      - run: pnpm --filter @pt/web exec playwright test --shard=${{ matrix.shard }}/3
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-blob-${{ matrix.shard }}
+          path: apps/web/blob-report
+          retention-days: 7
+
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ matrix.shard }}
+          path: apps/web/e2e/.tmp/results
+          retention-days: 7
+
+  # One HTML report from the three shards.
+  e2e-report:
+    needs: e2e
+    if: always() && needs.e2e.result != 'skipped'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-blob-*
+          path: apps/web/all-blob-reports
+          merge-multiple: true
+
+      - run: pnpm --filter @pt/web exec playwright merge-reports --reporter html ./all-blob-reports
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: apps/web/playwright-report
+          retention-days: 7
+
+  # The required status check (branch protection: `checks-web`). Always reports,
+  # so branch protection works when `verify` is skipped; fails when a job it
+  # needs failed or was cancelled. `e2e` counts only when `gate_e2e` is true (a
+  # release PR into main or a manual run): then it must have succeeded, so a
+  # release cannot merge on a red or cancelled suite. On a task PR its result
+  # is shown but not required.
+  checks-web:
+    needs: [changes, verify, e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          CHANGES: ${{ needs.changes.result }}
+          VERIFY: ${{ needs.verify.result }}
+          E2E: ${{ needs.e2e.result }}
+          GATE_E2E: ${{ needs.changes.outputs.gate_e2e }}
+        run: |
+          echo "changes=$CHANGES verify=$VERIFY e2e=$E2E gate_e2e=$GATE_E2E"
+          if [ "$CHANGES" != "success" ]; then
+            exit 1
+          fi
+          if [ "$VERIFY" != "success" ] && [ "$VERIFY" != "skipped" ]; then
+            exit 1
+          fi
+          if [ "$GATE_E2E" = "true" ] && [ "$E2E" != "success" ]; then
+            exit 1
+          fi

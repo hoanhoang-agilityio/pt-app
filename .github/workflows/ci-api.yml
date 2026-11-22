@@ -1,0 +1,98 @@
+name: CI api
+
+# NestJS API (apps/api). Started only by its own paths: the API, the shared
+# contracts it imports, the root manifests and this file. Contracts is built to
+# dist/ first because the API imports it from there.
+# The required status check is `checks-api`.
+
+on:
+  pull_request:
+    paths:
+      - "apps/api/**"
+      - "packages/contracts/**"
+      - "docker-compose.yml"
+      - ".dockerignore"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/ci-api.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-api-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    # Only for the "no migration diff" step. The e2e tests start their own
+    # PostgreSQL 17 with Testcontainers (Docker is preinstalled on the runner).
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: pt
+          POSTGRES_PASSWORD: pt_ci_only
+          POSTGRES_DB: ptapp
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pt -d ptapp"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://pt:pt_ci_only@localhost:5432/ptapp
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reads the version from packageManager in package.json.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build:contracts
+
+      - run: pnpm --filter @pt/api lint
+
+      - run: pnpm --filter @pt/api typecheck
+
+      - run: pnpm --filter @pt/api test
+
+      - run: pnpm --filter @pt/api test:e2e
+
+      # Fails when an entity changed without a migration: apply the migrations
+      # to an empty database, then ask TypeORM for the remaining diff.
+      - name: No migration diff
+        run: |
+          pnpm --filter @pt/api migration:run
+          pnpm --filter @pt/api migration:check
+
+      # Fails when the committed OpenAPI file (input of the typed web client)
+      # no longer matches the controllers: regenerate and commit it.
+      - name: OpenAPI is up to date
+        run: |
+          pnpm --filter @pt/api openapi
+          git diff --exit-code -- apps/api/openapi.json
+
+      - run: pnpm --filter @pt/api build
+
+  # The required status check (branch protection: `checks-api`).
+  checks-api:
+    needs: [api]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          API: ${{ needs.api.result }}
+        run: |
+          echo "api=$API"
+          if [ "$API" != "success" ]; then
+            exit 1
+          fi

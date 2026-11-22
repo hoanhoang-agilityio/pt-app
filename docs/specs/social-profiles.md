@@ -16,12 +16,12 @@ A small social layer on top of pt-app (profiles, photo posts, reactions, comment
 - Q4 Admins are default friends: super admin of every trainee, a PT of the trainees in their workspace. Trainees keep their chat with the admin side as today.
 - Q5 Friend request + accept. Search only by the exact full email (trimmed, case-insensitive), never by prefix, so emails cannot be enumerated.
 - Q6 (superseded 2026-11-09: trainee chat is off, old chats stay read-only for the super admin) Super admin can read trainee-to-trainee chats (read-only). No in-chat notice; the Terms page states it. PTs cannot read them.
-- Q7 Post photos stored in the DB like chat photos (browser resize, WebP, long side <= 1600 px), served through a route that checks privacy. **Up to 10 photos per post (2026-11-15)**, first photo is the cover (`social_posts.photo_id`), order in `social_post_photos.position` (Hoan).
+- Q7 Post photos stored in the DB like chat photos (browser resize, WebP, long side <= 1600 px), served through a route that checks privacy. **One photo per post** (Hoan).
 
 ### Round 2: posts, feed, notifications
 
 - T1 Terms page `/terms` (Vietnamese). A trainee must accept it before using social features (posting, friends, trainee chat). Acceptance stores the terms version and time; a new version requires accepting again.
-- R1 A post is up to 10 optional photos plus a caption up to 2000 characters; at least one of them.
+- R1 A post is an optional single photo plus a caption up to 2000 characters; at least one of them.
 - R2 The author edits caption and privacy (not the photo) and deletes the post (photo, reactions and comments go with it). Super admin deletes any post or comment.
 - R3 Default privacy "Bạn bè"; the composer remembers each person's last choice.
 - R4 Six reactions, one per person per post, long-press to pick, tap = ❤️. Same emoji set as chat (`CHAT_REACTION_EMOJIS`).
@@ -63,7 +63,7 @@ A small social layer on top of pt-app (profiles, photo posts, reactions, comment
 - `admins.role` text null (null = super_admin), `admins.verified_at` int null, `admins.bio` text null.
 - `users.pt_admin_id` int null, `users.bio` text null, `users.terms_version` int null, `users.terms_accepted_at` int null, `users.post_privacy_default` text null.
 - `social_posts` (id, author_kind 'user'|'admin', author_id, caption, privacy, photo_id null, created_at, updated_at, deleted_at null).
-- `social_post_photos` (id, uploader_key, post_id null = pending, position null = 0 (order in the post), mime, width, height, data blob, size, created_at).
+- `social_post_photos` (id, uploader_key, post_id null = pending, mime, width, height, data blob, size, created_at).
 - `social_reactions` (post_id, reactor_key, emoji, created_at) PK (post_id, reactor_key).
 - `social_comments` (id, post_id, author_key, body, created_at, updated_at, deleted_at).
 - `social_friendships` (user_low, user_high, status 'pending'|'accepted', requested_by, created_at, accepted_at) PK (user_low, user_high).
@@ -101,16 +101,6 @@ Owner decision: trainee-to-trainee chat ("DM") is turned off.
 - Removed: the friend "Nhắn tin" buttons (friends list, profile) and the friend reply-to-post-in-chat button on the post card. A trainee can still reply in chat to a PT's post (coach chat).
 - Q6, A6 and A7 above are superseded by this change. The terms version is not bumped; the terms text now says the old messages are kept.
 
-## Change 2026-11-15 (chat photos)
-
-Chat messages carry up to 10 photos (2026-11-15), sent as one message shown as a photo grid, in the coach chat (`chat_photos`), the old trainee chats (`dm_photos`) and group chats (`chat_group_photos`).
-
-- Additive schema only: a nullable `position` on each of the three photo tables (null = 0). The message's `photo_id` stays the first photo, so old single-photo messages still return exactly one photo.
-- Send actions take `photoIds: number[]` (positive, unique, at most 10). The server checks that every id is a pending photo of the same uploader in the same conversation or group, then stores the message and attaches all photos in one transaction (position = index); one bad id stores nothing.
-- Message payloads (thread, polling, realtime, DM thread) carry `photos[]` in order, loaded in one query per page. Unsend deletes every photo row of the message. The photo routes authorize by conversation or group, so every photo of a message is served, not only the cover.
-- The composer uploads each picked photo at once (3 at a time, per-photo retry and remove); send waits while any upload is pending or failed. One caption per message.
-- Inbox, push and quote texts name the count when there are several ("📷 3 ảnh", "Đã gửi 3 ảnh"); one photo keeps the old text. The chat gallery lists every photo.
-
 ## Out of scope
 
-Cover photos, video, nested comments, mentions, hashtags, shares, stories, post search, PT-to-PT features, signed-out profiles, e2e tests.
+Cover photos, multi-photo posts, video, nested comments, mentions, hashtags, shares, stories, post search, PT-to-PT features, signed-out profiles, e2e tests.

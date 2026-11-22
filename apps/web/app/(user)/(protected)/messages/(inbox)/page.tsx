@@ -1,0 +1,143 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
+
+import { Avatar } from "@/components/common/Avatar";
+import { ScrollToTopButton } from "@/components/common/ScrollToTopButton";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { ROUTES } from "@/constants/routes";
+import { CARD, PAGE_CONTAINER, SECTION_TITLE } from "@/constants/styles";
+import { TIME_ZONE } from "@/constants/time";
+import { InboxLiveRefresh } from "@/features/chat/components/InboxLiveRefresh";
+import { loadUserUnread } from "@/features/chat/services/chat-queries";
+import { BubbleRowTrigger } from "@/features/chat-bubbles/components/BubbleRowTrigger";
+import { bubbleKeyFor } from "@/features/chat-bubbles/utils/bubble-links";
+import { GroupInboxSection } from "@/features/chat-groups/components/GroupInboxSection";
+import { listMyGroups } from "@/features/chat-groups/services/group-queries";
+import { DmInboxRefresh } from "@/features/social/components/DmInboxRefresh";
+import { listDmInbox } from "@/features/social/services/dm-api";
+import { dmPath } from "@/features/social/utils/dm-rules";
+import { requireUser } from "@/services/auth-guard";
+import { formatRelativeTime, getRequestTime } from "@/utils/time";
+
+export const generateMetadata = async (): Promise<Metadata> => {
+  const t = await getTranslations("chat.pages");
+
+  return { title: t("messagesTitle") };
+};
+
+const ROW = `${CARD} flex items-center gap-3 p-3 active:bg-line/60`;
+
+const UnreadDot = ({ label }: { label: string }) => (
+  <span
+    role="status"
+    aria-label={label}
+    className="size-3 shrink-0 rounded-full bg-danger"
+  />
+);
+
+// The Messages tab: the coach chat first (unchanged, under /messages/coach),
+// then the groups the trainee is in, then the old read-only chats with
+// friends (each shown only when any exist).
+const MessagesInboxPage = async () => {
+  const t = await getTranslations("chat.pages");
+  const dm = await getTranslations("social.dm");
+  const locale = await getLocale();
+  const user = await requireUser();
+  const [unread, chats, groups] = await Promise.all([
+    loadUserUnread(),
+    listDmInbox(),
+    listMyGroups("user"),
+  ]);
+
+  return (
+    <>
+      <AppHeader title={dm("inboxTitle")} />
+      <DmInboxRefresh />
+      <InboxLiveRefresh role="user" groupReaderKey={`user:${user.id}`} />
+      <main
+        className={`${PAGE_CONTAINER} space-y-3 pt-4 pb-[calc(env(safe-area-inset-bottom)+6rem)]`}
+      >
+        <ul className="space-y-2">
+          <li>
+            <BubbleRowTrigger
+              role="user"
+              bubbleKey={bubbleKeyFor("user", user.id)}
+              name={dm("coachTitle")}
+              disabled={!unread.chatEnabled}
+            >
+              <Link href={ROUTES.MESSAGES_COACH} className={ROW}>
+                <Avatar name="PT" className="size-12 shrink-0 text-base" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-fg">
+                    {dm("coachTitle")}
+                  </span>
+                  <span className="block truncate text-sm text-muted">
+                    {t("coachSubtitle")}
+                  </span>
+                </span>
+                {unread.coachCount > 0 && <UnreadDot label={t("unreadDot")} />}
+              </Link>
+            </BubbleRowTrigger>
+          </li>
+        </ul>
+        {groups.length > 0 && (
+          <GroupInboxSection
+            groups={groups}
+            role="user"
+            viewerKey={`user:${user.id}`}
+            nowMs={getRequestTime()}
+            showEmptyHint={false}
+          />
+        )}
+        {chats.length > 0 && (
+          <>
+            <h2 className={SECTION_TITLE}>{t("friendsSection")}</h2>
+            <p className="text-sm text-muted">{dm("archivedNote")}</p>
+            <ul className="space-y-2">
+              {chats.map((chat) => (
+                <li key={chat.conversationId}>
+                  <Link href={dmPath(chat.conversationId)} className={ROW}>
+                    <Avatar
+                      name={chat.name}
+                      src={chat.avatarUrl}
+                      className="size-12 shrink-0 text-base"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span
+                          className={`truncate ${chat.unread > 0 ? "font-bold" : "font-semibold"} text-fg`}
+                        >
+                          {chat.name}
+                        </span>
+                        {chat.lastMessageAt && (
+                          <span className="shrink-0 text-xs text-muted">
+                            {formatRelativeTime(
+                              new Date(chat.lastMessageAt).getTime(),
+                              TIME_ZONE,
+                              undefined,
+                              locale,
+                            )}
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={`block truncate text-sm ${chat.unread > 0 ? "font-semibold text-fg" : "text-muted"}`}
+                      >
+                        {chat.preview}
+                      </span>
+                    </span>
+                    {chat.unread > 0 && <UnreadDot label={t("unreadDot")} />}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </main>
+      <ScrollToTopButton aboveTabBar />
+    </>
+  );
+};
+
+export default MessagesInboxPage;

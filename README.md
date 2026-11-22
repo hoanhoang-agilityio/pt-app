@@ -45,44 +45,51 @@
 - Sửa, xóa, sắp xếp thứ tự bài tập.
 - Sao chép cả tuần sang tuần khác hoặc sang user khác.
 - Sao chép plan bữa ăn sang ngày khác bằng lịch tháng (T2 đầu tuần): ngày đã qua bị khóa, hôm nay và ngày mai có nhãn, chọn nhiều ngày, ngày đã có plan sẽ hỏi trước khi ghi đè.
-- **Tin nhắn**: chat mặc định tắt. Bật/khoá chat cho từng user bằng công tắc trong tab **Tin nhắn** của user đó (khoá thì giữ lịch sử, hai bên đều không gửi được). Hộp thư chung `/admin/messages` liệt kê các cuộc trò chuyện kèm số tin chưa đọc; số chưa đọc cập nhật trực tiếp không cần tải lại, và khi có Ably thì hiện "đang nhập…" ở hai phía.
+- **Tin nhắn**: chat mặc định tắt. Bật/khoá chat cho từng user bằng công tắc trong tab **Tin nhắn** của user đó (khoá thì giữ lịch sử, hai bên đều không gửi được). Hộp thư chung `/admin/messages` liệt kê các cuộc trò chuyện kèm số tin chưa đọc; số chưa đọc cập nhật trực tiếp không cần tải lại, và hiện "đang nhập…" ở hai phía qua kết nối realtime (Socket.IO) tới API.
 - "Xem như user" (biểu tượng con mắt) để xem trước đúng màn hình user thấy.
 
 ## Chạy local
 
+Cần cài trước:
+
+- Node 24 (`nvm install` đọc `.nvmrc`, hoặc `brew install node@24`).
+- Docker đang chạy (Docker Desktop hoặc OrbStack trên Mac). `docker compose` chạy PostgreSQL và API, còn `pnpm verify` dùng Testcontainers nên cũng cần Docker.
+
 ```bash
 corepack enable              # một lần, để dùng đúng pnpm trong packageManager
-pnpm install
-cp .env.example .env.local   # sửa SESSION_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD
-pnpm db:push                 # tạo bảng trong local.db (SQLite)
-pnpm admin:create            # tạo tài khoản admin từ ADMIN_USERNAME / ADMIN_PASSWORD
-pnpm dev
+pnpm install --frozen-lockfile                 # cảnh báo "Ignored build scripts" là bình thường
+cp apps/web/.env.example apps/web/.env.local
+cp apps/api/.env.example apps/api/.env         # rồi bỏ comment và điền SUPER_ADMIN_USERNAME, SUPER_ADMIN_PASSWORD (>= 8 ký tự)
+docker compose up -d --build db api            # PostgreSQL 17 + API (:4000), tự chạy migration (hoặc `pnpm dev:db`)
+pnpm admin:create            # tạo tài khoản admin từ SUPER_ADMIN_USERNAME / SUPER_ADMIN_PASSWORD
+pnpm dev                     # build @pt/contracts rồi chạy web (hoặc `pnpm dev:all` làm cả hai bước)
 ```
+
+Repo là monorepo pnpm: `apps/web` (Next.js, đóng vai BFF, không có database riêng), `apps/api` (NestJS 12 + TypeORM + PostgreSQL 17) và `packages/contracts` (schema Zod dùng chung). Các lệnh `db:*` và `admin:create` ở root chuyển sang `@pt/api`.
 
 Mở http://localhost:3000 (user) và http://localhost:3000/admin/login (admin). Trang user không có link sang admin.
 
-Tạo thêm admin hoặc đổi mật khẩu (chạy lại với cùng username sẽ đặt lại mật khẩu):
+Admin mới (user thường) được tạo trong giao diện admin; `pnpm admin:create` chỉ tạo super admin đầu tiên và không ghi đè admin đã có.
 
-```bash
-pnpm admin:create <username> <mật-khẩu>
-```
+Nếu cổng 5432 hoặc 4000 đã bị chiếm (ví dụ máy đã có PostgreSQL từ Homebrew), đổi cổng phía host: `DB_PORT=55432 API_PORT=4400 docker compose up -d --build db api`. Khi đó cập nhật cổng trong `DATABASE_URL` (apps/api/.env), `API_URL` và `NEXT_PUBLIC_API_URL` (apps/web/.env.local) cho khớp.
 
 Để mở trên iPhone cùng mạng Wi-Fi, dùng địa chỉ `Network` mà `next dev` in ra.
 
 ## Scripts
 
-| Lệnh                | Việc                                                        |
-| ------------------- | ----------------------------------------------------------- |
-| `pnpm dev`          | Dev server                                                  |
-| `pnpm build`        | Build production                                            |
-| `pnpm test`         | Unit test (Vitest)                                          |
-| `pnpm lint`         | ESLint (0 warning)                                          |
-| `pnpm typecheck`    | TypeScript                                                  |
-| `pnpm db:push`      | Đồng bộ schema `db/schema.ts` vào DB                        |
-| `pnpm db:setup`     | Tạo bảng + admin đầu tiên (tự chạy khi build trên Vercel)   |
-| `pnpm db:studio`    | Xem dữ liệu bằng Drizzle Studio                             |
-| `pnpm admin:create` | Tạo admin / đặt lại mật khẩu                                |
-| `pnpm db:seed-demo` | Tạo user "Demo" có lịch + bài đã tập (`-- --remove` để xóa) |
+| Lệnh                 | Việc                                                    |
+| -------------------- | ------------------------------------------------------- |
+| `pnpm dev`           | Dev server web (build `@pt/contracts` trước)            |
+| `pnpm dev:api`       | Dev server API NestJS (http://localhost:4000/v1/health) |
+| `pnpm verify`        | test + lint + typecheck cho mọi workspace               |
+| `pnpm build`         | Build production (contracts rồi web)                    |
+| `pnpm test`          | Unit test (Vitest)                                      |
+| `pnpm lint`          | ESLint (0 warning)                                      |
+| `pnpm typecheck`     | TypeScript                                              |
+| `pnpm db:migrate`    | Chạy migration TypeORM của API trên `DATABASE_URL`      |
+| `pnpm admin:create`  | Tạo super admin đầu tiên (không ghi đè admin đã có)     |
+| `pnpm db:seed-foods` | Thêm thư viện thực phẩm mẫu                             |
+| `pnpm db:seed-demo`  | Tạo user "Demo" (chỉ DB local; `-- --remove` để xóa)    |
 
 ## Phân quyền
 
@@ -91,50 +98,43 @@ pnpm admin:create <username> <mật-khẩu>
 | User  | `/` (email + mật khẩu), `/workouts`, `/account/password` | User đã đăng nhập. Admin vào sẽ bị chuyển về `/admin`.                              |
 | Admin | `/admin/login`, `/admin/**`                              | Admin đã đăng nhập. User vào (kể cả trang login admin) sẽ bị chuyển về `/workouts`. |
 
-Bảo vệ 3 lớp: `proxy.ts` (kiểm tra cookie và điều hướng), layout của route group `(user)/(protected)` và `admin/(protected)` (kiểm tra với DB), và từng server action (`requireAdmin`). Trang admin có `noindex`.
+Bảo vệ 3 lớp: `apps/web/proxy.ts` (kiểm tra cookie và điều hướng), layout của route group `(user)/(protected)` và `admin/(protected)` (hỏi API `GET /v1/auth/me`), và từng server action (`requireAdmin`). Trang admin có `noindex`.
 
 ## Công nghệ
 
-Next.js 16 (App Router, Server Actions, `proxy.ts`), React 19, Tailwind CSS 4, Drizzle ORM + libSQL (SQLite), `jose` (cookie session), Zod, vaul (bottom sheet), sonner (toast), lucide-react (icon).
+Next.js 16 (App Router, Server Actions, `proxy.ts`), React 19, Tailwind CSS 4, cookie giữ token phiên của API, Zod, vaul (bottom sheet), sonner (toast), lucide-react (icon).
 
 ## Cấu trúc
 
 ```text
-app/                 routes (mỏng, chỉ ghép các feature)
-features/
-  auth/              đăng nhập user/admin, đăng xuất
-  members/           quản lý user (admin)
-  workouts/          lịch tuần, bài tập, YouTube, sao chép tuần, đánh dấu đã tập
-  dashboard/         thống kê tiến độ và hoạt động cho admin
-  nutrition/         mục tiêu dinh dưỡng, nhật ký ăn, tổng kết ngày/tuần
-components/          layout + UI dùng chung (header, bottom sheet, nút submit)
-services/            session, guard, truy vấn user dùng chung
-db/                  schema + kết nối Drizzle
+apps/web/            Next.js (xem bên dưới)
+apps/api/            NestJS API + TypeORM + PostgreSQL (/v1)
+packages/contracts/  schema Zod + giới hạn dùng chung cho web và API
+docker-compose.yml   PostgreSQL 17 + API (docker compose up -d --build db api)
+
+apps/web/
+  app/               routes (mỏng, chỉ ghép các feature)
+  features/
+    auth/              đăng nhập user/admin, đăng xuất
+    members/           quản lý user (admin)
+    workouts/          lịch tuần, bài tập, YouTube, sao chép tuần, đánh dấu đã tập
+    dashboard/         thống kê tiến độ và hoạt động cho admin
+    nutrition/         mục tiêu dinh dưỡng, nhật ký ăn, tổng kết ngày/tuần
+  components/          layout + UI dùng chung (header, bottom sheet, nút submit)
+  services/            session, guard, client gọi API (services/api/)
 ```
 
-## Deploy lên Vercel (Turso)
+## Deploy
 
-1. Vercel → project → **Storage** → kết nối database Turso. Integration tự thêm `TURSO_DATABASE_URL` và `TURSO_AUTH_TOKEN` (app đọc 2 biến này trước, rồi mới tới `DATABASE_URL`/`DATABASE_AUTH_TOKEN`).
-2. Vercel → **Settings → Environment Variables** (Production + Preview):
+Web chạy trên Vercel (Root Directory `apps/web`), API và PostgreSQL chạy riêng. Các bước chuyển từ Turso, biến môi trường của API và của Vercel, kiểm tra sau deploy và rollback: `docs/backend/cutover-runbook.md`.
 
-   | Biến                 | Giá trị                                                                                   |
-   | -------------------- | ----------------------------------------------------------------------------------------- |
-   | `SESSION_SECRET`     | chuỗi ngẫu nhiên ≥ 32 ký tự (`openssl rand -base64 32`)                                   |
-   | `ADMIN_USERNAME`     | tài khoản admin đầu tiên (3–32 ký tự a-z 0-9 . \_ -)                                      |
-   | `ADMIN_PASSWORD`     | mật khẩu admin đầu tiên (≥ 8 ký tự)                                                       |
-   | `HEALTH_CHECK_TOKEN` | (tuỳ chọn) ≥ 16 ký tự, để xem chi tiết `/api/health`                                      |
-   | `ABLY_API_KEY`       | (tuỳ chọn) key Ably cho chat realtime; thiếu thì chat tự chuyển sang hỏi lại mỗi vài giây |
-
-   Không cần `DATABASE_URL` trên Vercel; nếu có, đừng để `file:local.db`.
-
-3. **Redeploy**. `pnpm build` chạy `scripts/setup-database.ts` trước `next build`: tạo/cập nhật bảng trên Turso và tạo admin từ `ADMIN_USERNAME`/`ADMIN_PASSWORD` nếu database chưa có admin nào (admin đã có thì không bị ghi đè).
-4. Kiểm tra: mở `https://<domain>/api/health?token=<HEALTH_CHECK_TOKEN>` — phải là `"status": "ok"`.
+Biến môi trường của web: `API_URL` (địa chỉ API, chỉ server đọc), `NEXT_PUBLIC_API_URL` (địa chỉ API cho kết nối realtime của trình duyệt), tuỳ chọn `HEALTH_CHECK_TOKEN` (≥ 16 ký tự, để xem chi tiết `/api/health`) và các biến VAPID cho web push. Kiểm tra: `https://<domain>/api/health?token=<HEALTH_CHECK_TOKEN>` phải là `"status": "ok"`.
 
 ## Xử lý lỗi
 
-- Lỗi kỹ thuật (thiếu biến môi trường, database chưa tạo bảng, mất kết nối…) **không làm crash app**: form/toast hiện thông báo chung _"Đã có lỗi xảy ra. Vui lòng thử lại sau."_ kèm **mã tham chiếu**. Trên production không bao giờ hiện chi tiết kỹ thuật cho user.
+- Lỗi kỹ thuật (thiếu biến môi trường, không kết nối được API…) **không làm crash app**: form/toast hiện thông báo chung _"Đã có lỗi xảy ra. Vui lòng thử lại sau."_ kèm **mã tham chiếu**. Trên production không bao giờ hiện chi tiết kỹ thuật cho user.
 - Chi tiết nằm trong **Vercel → Logs**, mỗi lỗi một dòng `[pt-app] <hành động> failed · <MÃ LỖI>` kèm `referenceId`/`digest` trùng với mã user thấy.
-- Mã lỗi: `CONFIG_MISSING`, `CONFIG_INVALID`, `DB_FILE_UNAVAILABLE`, `DB_NOT_MIGRATED`, `DB_AUTH_FAILED`, `DB_UNREACHABLE`, `UNKNOWN`.
+- Mã lỗi: `CONFIG_MISSING`, `CONFIG_INVALID`, `API_UNREACHABLE`, `API_TIMEOUT`, `UNKNOWN`.
 - Ở môi trường dev, form/toast hiện luôn nguyên nhân và mã lỗi để debug nhanh.
 
 ## Giới hạn hiện tại

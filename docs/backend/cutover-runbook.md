@@ -1,0 +1,234 @@
+# Cutover runbook: Turso to PostgreSQL
+
+Hoan runs every step of this by hand, in this order. Claude never runs the data script against Turso or any remote database; every rehearsal uses a local SQLite file.
+
+The data script is `apps/api/scripts/migrate-from-turso.ts`. It copies the 53 source tables into an empty PostgreSQL that already has the migrations, then proves the copy is complete. Its SQLite column description (`turso-columns.json`) and DDL (`turso-schema.sql`, frozen) stay in the repo until the cutover is over; the script, both files and the Turso/libSQL dev dependency are deleted afterwards (see "After the cutover").
+
+The freeze matches production at `company/main` 8f0e085 (2026-11-18: group chat, accent color, user restrictions, report reasons, photo positions). A source table or column missing from `turso-columns.json` aborts every mode before any read of the rows. If production gains schema again before the cutover, regenerate both files the same way (drizzle-kit's SQLite `generate` on that commit's `db/schema.ts` against nothing, then the columns generator from 8f48cb5^ `generate-turso-columns.ts`; never against a remote URL), compare the DDL with a local copy's `sqlite_master`, and add the PostgreSQL side.
+
+## What the script does
+
+1. Reads a SQLite file (`file:` URL) with `@libsql/client`. A remote source is refused unless `--allow-remote` is passed (the plan does not need it).
+2. Refuses to start when the target has pending migrations. Apply them first: `DATABASE_URL=<target> pnpm --filter @pt/api migrate`. The script never changes the schema.
+3. Validates every value (enum CHECK values, integer ranges, NUL characters, timestamp units, NOT NULL), converts the NULLs the schema now forbids, checks the new constraints (next section), then scans every foreign key for orphan rows.
+4. Loads in one transaction, parents first, with `OVERRIDING SYSTEM VALUE` (ids are kept). A foreign key that closes a cycle (`chat_conversations.last_message_id`, `chat_messages.photo_id`, `chat_messages.reply_to_message_id`, the DM and social photo links) is loaded as NULL and set by an `UPDATE` after all tables are loaded. No superuser rights are needed.
+   Profile photos: in Turso `users.avatar` and `admins.avatar` are base64 data URLs in a text column; in PostgreSQL they are rows of `user_avatars` / `admin_avatars` (migration `AvatarTables1795000000000`, `bytea` + `mime` + `size` + `updated_at`). The script decodes each non-null source avatar while copying (`scripts/migrate/avatars.ts`) and inserts it right after its owner row; `avatar_updated_at` stays in `users` / `admins` and is the row's `updated_at`. Avatars are cosmetic, so an unusable one never aborts the run: a value that is not a base64 `data:image/png|jpeg|webp` URL, whose bytes are not that image type, that is over the 80 KB avatar limit, or that has no `avatar_updated_at` is skipped and listed under "Warnings" (table, id, problem, never the content; also `skippedAvatars` in the JSON report). The owner row still loads, with `avatar_updated_at` set to NULL so no avatar URL is built. Review the warning list after the run; a user whose avatar was skipped simply has no photo. The SQL migration `AvatarTables1795000000000` (used when the API is upgraded in place) treats avatars the same way: an unusable one, or one without `avatar_updated_at`, is skipped with a `WARNING` (table and id) and its owner's `avatar_updated_at` is set to NULL; nothing is invented.
+5. Runs `setval` on every identity sequence: the next id follows the larger of the highest loaded id and the source's AUTOINCREMENT high-water mark (`sqlite_sequence`), so the id of a row deleted before the cutover (an account whose `user:<id>` key lives on in group messages, photos and other rows) is never handed out again; a table that never had a row starts at 1. The report lists `maxId`, `sourceSequence` and `next` per table, and `data:verify` checks the same rule.
+6. Verifies row counts and checksums on both sides before `COMMIT`. A mismatch rolls the whole load back.
+
+`--reset` truncates the data tables, `user_avatars`, `admin_avatars` and `sessions` in the same transaction. Without it, a target that has any row is refused.
+
+## Constraints checked before the load (db-constraints migration)
+
+The schema is stricter than the SQLite one ever was. Before it writes anything, the script checks every rule below on the source rows and prints them (and writes them to `--report` as `backfilledValues` and `constraintViolations`: table, column, rule, count, sample ids). `--dry-run` shows the same report.
+
+Converted silently, but listed (`backfilledValues`): a NULL becomes what the app already read it as.
+
+| Column                         | NULL becomes                                       |
+| ------------------------------ | -------------------------------------------------- |
+| `admins.role`                  | `super_admin` (a roleless admin was a super admin) |
+| `admins.passcode_failed_count` | `0`                                                |
+| `admins.presence_hidden`       | `false`                                            |
+| `users.chat_enabled`           | `false`                                            |
+| `users.post_privacy_default`   | `friends`                                          |
+
+`users.terms_version` stays NULL (never accepted). `exercises.user_id` and `meal_plan_meals.user_id` are new columns the load fills from the row's day, so they need no decision.
+
+Reported, never repaired (`constraintViolations`), each with the rule it would break:
+
+| Rule                                                                        | Tables and columns                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `date`: not a real `YYYY-MM-DD` day (e.g. `2026-02-30`, `2026-2-3`)         | `workout_days.date`, `meal_plan_days.date`, `weight_logs.date`, `food_entries.date`, `nutrition_targets.effective_from`                                                                                                                                                                                                                                                                                                                                                      |
+| `*_range`: a number outside the limit the API validates                     | `exercises.sets` 1..50, `exercise_sets.reps` 1..100, `exercise_sets.weight_kg` 0.5..500, `meal_plan_items.grams` >0..3000, `meal_plan_meals.share_percent` 0..100, `meal_logs.grams` 0..3000, `meal_logs` kcal/macros >= 0, `meal_mark_items` numbers >= 0, `food_entries` and `nutrition_targets` macros 0..2000, `body_profiles` birth year 1900..2100, height 120..230, weight 30..250, kcal adjustment -1500..1500, protein per kg 1..3, `weight_logs.weight_kg` 30..250 |
+| `meal_logs_food_or_name`: neither a food nor a custom name                  | `meal_logs`                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `*_owner_fkey`: the row's `user_id` is not the owner of its parent's day    | `exercise_sets`, `exercise_completions`, `meal_logs`, `meal_marks`                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `meal_mark_items_mark_meal_fkey`: the item names another meal than its mark | `meal_mark_items`                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `*_position_key`: two exercises (or two meals) at one position of a day     | `exercises`, `meal_plan_meals` (the row with the lowest id keeps the position; the later ones are reported)                                                                                                                                                                                                                                                                                                                                                                  |
+
+What `--orphans` does with them:
+
+- `report` (default): aborts before any write, with the table above in the output.
+- `skip`: leaves those rows out, and, as for orphans, every row that pointed at a left-out row (a skipped day takes its exercises, their sets and completions). The ids are in `skippedRows`; give `data:verify` the same flag.
+- `null`: aborts. A value that breaks a CHECK cannot be repaired by clearing a foreign key. (It also aborts when clearing a dangling `meal_logs.food_id` would leave a log with neither food nor name.)
+
+To keep a row instead of dropping it, correct the SQLite copy (`turso-final.db`, never Turso) and re-run: for example fix the date, or give the second exercise a free position.
+
+## Before the day: rehearse on a local copy (as often as needed)
+
+```sh
+turso db shell <db> .dump > turso.sql          # read-only export of production
+sqlite3 turso-copy.db < turso.sql              # local file, never the Turso URL
+docker compose up -d db                        # PostgreSQL 17
+DATABASE_URL=postgres://pt:pt_local_only@localhost:5432/ptapp pnpm --filter @pt/api migrate
+
+pnpm --filter @pt/api data:migrate -- \
+  --source file:./turso-copy.db \
+  --target postgres://pt:pt_local_only@localhost:5432/ptapp \
+  --dry-run --report rehearsal-dryrun.json
+```
+
+`--dry-run` reads, validates and prints the orphan report without writing. A libSQL file copied from a Turso replica works the same way as the `.dump` import.
+
+Read the orphan report and decide. SQLite never enforced its foreign keys, so some rows may point at deleted parents. The report lists table, column, count and sample ids. Default is to abort.
+
+- `--orphans=skip`: do not copy those rows (and, repeatedly, rows that pointed at a skipped row). Every skipped row id goes in the JSON report.
+- `--orphans=null`: set the FK column to NULL. Only for nullable columns; a NOT NULL column aborts.
+- Pass the same `--orphans` value to `data:verify` later, so it knows what was left out.
+
+The database also holds rules SQLite never had (migration `DbIntegrity`), and the scan reports their violations in the same table, so the dry run shows them before anything is written:
+
+- Text keys that point at an account (`user:<id>`, `admin:<id>`, the chat form `admin:<id>`, and kind + id pairs such as `social_posts.author_kind/author_id`, `chat_custom_stickers`, `social_reports` about a user) are real foreign keys through generated columns, so a key whose account does not exist is an orphan. The report names the generated column (for example `social_comments.author_user_id`, parent `users`) and lists the row ids.
+- Malformed keys: every covered text key must match its scheme (social and push `user:<id>` / `admin:<id>`; chat `user` / `admin:<id>`; alias targets also `pt`; ids at most 9 digits, no leading zero) and `author_id`, `owner_id`, `target_id` of kind + id pairs must be above 0 (format CHECKs). Rows that break this are reported with reason `malformed_key` and follow the same `skip` / `null` rule as dangling keys.
+- A trainee chat message with an admin id (`chat_messages_user_has_no_admin`): reported with reason `user_message_with_admin` and parent `-`.
+- The sender-scoped `client_id` unique indexes need no scan: the SQLite schema already had a stricter `UNIQUE (conversation_id, client_id)`.
+- `--orphans=skip` drops those rows and, repeatedly, everything that pointed at them (a skipped message takes its reactions, edits and photos).
+- `--orphans=null` cannot null a text key or repair a CHECK: for these rows it aborts before any write with "use --orphans=skip". Decision: no partial repair of text keys; skip, or fix the source and re-run.
+- Generated columns are never inserted (the loader's column list comes from `turso-columns.json`, which stays unchanged).
+
+The `DbChatSocial` migration adds more rules; the scan reports each one with table, column, reason, count and primary keys (never content), and `--orphans=skip` drops the row and its dependents (`--orphans=null` aborts with "use --orphans=skip", as above). Parent `-` in the report means a rule rather than a missing parent:
+
+| Rule (table.column)                                                                                                                      | Reason                               | Notes                                                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `chat_messages.reply_to_message_id`                                                                                                      | `reply_in_other_conversation`        | a reply must be in the replied message's conversation (a missing target stays an ordinary orphan)                     |
+| `chat_conversations.last_message_id`, `dm_conversations.last_message_id`                                                                 | `last_message_in_other_conversation` | the last message belongs to its conversation                                                                          |
+| `chat_messages.photo_id`, `dm_messages.photo_id`, `social_posts.photo_id` | `photo_link_mismatch` | the cover is a photo attached to that very message or post. A message or post may have more photos than its cover (`PhotoPosition`); a pending photo (no owner) is fine |
+| `position` of `chat_photos`, `dm_photos`, `social_post_photos` | `position_negative`, `duplicate_position` | `position >= 0` and one photo per position of a message or post (NULL counts as 0 in the app and is free here); the later id is reported, unless it is the cover (then the other photo is, so `--orphans=skip` never drops the message or post) |
+| `size` of `chat_photos`, `dm_photos`, `social_post_photos`, `chat_custom_stickers`                                                       | `size_not_byte_length`               | `size` must equal the byte length. Avatars are decoded by the script, so their size is right by construction          |
+| `dm_conversations.user_low`, `social_friendships.user_low`                                                                               | `pair_not_ordered`                   | `user_low < user_high`                                                                                                |
+| `social_friendships.requested_by`                                                                                                        | `requester_not_in_pair`              | the requester is `user_low` or `user_high`                                                                            |
+| `dm_messages.sender_id`, `dm_photos.uploader_id`, `dm_reads.user_id` | `not_conversation_member` | the user is the conversation's `user_low` or `user_high` (a trigger in PostgreSQL; `DbHousekeeping`). A missing conversation stays an ordinary orphan |
+| `social_reports.status`                                                                                                                  | `status_resolution_mismatch`         | `resolved` needs `resolution` and `resolved_at`; `open` needs `resolution`, `resolved_at` and `resolved_by` all empty |
+| `social_reports.reporter_key`                                                                                                            | `duplicate_open_report`              | one open report per reporter and target; the report with the lowest id stays, later duplicates are the violations     |
+
+Photo links are two foreign keys, both `DEFERRABLE INITIALLY DEFERRED`, so the loader may set either side first; they are checked at `COMMIT`. Composite foreign keys are planned by their one nullable column (`reply_to_message_id`, `last_message_id`, `photo_id`, `message_id`, `post_id`) like plain ones, so a missing parent is reported as `missing_parent` and the cycle columns are still loaded as NULL and set afterwards.
+
+Repaired while reading, not reported: `chat_messages.silent` NULL (the source allowed it, the app meant "not silent") is copied as false.
+
+`chat_nicknames` is not legacy: the shared per-conversation nicknames are live again (migration `ChatNicknamesRestore`), so the table is copied like any other. Rows must fit its CHECKs (target `user`, `pt` or `admin:<id>`; setter `user` or `admin:<id>`; a nickname of 1 to 30 characters, trimmed, single spaces, no control characters, migration `ChatNicknameValue`); the orphan scan reports a row that does not (`malformed_key`, `nickname_value`), and `--orphans=skip` drops it. Private `contact_aliases` are copied as before and used outside chat only.
+
+Legacy data PostgreSQL no longer has (the source schema and `turso-columns.json` stay as they are):
+
+- `chat_messages.attachment_url` / `attachment_meta`: nothing reads or writes them (photos have their own table). If any message has a value, the run aborts in every mode (dry run, migrate, verify) with the count and "pass `--drop-legacy-attachments`". With the flag the values are dropped and the count is in the report (`droppedLegacy`) and a warning.
+- Pass the same flags to `data:verify`.
+
+The `UserRestrictions`, `AccentTheme` and `ChatGroups` migrations (company/main features) add rules SQLite never had, reported the same way (`scripts/migrate/company-features.ts`, account keys in `account-refs.ts`):
+
+| Rule (table.column) | Reason | Notes |
+| --- | --- | --- |
+| `users.accent_color`, `admins.accent_color`, `theme_settings.accent` | `accent_not_rrggbb` | NULL or lower-case `#rrggbb` |
+| `user_restrictions.lifted_by_admin_id`, `chat_groups.dissolved_by_admin_id`, `chat_group_members.removed_by_key` | `lifted_by_without_lifted_at`, `dissolved_by_without_dissolved_at`, `removed_by_without_left_at` | who did it needs when |
+| `chat_groups.name` | `group_name_length` | 1 to 60 characters (only the length is read) |
+| `chat_groups.last_message_id` | `last_message_in_other_group` | the last message belongs to its group |
+| `chat_group_members.last_read_message_id` | `last_read_negative` | a negative id; 0 is read as NULL (nothing read) |
+| `chat_group_messages.sender_key` | `sender_does_not_match_kind` | a system line has no sender, a message has one |
+| `chat_group_messages.hidden_by_key` | `hidden_by_and_hidden_at_disagree` | both set or both empty |
+| `chat_group_messages.reply_to_message_id` | `reply_in_other_group` | a reply stays in its group |
+| `chat_group_messages.photo_id` | `photo_link_mismatch` | the cover is a photo of that message, as for the other photo tables |
+| `chat_group_photos.message_id`, `.size`, `.position` | `photo_message_in_other_group`, `size_not_byte_length`, `position_negative`, `duplicate_position` | one photo per position of a message, as for the other photo tables; the later id is reported |
+
+Group keys (`member_key`, `reactor_key`, `sender_key`, `uploader_key`, `created_by_key`, `added_by_key`, `removed_by_key`, `hidden_by_key`) must be `user:<id>` / `admin:<id>` (`malformed_key`); only members and reactions are foreign keys to the account (generated ids), the others may name a deleted account. Repaired while reading: `chat_groups.managers_only` and `chat_group_messages.silent` NULL become false. Repaired as the `GroupChatRestrictionKeys` migration repairs existing rows, listed in `warnings` by primary key, never reported as violations:
+
+- `chat_group_members.last_read_message_id`: 0 becomes NULL (nothing read); a cursor that names no message of its own group (missing, or another group's) is cleared, the member stays. Under `--orphans=skip` a cursor whose message is skipped is cleared too, instead of dropping the member.
+- `user_restrictions`: a `lifted_at` before `created_at` becomes `created_at`. One row per trainee may have `lifted_at` NULL: the newest (by `created_at`, then id) stays; each older one gets `lifted_at` = the next newer row's `created_at`, or its own `until` if that came first (never before its own `created_at`). The moments come from the rows, not the clock, so `data:verify` computes the same values. `user_restrictions.created_by_admin_id` is nullable in PostgreSQL (SQLite: NOT NULL), so `--orphans=null` can clear a deleted admin there.
+
+`--orphans=skip` never drops a user restriction for a reason other than its trainee being left out (dropping it would silently lift a block): a missing admin in `created_by_admin_id` / `lifted_by_admin_id` is set to NULL instead, and a `lifted_by_admin_id` without `lifted_at` is cleared (the block was never lifted and stays active; an older active block that the one-active repair below lifts gets its `lifted_at` first, so its `lifted_by_admin_id` is kept). A malformed personal `accent_color` on `users` / `admins` is cleared too (the default color applies) rather than dropping the account. Under `--orphans=null` the same two rules are cleared; `report` still stops and lists them. Every cleared value is in `nulledValues`.
+
+After the load (and in `data:verify`) the script recomputes `last_message_id` (the newest message id of the conversation) and `last_message_at` (that message's `created_at`) for `chat_conversations`, `dm_conversations` and `chat_groups` (for groups the newest message without an `audience`: the super-admin-only PT-change alert never moves it) and compares them with the stored values. These fields are kept by the app, so a difference is a warning (`derivedChecks` in the report, conversation ids only), never an error and never rewritten. Look at the list before lifting the freeze.
+
+Nothing is dropped silently: skipped and nulled values are counted and listed in the console and in the report.
+
+Also prepare, without changing production: the API host and its production PostgreSQL (empty database, a user that can create tables), and the values for the environment list in step 4.
+
+## Cutover day, in order
+
+### 1. Freeze writes on production
+
+1. Announce a short maintenance window.
+2. Stop writes to Turso: put the current Vercel deployment in maintenance (for example redeploy it with a maintenance page, or pause the project) so no trainee or PT can save anything. Turso itself is never changed.
+3. Export again: `turso db shell <db> .dump > turso-final.sql`, then `sqlite3 turso-final.db < turso-final.sql`. Use this file for the real run; never point the script at the live Turso database. Keep the dump safe for the rollback period.
+
+### 2. Prepare PostgreSQL and load the data
+
+```sh
+# a. The schema (the API also applies pending migrations on start, but the data script needs them first)
+DATABASE_URL="<production postgres url>" pnpm --filter @pt/api migrate
+
+# b. The data
+pnpm --filter @pt/api data:migrate -- \
+  --source file:./turso-final.db \
+  --target "<production postgres url>" \
+  --orphans=<decision> --report cutover-report.json
+```
+
+Add `--reset` only when the target was rehearsed on and has rows. The tables print as a count and checksum table; exit code 0 means every table matched and every sequence is right. Running it twice with `--reset` gives the same checksums (idempotent). Passing the URL on the command line puts it in shell history; prefer an environment variable your shell does not log.
+
+### 3. Verify
+
+```sh
+pnpm --filter @pt/api data:verify -- \
+  --source file:./turso-final.db --target "<production postgres url>" --orphans=<decision>
+```
+
+`data:verify` writes nothing and exits 1 on any mismatch. Keep `cutover-report.json`: counts, checksums, orphans, skipped and nulled values, blob totals, duration.
+
+Avatars are checked separately, per id: the report's `avatars` list (printed as "Avatars") has one entry per avatar table with the expected and loaded row counts and a checksum over `id | mime | size | SHA-256 of the decoded bytes | version`. The source side is derived from the decoded data URL, the PostgreSQL side from the stored row. `data:verify` expects exactly the skipped ids to be missing from the avatar tables (and their owners' `avatar_updated_at` to be NULL) and fails on any other difference. The `users` / `admins` row checksums leave the avatar column out (it no longer exists there).
+
+What the checksum covers: for each row a SHA-256 over every column, normalized (ids, timestamps as epoch milliseconds, booleans as 0/1, numbers, text byte for byte, blobs as their SHA-256), then a SHA-256 over the sorted row hashes. Password and passcode hashes (`scrypt$N$salt$hash`) are text and are compared exactly, so every password keeps working.
+
+### 4. Deploy the API
+
+The image is built from the repo root with `apps/api/Dockerfile` (`node dist/migrate.js && node dist/main.js` is the start command used by `docker-compose.yml`). Run it on the chosen host with these environment variables:
+
+| Variable                                                        | Value                                                                                    |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                  | the production PostgreSQL URL (required)                                                 |
+| `NODE_ENV`                                                      | `production`                                                                             |
+| `PORT`                                                          | the port the host expects (default 4000)                                                 |
+| `WEB_ORIGIN`                                                    | the production web origin, for example `https://<domain>` (CORS and the realtime socket) |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`        | the existing web push keys (all three, or push is off)                                   |
+| `AVATAR_URL_SECRET`                                             | required: 32+ random characters (for example `openssl rand -base64 48`); signs avatar URLs, rotating it only reissues URLs |
+| `GIPHY_API_KEY`                                                 | optional, sticker search                                                                 |
+| `LOGIN_THROTTLE_LIMIT`, `LOG_LEVEL`, `REALTIME_RECHECK_SECONDS` | optional, see `apps/api/.env.example`                                                    |
+
+Behind a proxy or load balancer, serve it over HTTPS on its own host name (for example `api.<domain>`). Check `GET https://<api host>/v1/health`: it must answer `ok` with `db` ok. If no admin existed in the copied data, create one once with `SUPER_ADMIN_USERNAME`/`SUPER_ADMIN_PASSWORD` set in the API's environment and `pnpm --filter @pt/api admin:create`; the copied admins already work.
+
+### 5. Vercel settings
+
+1. Project Settings, General: Root Directory `apps/web` (the repo is a monorepo; "Include files outside the Root Directory" stays enabled so `packages/contracts` is built). Build command `next build` comes from `apps/web/package.json` (`pnpm build` at the root also works: contracts, then web). Node 24.
+2. Environment Variables (Production and Preview): add `API_URL` (the API's base URL, server only) and `NEXT_PUBLIC_API_URL` (the same host; the browser's realtime socket connects to it, and the API's `WEB_ORIGIN` must allow this web origin). Keep `HEALTH_CHECK_TOKEN` and the web push variables the web still reads (`VAPID_PUBLIC_KEY`/`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`).
+3. Do NOT delete the old variables yet; first do steps 6 and 7. After the cutover is accepted, remove `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `SESSION_SECRET`, `ABLY_API_KEY`, `ADMIN_USERNAME` and `ADMIN_PASSWORD`, and disconnect the Turso integration in Storage (only after the rollback period).
+4. Deploy the branch that contains this step 10 (merged into `stag`, then the release PR `stag` to `main`, `docs/release.md`).
+
+### 6. Branch protection
+
+Required status checks on `stag` and `main` are the three gate jobs: `checks-web`, `checks-api`, `checks-contracts`. Make sure they are the only required ones (the e2e shards gate `checks-web` themselves on the release PR into `main`).
+
+### 7. Smoke checks
+
+- `https://<domain>/api/health?token=<HEALTH_CHECK_TOKEN>` answers `"status": "ok"` and shows the API check.
+- Log in as one trainee and one admin through the web app, using their existing password (hashes are copied unchanged). Sessions are new: everyone logs in once again after cutover.
+- Check the admin passcode, one chat photo, the latest chat message, a food log and a workout week.
+- Send one chat message between a trainee and the PT and see it arrive live (the realtime socket needs `NEXT_PUBLIC_API_URL` and `WEB_ORIGIN` to agree).
+- Log out in the web app, then try the old token against `GET /v1/auth/me`: it must answer 401.
+- Lift the maintenance window.
+
+## Rollback
+
+Turso is never changed, so rollback is switching the front end back:
+
+1. In Vercel, promote the previous production deployment (the last build before this one) to production again (Deployments, "Promote to Production"). It still reads Turso with its old environment variables, which is why they are removed only after the cutover is accepted.
+2. Anything written to PostgreSQL after the lift of the freeze is not in Turso. If the window was short, accept the loss; otherwise copy those rows back by hand before promoting.
+3. Keep the API and PostgreSQL running or stop them; nothing depends on them in the old deployment.
+
+## If the data script fails
+
+The load is one transaction, so a failure leaves the target as it was (after `--reset`, restored too). Fix the cause, then re-run. Orphan or validation aborts happen before any write. While this happens production is still frozen: if it takes long, lift the freeze (Turso is unchanged) and retry in another window.
+
+## Credentials
+
+- Never put a token on the command line. If a remote read is ever needed, export `TURSO_AUTH_TOKEN` in the shell and pass `--allow-remote`; the script prints only the host and never the token or any connection string.
+- Never put production URLs in `.env.example` or in commits.
+
+## After the cutover (once the rollback period has passed)
+
+Delete `apps/api/scripts/` (`migrate-from-turso.ts`, `migrate/`, `turso-columns.*`, `turso-schema.*`), `apps/api/test/migrate-from-turso.e2e.test.ts`, `apps/api/test/support/turso-fixture.ts`, the `data:*` scripts and the `@libsql/client` dev dependency, remove the old Vercel variables listed in step 5, and disconnect the Turso database.

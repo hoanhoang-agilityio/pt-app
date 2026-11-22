@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 
 import { AuthModule } from "../auth/auth.module.js";
+import { ChatModule } from "../chat/chat.module.js";
 import { PushController } from "./push.controller.js";
 import { PushNotifier } from "./push.notifier.js";
 import { PushRecipients } from "./push.recipients.js";
@@ -16,7 +17,7 @@ import { WebPushSender } from "./senders/web-push.sender.js";
 // one more entry in `inject` below. Without the VAPID_* variables
 // the web sender is disabled; the Expo sender is always on.
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, ChatModule],
   controllers: [PushController],
   providers: [
     WebPushSender,

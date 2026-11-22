@@ -37,6 +37,7 @@ import type { AdminActor, AuthActor, UserActor } from "../auth/actor.js";
 import { Actor, Admin, Roles, User } from "../auth/decorators/index.js";
 import { ApiRoute } from "../common/openapi/api-route.js";
 import { RefuseRestricted } from "../restrictions/restriction.guard.js";
+import { AppBadgeService } from "./app-badge.service.js";
 import { ChatAccess } from "./chat.access.js";
 import { chatErrors } from "./chat.errors.js";
 import { ChatService } from "./chat.service.js";
@@ -71,6 +72,7 @@ export class ChatMessagesController {
     private readonly threads: ChatThreadService,
     private readonly photos: ChatPhotosService,
     private readonly inbox: ChatInboxService,
+    private readonly badge: AppBadgeService,
   ) {}
 
   @Patch("messages/:mid")
@@ -251,7 +253,7 @@ export class ChatMessagesController {
   @Get("unread")
   @ApiRoute({
     summary:
-      "Badge poll. Trainee: { count, coachCount, dmCount, chatEnabled, hasHistory, latestLoudIncomingId }. Admin: { count, perTrainee }",
+      "Badge poll. Trainee: { count, coachCount, dmCount, chatEnabled, hasHistory, latestLoudIncomingId, appBadge }. Admin: { count, perTrainee, appBadge }. appBadge = unread coach chat + DMs + group messages + unread social notifications",
     response: chatUnreadResponseSchema,
     errors: [401, 403],
   })
@@ -260,9 +262,14 @@ export class ChatMessagesController {
     @Res({ passthrough: true }) res: Response,
   ) {
     res.set("Cache-Control", "no-store");
-    return actor.kind === "user"
-      ? this.inbox.unreadForTrainee(actor)
-      : this.inbox.unreadForAdmin(actor);
+    const [unread, appBadge] = await Promise.all([
+      actor.kind === "user"
+        ? this.inbox.unreadForTrainee(actor)
+        : this.inbox.unreadForAdmin(actor),
+      this.badge.forActor(actor),
+    ]);
+
+    return { ...unread, appBadge };
   }
 
   @Get("bubbles")

@@ -346,9 +346,13 @@ export const chatUnreadResponseSchema = z.union([
     chatEnabled: z.boolean(),
     hasHistory: z.boolean(),
     latestLoudIncomingId: z.number().int().nullable(),
+    // The app icon number: unread coach chat + DMs + group messages + unread
+    // social notifications.
+    appBadge: z.number().int().nonnegative(),
   }),
   z.object({
     count: z.number().int(),
+    appBadge: z.number().int().nonnegative(),
     perTrainee: z.array(
       z.object({
         userId: z.number().int(),

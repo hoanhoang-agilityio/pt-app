@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { PushKind, PushPayload } from "@pt/contracts";
 import { InjectPinoLogger, PinoLogger } from "nestjs-pino";
 
+import { AppBadgeService } from "../chat/app-badge.service.js";
 import { Clock } from "../common/clock.js";
 import type { StoredPushSubscription } from "./push-sender.js";
 import { PUSH_SENDERS, type PushSender } from "./push-sender.js";
@@ -24,6 +25,7 @@ export class PushService {
     private readonly store: PushSubscriptionStore,
     private readonly clock: Clock,
     @InjectPinoLogger(PushService.name) private readonly logger: PinoLogger,
+    private readonly badges: AppBadgeService,
   ) {
     this.byKind = new Map(senders.map((sender) => [sender.kind, sender]));
   }
@@ -54,9 +56,21 @@ export class PushService {
           subscription,
         ]);
       }
+      // The app icon number rides along for phones only; a failure to count
+      // never stops the push.
+      const badge = byKind.has("expo")
+        ? await this.badges.forOwnerKey(ownerKey).catch(() => undefined)
+        : undefined;
+
       await Promise.all(
         [...byKind].map(([kind, group]) =>
-          this.sendGroup(kind, group, payload),
+          this.sendGroup(
+            kind,
+            group,
+            kind === "expo" && badge !== undefined
+              ? { ...payload, badge }
+              : payload,
+          ),
         ),
       );
     } catch (error) {

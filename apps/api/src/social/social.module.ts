@@ -69,6 +69,6 @@ import { SocialTermsGuard } from "./terms.guard.js";
     SocialCleanupService,
     SocialPostQuotes,
   ],
-  exports: [SocialCleanupService, SocialPostQuotes],
+  exports: [SocialCleanupService, SocialPostQuotes, NotificationsService],
 })
 export class SocialModule {}

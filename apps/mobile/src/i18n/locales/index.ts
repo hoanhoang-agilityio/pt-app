@@ -1,10 +1,13 @@
 import enAccount from "./en/account.json";
+import enAdmin from "./en/admin.json";
 import enNutrition from "./en/nutrition.json";
 import enWorkouts from "./en/workouts.json";
 import viAccount from "./vi/account.json";
+import viAdmin from "./vi/admin.json";
 import viNutrition from "./vi/nutrition.json";
 import viWorkouts from "./vi/workouts.json";
 import zhAccount from "./zh/account.json";
+import zhAdmin from "./zh/admin.json";
 import zhNutrition from "./zh/nutrition.json";
 import zhWorkouts from "./zh/workouts.json";
 
@@ -31,7 +34,7 @@ export const deepMerge = (base: Tree, ...extras: Tree[]): Tree => {
 };
 
 export const featureMessages = {
-  vi: [viWorkouts, viNutrition, viAccount] as Tree[],
-  en: [enWorkouts, enNutrition, enAccount] as Tree[],
-  zh: [zhWorkouts, zhNutrition, zhAccount] as Tree[],
+  vi: [viWorkouts, viNutrition, viAccount, { admin: viAdmin }] as Tree[],
+  en: [enWorkouts, enNutrition, enAccount, { admin: enAdmin }] as Tree[],
+  zh: [zhWorkouts, zhNutrition, zhAccount, { admin: zhAdmin }] as Tree[],
 };

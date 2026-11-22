@@ -177,3 +177,39 @@ describe("ExpoPushSender", () => {
     expect(await sender.send(sub(1), payload)).toBe("failed");
   });
 });
+
+describe("ExpoPushSender timeout", () => {
+  it("passes a 10 second abort signal to fetch", async () => {
+    const fetchMock = vi.fn(() => reply({ data: [{ status: "ok" }] }));
+
+    vi.stubGlobal("fetch", fetchMock);
+    await new ExpoPushSender(env()).send(sub(1), payload);
+    const init = (fetchMock.mock.calls[0] as unknown[])[1] as RequestInit;
+
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("turns a timeout abort into a retryable failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.reject(new DOMException("timed out", "TimeoutError")),
+      ),
+    );
+
+    expect(await new ExpoPushSender(env()).send(sub(1), payload)).toBe("retry");
+  });
+
+  it("uses AbortSignal.timeout(10000)", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => reply({ data: [{ status: "ok" }] })),
+    );
+    await new ExpoPushSender(env()).send(sub(1), payload);
+
+    expect(timeout).toHaveBeenCalledWith(10_000);
+    timeout.mockRestore();
+  });
+});

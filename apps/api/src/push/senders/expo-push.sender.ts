@@ -13,6 +13,8 @@ export const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 // The Expo push service accepts at most 100 messages per request.
 export const EXPO_BATCH_SIZE = 100;
 const PUSH_TTL_SECONDS = 3600;
+// A hung request becomes a retryable failure instead of blocking the queue.
+export const EXPO_FETCH_TIMEOUT_MS = 10_000;
 
 export type ExpoPushData = {
   url: string;
@@ -135,6 +137,7 @@ export class ExpoPushSender implements PushSender {
         method: "POST",
         headers,
         body: JSON.stringify(messages),
+        signal: AbortSignal.timeout(EXPO_FETCH_TIMEOUT_MS),
       });
 
       if (response.status === 429 || response.status >= 500) {

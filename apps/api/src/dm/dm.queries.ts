@@ -203,6 +203,32 @@ export class DmQueries {
     });
   }
 
+  // The content of an unsent message, for a super admin who may open its
+  // conversation (resolveView); null for a live message or no access.
+  async originalOf(actor: AuthActor, messageId: number) {
+    const rows: (MessageRow & {
+      conversationId: number;
+      unsentAt: Date;
+    })[] = await this.dataSource.query(
+      `SELECT id, conversation_id AS "conversationId", sender_id AS "senderId",
+              body, photo_id AS "photoId", reply_post_id AS "replyPostId",
+              client_id AS "clientId", created_at AS "createdAt",
+              deleted_at AS "unsentAt"
+       FROM dm_messages WHERE id = $1 AND deleted_at IS NOT NULL`,
+      [messageId],
+    );
+    const row = rows[0];
+
+    if (!row || !(await this.resolveView(actor, row.conversationId))) {
+      return null;
+    }
+    const [message] = await this.toViews([row], actor);
+
+    return message
+      ? { message, unsentAt: row.unsentAt.toISOString() }
+      : null;
+  }
+
   // Newest page (no cursor), older (`before`) or newer (`after`) messages, in
   // ascending order. Unsent messages never come back; the latest unsent ids
   // ride along so a polling client can remove them.

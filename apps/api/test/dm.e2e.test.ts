@@ -558,7 +558,7 @@ describe("read marks and unsend", () => {
     ).toBe(0);
   });
 
-  it("lets a member take back their own message, photo bytes included, and emits dm.message.deleted", async () => {
+  it("lets a member take back their own message (flag only, content kept) and emits dm.message.deleted", async () => {
     const me = await trainee();
     const ann = await trainee();
     const cid = await conversationBetween(me, ann);
@@ -582,14 +582,10 @@ describe("read marks and unsend", () => {
       .getRepository(DmMessage)
       .findOneByOrFail({ id: mine });
 
-    expect(stored).toMatchObject({
-      body: null,
-      photoId: null,
-      replyPostId: null,
-    });
+    expect(stored).toMatchObject({ body: "thu hồi", photoId });
     expect(stored.deletedAt).not.toBeNull();
     expect(await ds.getRepository(DmPhoto).existsBy({ id: photoId })).toBe(
-      false,
+      true,
     );
     expect(events.named("dm.message.deleted")).toEqual([
       {
@@ -716,7 +712,7 @@ describe("DM messages with several photos", () => {
     ).toBe("📷 4 ảnh");
   });
 
-  it("serves every photo of the message and takes all of them back on unsend", async () => {
+  it("serves every photo of the message and hides all of them (kept for a super admin) on unsend", async () => {
     const me = await trainee();
     const ann = await trainee();
     const stranger = await trainee();
@@ -738,12 +734,68 @@ describe("DM messages with several photos", () => {
     ).toBe(204);
     expect(
       await ds.getRepository(DmPhoto).countBy({ conversationId: cid }),
-    ).toBe(0);
+    ).toBe(3);
+    const boss = await admin("super_admin");
+
     for (const id of ids) {
+      for (const token of [ann.token, me.token]) {
+        expect(
+          (await callWith(app, "get", `/v1/dm/photos/${id}`, token)).status,
+        ).toBe(404);
+      }
       expect(
-        (await callWith(app, "get", `/v1/dm/photos/${id}`, ann.token)).status,
-      ).toBe(404);
+        (await callWith(app, "get", `/v1/dm/photos/${id}`, boss.token)).status,
+      ).toBe(200);
     }
+  });
+});
+
+describe("GET /v1/dm/messages/:mid/original", () => {
+  it("gives a super admin the kept content of an unsent DM and nobody else", async () => {
+    const me = await trainee();
+    const ann = await trainee();
+    const stranger = await trainee();
+    const boss = await admin("super_admin");
+    const pt = await admin("pt");
+    const cid = await conversationBetween(me, ann);
+    const mid = await message(cid, me, "đừng ai thấy");
+    const photoId = await dmPhoto(cid, me, mid);
+    const original = (token: string | null) =>
+      callWith(app, "get", `/v1/dm/messages/${mid}/original`, token);
+
+    // Live: no original.
+    expect((await original(boss.token)).status).toBe(404);
+    expect(
+      (await callWith(app, "delete", `/v1/dm/messages/${mid}`, me.token)).status,
+    ).toBe(204);
+    // The member still sees nothing of it.
+    const thread = await callWith(
+      app,
+      "get",
+      `/v1/dm/conversations/${cid}/messages`,
+      ann.token,
+    );
+
+    expect(thread.body.messages.map((m: { id: number }) => m.id)).not.toContain(
+      mid,
+    );
+    expect(thread.body.deletedIds).toContain(mid);
+    for (const token of [me.token, ann.token, stranger.token, pt.token]) {
+      expect((await original(token)).status).toBe(403);
+    }
+    expect((await original(null)).status).toBe(401);
+    const revealed = await original(boss.token);
+
+    expect(revealed.status).toBe(200);
+    expect(revealed.body.message).toMatchObject({
+      id: mid,
+      senderId: me.id,
+      body: "đừng ai thấy",
+    });
+    expect(revealed.body.message.photos).toEqual([
+      expect.objectContaining({ url: `/v1/dm/photos/${photoId}` }),
+    ]);
+    expect(typeof revealed.body.unsentAt).toBe("string");
   });
 });
 
@@ -783,7 +835,10 @@ describe("GET /v1/dm/photos/:id", () => {
     await ds
       .getRepository(DmMessage)
       .update({ id: sent }, { deletedAt: clock.now() });
-    expect((await get(boss.token)).status).toBe(404);
+    // Unsent: members get 404, the super admin still gets the kept photo.
+    expect((await get(boss.token)).status).toBe(200);
+    expect((await get(ann.token)).status).toBe(404);
+    expect((await get(pt.token)).status).toBe(404);
   });
 
   it("does not serve a pending upload", async () => {

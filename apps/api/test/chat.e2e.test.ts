@@ -1337,16 +1337,22 @@ describe("reactions", () => {
     expect(events.named("chat.reaction.changed")).toHaveLength(0);
   });
 
-  it("rejects an emoji outside the six and a reaction to an unsent message", async () => {
+  it("accepts any single emoji, rejects anything else and a reaction to an unsent message", async () => {
     const me = await trainee();
     const sent = await sendAs(me.token, { body: "emoji" });
     const id = sent.body.message.id;
 
-    expect((await react(me.token, id, "🔥")).status).toBe(400);
+    expect((await react(me.token, id, "x")).status).toBe(400);
     expect((await react(me.token, id, "")).status).toBe(400);
+    expect((await react(me.token, id, "👍👍")).status).toBe(400);
     expect(
       await ds.getRepository(ChatReaction).countBy({ messageId: id }),
     ).toBe(0);
+    expect((await react(me.token, id, "🥹")).status).toBe(200);
+    expect((await react(me.token, id, "🇻🇳")).body.message.reactions).toEqual([
+      expect.objectContaining({ emoji: "🇻🇳" }),
+    ]);
+    await callWith(app, "delete", `/v1/chat/messages/${id}/reaction`, me.token);
     await callWith(app, "delete", `/v1/chat/messages/${id}`, me.token);
     const response = await react(me.token, id, "👍");
 

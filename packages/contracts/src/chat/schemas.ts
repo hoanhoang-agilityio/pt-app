@@ -262,6 +262,16 @@ export const chatMessageResponseSchema = z.object({
   message: chatMessageViewSchema,
 });
 
+// The content of an unsent message, for a super admin only. `message.deleted`
+// stays true; the body, sticker, photos, reactions and quotes are the originals.
+export const chatOriginalMessageResponseSchema = z.object({
+  message: chatMessageViewSchema,
+  unsentAt: iso,
+});
+export type ChatOriginalMessageResponse = z.infer<
+  typeof chatOriginalMessageResponseSchema
+>;
+
 // Keys are "user", "pt" and "admin:<id>"; nicknames are the conversation's
 // shared ones (every member sees the same; private contact aliases are never
 // used in chat), colours are resolved (an admin's per-conversation override
@@ -512,6 +522,15 @@ export const dmMessageViewSchema = z.object({
   createdAt: iso,
 });
 export type DmMessageView = z.infer<typeof dmMessageViewSchema>;
+
+// The content of an unsent DM, for a super admin only.
+export const dmOriginalMessageResponseSchema = z.object({
+  message: dmMessageViewSchema,
+  unsentAt: iso,
+});
+export type DmOriginalMessageResponse = z.infer<
+  typeof dmOriginalMessageResponseSchema
+>;
 
 export const dmThreadResponseSchema = z.object({
   messages: z.array(dmMessageViewSchema),

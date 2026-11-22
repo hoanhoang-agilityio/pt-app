@@ -78,7 +78,8 @@ export class GroupPhotosService {
     return id;
   }
 
-  // The photo of a live (not unsent) message, only for a member of its group
+  // The photo of a live (not unsent) message (a super admin also gets an
+  // unsent one, for the original view), only for a member of its group
   // and only through that group's URL; a pending upload is visible to nobody.
   // A hidden message's photo is kept for the managers who moderate. Anything
   // else is "not found" (never 403, so ids reveal nothing).
@@ -91,8 +92,9 @@ export class GroupPhotosService {
       `SELECT m.hidden_at IS NOT NULL AS hidden
        FROM chat_group_photos p
        JOIN chat_group_messages m ON m.id = p.message_id AND m.group_id = p.group_id
-       WHERE p.id = $1 AND p.group_id = $2 AND m.deleted_at IS NULL`,
-      [photoId, groupId],
+       WHERE p.id = $1 AND p.group_id = $2
+         AND (m.deleted_at IS NULL OR $3::boolean)`,
+      [photoId, groupId, auth.kind === "admin" && auth.role === "super_admin"],
     );
     const context = rows[0] ? await this.access.find(auth, groupId) : null;
 

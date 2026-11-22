@@ -225,6 +225,15 @@ export const groupMessageResponseSchema = z.object({
   message: groupMessageViewSchema,
 });
 
+// The content of an unsent group message, for a super admin only.
+export const groupOriginalMessageResponseSchema = z.object({
+  message: groupMessageViewSchema,
+  unsentAt: iso,
+});
+export type GroupOriginalMessageResponse = z.infer<
+  typeof groupOriginalMessageResponseSchema
+>;
+
 export const groupHeaderSchema = z.object({
   id: z.number().int(),
   name: z.string(),

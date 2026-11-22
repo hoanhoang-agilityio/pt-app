@@ -24,6 +24,7 @@ import {
   chatInboxQuerySchema,
   chatInboxResponseSchema,
   chatMessageResponseSchema,
+  chatOriginalMessageResponseSchema,
   chatPhotoResponseSchema,
   type ChatReactRequest,
   chatReactRequestSchema,
@@ -33,7 +34,7 @@ import {
 import type { Request, Response } from "express";
 
 import type { AdminActor, AuthActor, UserActor } from "../auth/actor.js";
-import { Actor, Admin, User } from "../auth/decorators/index.js";
+import { Actor, Admin, Roles, User } from "../auth/decorators/index.js";
 import { ApiRoute } from "../common/openapi/api-route.js";
 import { RefuseRestricted } from "../restrictions/restriction.guard.js";
 import { ChatAccess } from "./chat.access.js";
@@ -124,6 +125,23 @@ export class ChatMessagesController {
   })
   async unreact(@Actor() actor: AuthActor, @Param("mid", idParam) mid: number) {
     return { message: await this.chat.react(actor, mid, null) };
+  }
+
+  @Get("messages/:mid/original")
+  @Roles("super_admin")
+  @ApiRoute({
+    summary:
+      "Super admin only: the original content of an unsent message (404 for a live one)",
+    response: chatOriginalMessageResponseSchema,
+    errors: [400, 401, 403, 404],
+  })
+  async original(
+    @Actor() actor: AuthActor,
+    @Param("mid", idParam) mid: number,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.set("Cache-Control", "no-store");
+    return this.chat.original(actor, mid);
   }
 
   @Get("messages/:mid/edits")

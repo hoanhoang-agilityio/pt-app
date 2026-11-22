@@ -681,6 +681,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/chat/messages/{mid}/original": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Super admin only: the original content of an unsent message (404 for a live one) */
+        get: operations["ChatMessagesController_original"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/chat/messages/{mid}/edits": {
         parameters: {
             query?: never;
@@ -932,8 +949,25 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Take back my own old message (the photo bytes go too) */
+        /** Take back my own old message (only the flag is set; a super admin can still read it) */
         delete: operations["DmController_unsend"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/dm/messages/{mid}/original": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Super admin only: the original content of an unsent DM (404 for a live one) */
+        get: operations["DmController_original"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1806,6 +1840,23 @@ export interface paths {
         head?: never;
         /** Edit my own message (the previous text is kept in the history) */
         patch: operations["GroupMessagesController_edit"];
+        trace?: never;
+    };
+    "/v1/chat/groups/{groupId}/messages/{mid}/original": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Super admin only: the original content of an unsent group message (404 for a live one) */
+        get: operations["GroupMessagesController_original"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/chat/groups/{groupId}/messages/{mid}/reaction": {
@@ -7953,6 +8004,158 @@ export interface operations {
             };
         };
     };
+    ChatMessagesController_original: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mid: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: {
+                            id: number;
+                            /** @enum {string} */
+                            senderRole: "user" | "admin";
+                            senderAdminId: number | null;
+                            senderAdminName: string | null;
+                            body: string;
+                            sticker: {
+                                /** @enum {string} */
+                                kind: "pack" | "giphy" | "custom";
+                                url: string;
+                                alt: string;
+                            } | null;
+                            photo: {
+                                url: string;
+                                width: number;
+                                height: number;
+                                alt: string;
+                            } | null;
+                            photos: {
+                                url: string;
+                                width: number;
+                                height: number;
+                                alt: string;
+                            }[];
+                            clientId: string;
+                            createdAt: string;
+                            replyTo: {
+                                id: number;
+                                body: string;
+                                isSticker: boolean;
+                                isPhoto: boolean;
+                                photoCount: number;
+                                /** @enum {string} */
+                                senderRole: "user" | "admin";
+                                deleted: boolean;
+                            } | null;
+                            editedAt: string | null;
+                            deleted: boolean;
+                            updatedAt: string;
+                            reactions: {
+                                emoji: string;
+                                reactorKey: string;
+                                reactorName: string;
+                            }[];
+                            post: ({
+                                id: number;
+                                /** @enum {boolean} */
+                                available: false;
+                            } | {
+                                id: number;
+                                /** @enum {boolean} */
+                                available: true;
+                                authorName: string;
+                                authorAvatarUrl: string | null;
+                                caption: string;
+                                photo: {
+                                    url: string;
+                                    width: number;
+                                    height: number;
+                                } | null;
+                                photoCount: number;
+                            }) | null;
+                        };
+                        unsentAt: string;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Missing, invalid or expired session, or wrong credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Not allowed (role, passcode lock or wrong passcode) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Not found (also: outside the PT workspace or hidden) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+        };
+    };
     ChatMessagesController_edits: {
         parameters: {
             query?: never;
@@ -9619,6 +9822,129 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Missing, invalid or expired session, or wrong credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Not allowed (role, passcode lock or wrong passcode) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Not found (also: outside the PT workspace or hidden) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    DmController_original: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mid: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: {
+                            id: number;
+                            senderId: number;
+                            body: string | null;
+                            photo: {
+                                url: string;
+                                width: number;
+                                height: number;
+                            } | null;
+                            photos: {
+                                url: string;
+                                width: number;
+                                height: number;
+                            }[];
+                            post: ({
+                                id: number;
+                                /** @enum {boolean} */
+                                available: false;
+                            } | {
+                                id: number;
+                                /** @enum {boolean} */
+                                available: true;
+                                authorName: string;
+                                authorAvatarUrl: string | null;
+                                caption: string;
+                                photo: {
+                                    url: string;
+                                    width: number;
+                                    height: number;
+                                } | null;
+                                photoCount: number;
+                            }) | null;
+                            clientId: string;
+                            createdAt: string;
+                        };
+                        unsentAt: string;
+                    };
+                };
             };
             /** @description Invalid input */
             400: {
@@ -16213,6 +16539,197 @@ export interface operations {
             };
             /** @description Conflict with the current state */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    GroupMessagesController_original: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                groupId: number;
+                mid: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: {
+                            id: number;
+                            groupId: number;
+                            /** @enum {string} */
+                            kind: "message" | "system";
+                            senderKey: string | null;
+                            senderName: string | null;
+                            senderDeleted: boolean;
+                            /** @enum {string|null} */
+                            senderTag: "manager" | "pt" | null;
+                            body: string;
+                            systemEvent: ({
+                                /** @enum {string} */
+                                type: "member_added";
+                                actorKey: string;
+                                memberKeys: string[];
+                            } | {
+                                /** @enum {string} */
+                                type: "member_removed";
+                                actorKey: string;
+                                memberKey: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "member_left";
+                                memberKey: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "renamed";
+                                actorKey: string;
+                                from: string;
+                                to: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "avatar_changed";
+                                actorKey: string;
+                            } | {
+                                /** @enum {string} */
+                                type: "managers_only";
+                                actorKey: string;
+                                enabled: boolean;
+                            } | {
+                                /** @enum {string} */
+                                type: "pt_changed";
+                                userId: number;
+                                fromPtId: number | null;
+                                toPtId: number | null;
+                                resolution: {
+                                    /** @enum {string} */
+                                    choice: "keep" | "remove" | "superseded";
+                                    byAdminId: number | null;
+                                    at: number;
+                                } | null;
+                            }) | null;
+                            /** @enum {string|null} */
+                            audience: "super_admin" | null;
+                            clientId: string | null;
+                            replyTo: {
+                                id: number;
+                                senderKey: string | null;
+                                senderName: string | null;
+                                snippet: string;
+                                unavailable: boolean;
+                                isSticker: boolean;
+                                isPhoto: boolean;
+                                photoCount: number;
+                            } | null;
+                            sticker: {
+                                /** @enum {string} */
+                                kind: "pack" | "giphy" | "custom";
+                                url: string;
+                                alt: string;
+                            } | null;
+                            photo: {
+                                id: number;
+                                url: string;
+                                width: number;
+                                height: number;
+                                alt: string;
+                            } | null;
+                            photos: {
+                                id: number;
+                                url: string;
+                                width: number;
+                                height: number;
+                                alt: string;
+                            }[];
+                            eventNames: {
+                                [key: string]: string | null;
+                            };
+                            silent: boolean;
+                            deleted: boolean;
+                            hidden: boolean;
+                            edited: boolean;
+                            reactions: {
+                                emoji: string;
+                                count: number;
+                                mine: boolean;
+                            }[];
+                            seenCount: number;
+                            createdAt: string;
+                            updatedAt: string | null;
+                        };
+                        unsentAt: string;
+                    };
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Missing, invalid or expired session, or wrong credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Not allowed (role, passcode lock or wrong passcode) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Not found (also: outside the PT workspace or hidden) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

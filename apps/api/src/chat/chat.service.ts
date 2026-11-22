@@ -301,8 +301,9 @@ export class ChatService {
     return this.current(actor, messageId);
   }
 
-  // Unsend for everyone: soft delete, idempotent. An unsent photo is gone for
-  // good, bytes included (KAN-160).
+  // Unsend for everyone: the flag only (deleted_at), idempotent. Text, sticker,
+  // quote and photos stay stored (company #213); every reader blanks them and
+  // only a super admin can fetch the original (`original`).
   async unsend(actor: AuthActor, messageId: number) {
     const { stored, conversation, trainee } = await this.access.forMessage(
       actor,
@@ -317,12 +318,9 @@ export class ChatService {
     const now = this.clock.now();
     const changedAt = await this.dataSource.transaction(async (manager) => {
       await manager.query(
-        `UPDATE chat_messages SET deleted_at = $1, reply_post_id = NULL WHERE id = $2`,
+        `UPDATE chat_messages SET deleted_at = $1 WHERE id = $2`,
         [now, messageId],
       );
-      await manager.query(`DELETE FROM chat_photos WHERE message_id = $1`, [
-        messageId,
-      ]);
       return this.touch(manager, conversation.id, messageId, now);
     });
 
@@ -484,6 +482,24 @@ export class ChatService {
     if (!own) {
       throw chatErrors.notYourMessage();
     }
+  }
+
+  // The content of a message its author unsent. Super admins only, and only
+  // for a real unsend (an admin-hidden message keeps its own evidence path).
+  async original(actor: AuthActor, messageId: number) {
+    if (actor.kind !== "admin" || actor.role !== "super_admin") {
+      throw chatErrors.messageNotFound();
+    }
+    const { stored } = await this.access.forMessage(actor, messageId);
+    const row = await this.queries.findMessageRow(messageId);
+    const unsentAt = await this.queries.unsentAt(messageId);
+
+    if (!row || !unsentAt || stored.deletedAt === null) {
+      throw chatErrors.messageNotFound();
+    }
+    const [message] = await this.views.many([{ ...row, deletedAt: null }], actor);
+
+    return { message: { ...message, deleted: true }, unsentAt: unsentAt.toISOString() };
   }
 
   private async current(actor: AuthActor, messageId: number) {

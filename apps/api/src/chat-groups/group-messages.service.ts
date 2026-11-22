@@ -470,6 +470,32 @@ export class GroupMessagesService {
     return this.finish(context, stored);
   }
 
+  // The content of a message its author unsent, for a super admin only.
+  async original(auth: AuthActor, groupId: number, messageId: number) {
+    if (auth.kind !== "admin" || auth.role !== "super_admin") {
+      throw groupErrors.messageNotFound();
+    }
+    const context = await this.access.load(auth, groupId);
+    const stored = await this.requireMessage(context, messageId);
+
+    if (stored.deletedAt === null) {
+      throw groupErrors.messageNotFound();
+    }
+    const [message] = await this.views.hydrate(
+      [{ ...stored, deletedAt: null, hiddenAt: null }],
+      groupId,
+      context.actor,
+    );
+
+    if (!message) {
+      throw groupErrors.messageNotFound();
+    }
+    return {
+      message: { ...message, deleted: true },
+      unsentAt: stored.deletedAt.toISOString(),
+    };
+  }
+
   // A super admin or the creator PT hides (or unhides) anyone's message; the
   // text stays stored for moderation, readers see a placeholder (G14).
   async hide(

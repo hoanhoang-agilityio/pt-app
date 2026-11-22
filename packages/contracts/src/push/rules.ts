@@ -35,6 +35,16 @@ export const isAllowedPushEndpoint = (value: string) => {
   );
 };
 
+export const PUSH_PLATFORMS = ["ios", "android"] as const;
+export type PushPlatform = (typeof PUSH_PLATFORMS)[number];
+
+// What the Expo push service hands the app: ExponentPushToken[...] (current) or
+// ExpoPushToken[...] (older SDKs).
+export const EXPO_PUSH_TOKEN_PATTERN =
+  /^Expo(nent)?PushToken\[[A-Za-z0-9_-]+\]$/;
+export const isExpoPushToken = (value: string) =>
+  EXPO_PUSH_TOKEN_PATTERN.test(value);
+
 export const PUSH_MESSAGES = {
   INVALID_SUBSCRIPTION: "Đăng ký thông báo không hợp lệ",
 } as const;

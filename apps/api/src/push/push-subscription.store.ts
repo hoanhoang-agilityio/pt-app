@@ -41,6 +41,23 @@ export class PushSubscriptionStore {
     );
   }
 
+  // A native device (Expo). The token is the unique `endpoint`; no keys. The
+  // user_agent column keeps "expo:<platform>". Same upsert: a device that
+  // signs in as someone else moves to the new owner.
+  async saveDevice(
+    ownerKey: string,
+    input: { token: string; platform: "ios" | "android" },
+  ) {
+    await this.dataSource.query(
+      `INSERT INTO push_subscriptions (owner_key, endpoint, p256dh, auth, kind, user_agent)
+       VALUES ($1, $2, NULL, NULL, 'expo', $3)
+       ON CONFLICT (endpoint) DO UPDATE
+         SET owner_key = EXCLUDED.owner_key, p256dh = NULL, auth = NULL,
+             kind = 'expo', user_agent = EXCLUDED.user_agent`,
+      [ownerKey, input.token, `expo:${input.platform}`],
+    );
+  }
+
   // Scoped to the owner: nobody removes another account's subscription by
   // guessing its endpoint.
   async remove(ownerKey: string, endpoint: string) {

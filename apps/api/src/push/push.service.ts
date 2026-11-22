@@ -46,13 +46,69 @@ export class PushService {
     try {
       const subscriptions = await this.store.listFor(ownerKey);
 
+      const byKind = new Map<PushKind, StoredPushSubscription[]>();
+
+      for (const subscription of subscriptions) {
+        byKind.set(subscription.kind, [
+          ...(byKind.get(subscription.kind) ?? []),
+          subscription,
+        ]);
+      }
       await Promise.all(
-        subscriptions.map((subscription) =>
-          this.sendToDevice(subscription, payload),
+        [...byKind].map(([kind, group]) =>
+          this.sendGroup(kind, group, payload),
         ),
       );
     } catch (error) {
       this.logger.error({ err: error }, "Push to owner failed");
+    }
+  }
+
+  // The devices of one kind. A sender with sendMany (Expo) gets them in one
+  // call and only the temporary failures are tried again.
+  private async sendGroup(
+    kind: PushKind,
+    group: StoredPushSubscription[],
+    payload: PushPayload,
+  ) {
+    const sender = this.byKind.get(kind);
+
+    if (!sender?.enabled) {
+      return;
+    }
+    if (!sender.sendMany) {
+      await Promise.all(group.map((sub) => this.sendToDevice(sub, payload)));
+      return;
+    }
+    let pending = group;
+
+    try {
+      for (let attempt = 1; attempt <= PUSH_MAX_ATTEMPTS; attempt += 1) {
+        const results = await sender.sendMany(pending, payload);
+        const retry: StoredPushSubscription[] = [];
+
+        for (const subscription of pending) {
+          const result = results.get(subscription.id) ?? "failed";
+
+          if (result === "ok") {
+            await this.store.markSuccess(subscription.id, this.clock.now());
+          } else if (result === "gone") {
+            await this.store.delete(subscription.id);
+          } else if (result === "retry") {
+            retry.push(subscription);
+          }
+        }
+        pending = retry;
+        if (pending.length === 0) {
+          return;
+        }
+        if (attempt < PUSH_MAX_ATTEMPTS) {
+          await this.clock.sleep(RETRY_DELAY_MS * attempt);
+        }
+      }
+      this.logger.warn({ kind, devices: pending.length }, "Push not delivered");
+    } catch (error) {
+      this.logger.error({ err: error, kind }, "Push sender threw");
     }
   }
 

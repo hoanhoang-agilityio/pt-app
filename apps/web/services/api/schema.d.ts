@@ -2820,6 +2820,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/push/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save this phone (an Expo push token; the same token moves to the caller) */
+        post: operations["PushController_registerDevice"];
+        /** Forget one of my phones by its Expo push token */
+        delete: operations["PushController_removeDevice"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -24218,6 +24236,152 @@ export interface operations {
             content: {
                 "application/json": {
                     endpoint: string;
+                };
+            };
+        };
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Missing, invalid or expired session, or wrong credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Not allowed (role, passcode lock or wrong passcode) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    PushController_registerDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                    /** @enum {string} */
+                    platform: "ios" | "android";
+                };
+            };
+        };
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Missing, invalid or expired session, or wrong credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+            /** @description Not allowed (role, passcode lock or wrong passcode) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: string;
+                        message: string;
+                        ref: string;
+                        details?: {
+                            [key: string]: string | number | boolean;
+                        };
+                    };
+                };
+            };
+        };
+    };
+    PushController_removeDevice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
                 };
             };
         };

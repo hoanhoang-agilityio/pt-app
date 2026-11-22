@@ -1,5 +1,7 @@
 import {
   isAllowedPushEndpoint,
+  pushDeviceRegisterRequestSchema,
+  pushDeviceRemoveRequestSchema,
   pushSubscribeRequestSchema,
   pushUnsubscribeRequestSchema,
   realtimePresencePeerQuerySchema,
@@ -96,5 +98,50 @@ describe("realtime requests", () => {
       userId: 7,
     });
     expect(realtimePresencePeerQuerySchema.parse({})).toEqual({});
+  });
+});
+
+describe("Expo device schemas", () => {
+  it("accepts ExponentPushToken and ExpoPushToken with a platform", () => {
+    for (const token of [
+      "ExponentPushToken[abc_DEF-123]",
+      "ExpoPushToken[xyz]",
+    ]) {
+      expect(
+        pushDeviceRegisterRequestSchema.parse({ token, platform: "ios" }),
+      ).toEqual({ token, platform: "ios" });
+    }
+    expect(
+      pushDeviceRegisterRequestSchema.parse({
+        token: "ExpoPushToken[xyz]",
+        platform: "android",
+      }).platform,
+    ).toBe("android");
+  });
+
+  it("refuses other tokens, URLs and unknown platforms", () => {
+    for (const token of [
+      "https://fcm.googleapis.com/fcm/send/abc",
+      "ExponentPushToken[]",
+      "ExponentPushToken[a b]",
+      "exponentpushtoken[abc]",
+      "ExponentPushToken[abc]x",
+      "",
+    ]) {
+      expect(
+        pushDeviceRegisterRequestSchema.safeParse({ token, platform: "ios" })
+          .success,
+        token,
+      ).toBe(false);
+      expect(pushDeviceRemoveRequestSchema.safeParse({ token }).success).toBe(
+        false,
+      );
+    }
+    expect(
+      pushDeviceRegisterRequestSchema.safeParse({
+        token: "ExpoPushToken[xyz]",
+        platform: "web",
+      }).success,
+    ).toBe(false);
   });
 });

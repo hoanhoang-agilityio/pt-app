@@ -189,6 +189,37 @@ describe("PushService", () => {
     expect(store.markSuccess).toHaveBeenCalledWith(2, expect.any(Date));
   });
 
+  it("hands all devices of a batching sender over in one call and applies each result", async () => {
+    const results: PushSendResult[] = ["ok", "gone", "retry"];
+    const expo = {
+      kind: "expo" as const,
+      enabled: true,
+      send: vi.fn(),
+      sendMany: vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Map(results.map((result, i) => [i + 1, result])),
+        )
+        .mockResolvedValueOnce(new Map([[3, "ok" as PushSendResult]])),
+    };
+    const { service, store, clock } = setup(
+      [sub(1, "expo"), sub(2, "expo"), sub(3, "expo")],
+      [expo],
+    );
+
+    await service.sendToOwner("user:1", payload);
+
+    expect(expo.send).not.toHaveBeenCalled();
+    expect(expo.sendMany).toHaveBeenCalledTimes(2);
+    expect(expo.sendMany.mock.calls[0]?.[0]).toHaveLength(3);
+    // Only the temporary failure is sent again.
+    expect(expo.sendMany.mock.calls[1]?.[0]).toEqual([sub(3, "expo")]);
+    expect(store.delete).toHaveBeenCalledWith(2);
+    expect(store.markSuccess).toHaveBeenCalledWith(1, expect.any(Date));
+    expect(store.markSuccess).toHaveBeenCalledWith(3, expect.any(Date));
+    expect(clock.sleeps).toEqual([250]);
+  });
+
   it("is enabled only when some sender is", () => {
     expect(setup([], [fake("web", [], false)]).service.isEnabled()).toBe(false);
     expect(setup([], [fake("web", [], true)]).service.isEnabled()).toBe(true);

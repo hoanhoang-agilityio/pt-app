@@ -30,4 +30,11 @@ export interface PushSender {
     subscription: StoredPushSubscription,
     payload: PushPayload,
   ): Promise<PushSendResult>;
+  // Optional: send one payload to several devices in as few requests as the
+  // provider allows (Expo: 100 per request). PushService prefers it. The map
+  // has one result per subscription id.
+  sendMany?(
+    subscriptions: StoredPushSubscription[],
+    payload: PushPayload,
+  ): Promise<Map<number, PushSendResult>>;
 }

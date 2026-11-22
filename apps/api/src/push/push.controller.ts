@@ -11,6 +11,10 @@ import {
 import { ApiTags } from "@nestjs/swagger";
 import {
   pushConfigResponseSchema,
+  type PushDeviceRegisterRequest,
+  pushDeviceRegisterRequestSchema,
+  type PushDeviceRemoveRequest,
+  pushDeviceRemoveRequestSchema,
   type PushSubscribeRequest,
   pushSubscribeRequestSchema,
   pushSubscriptionsResponseSchema,
@@ -89,6 +93,39 @@ export class PushController {
     body: PushUnsubscribeRequest,
   ) {
     await this.store.remove(ownerKeyOf(actor), body.endpoint);
+  }
+
+  @Post("devices")
+  @HttpCode(204)
+  @ApiRoute({
+    summary:
+      "Save this phone (an Expo push token; the same token moves to the caller)",
+    body: pushDeviceRegisterRequestSchema,
+    status: 204,
+    errors: [400, 401, 403],
+  })
+  async registerDevice(
+    @Actor() actor: AuthActor,
+    @Body({ schema: pushDeviceRegisterRequestSchema })
+    body: PushDeviceRegisterRequest,
+  ) {
+    await this.store.saveDevice(ownerKeyOf(actor), body);
+  }
+
+  @Delete("devices")
+  @HttpCode(204)
+  @ApiRoute({
+    summary: "Forget one of my phones by its Expo push token",
+    body: pushDeviceRemoveRequestSchema,
+    status: 204,
+    errors: [400, 401, 403],
+  })
+  async removeDevice(
+    @Actor() actor: AuthActor,
+    @Body({ schema: pushDeviceRemoveRequestSchema })
+    body: PushDeviceRemoveRequest,
+  ) {
+    await this.store.remove(ownerKeyOf(actor), body.token);
   }
 
   @Get("subscriptions")

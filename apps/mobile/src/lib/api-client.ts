@@ -60,10 +60,10 @@ export const buildUrl = (baseUrl: string, path: string, query?: Query) => {
   return `${url}?${search}`;
 };
 
-// An absolute URL for an API path such as "/v1/chat/photos/3"; absolute URLs
-// pass through unchanged.
+// An absolute URL for an API path such as "/v1/chat/photos/3"; anything with a
+// scheme (https:, file: of a local preview, data:) passes through unchanged.
 export const resolveApiUrl = (baseUrl: string, pathOrUrl: string) =>
-  /^https?:\/\//i.test(pathOrUrl) ? pathOrUrl : buildUrl(baseUrl, pathOrUrl);
+  /^[a-z][a-z0-9+.-]*:/i.test(pathOrUrl) ? pathOrUrl : buildUrl(baseUrl, pathOrUrl);
 
 const isAbort = (error: unknown) =>
   typeof error === "object" &&

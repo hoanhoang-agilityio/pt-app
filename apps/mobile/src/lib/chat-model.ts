@@ -360,6 +360,29 @@ export const buildRows = (messages: ChatMsg[]): ThreadRow[] => {
   return rows;
 };
 
+// Optimistic reaction on a message: replaces my reaction (one per person) or
+// removes it with `null`.
+export const applyMessageReaction = (
+  reactions: ChatMsg["reactions"],
+  next: string | null,
+): ChatMsg["reactions"] => {
+  const without = reactions
+    .map((r) => (r.mine ? { ...r, count: r.count - 1, mine: false } : r))
+    .filter((r) => r.count > 0);
+
+  if (next === null) {
+    return without;
+  }
+  const existing = without.find((r) => r.emoji === next);
+
+  return existing
+    ? without.map((r) => (r === existing ? { ...r, count: r.count + 1, mine: true } : r))
+    : [...without, { emoji: next, count: 1, mine: true }];
+};
+
+export const myReactionOf = (message: ChatMsg) =>
+  message.reactions.find((r) => r.mine)?.emoji ?? null;
+
 // Preview text for the inbox or a reply quote when the message has no text.
 export const hasContent = (message: ChatMsg) =>
   message.body !== "" || message.photos.length > 0 || message.sticker !== null;

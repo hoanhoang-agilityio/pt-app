@@ -1,0 +1,100 @@
+{
+  "profileExtra": {
+    "editBio": "Sửa giới thiệu"
+  },
+  "friends": {
+    "title": "Bạn bè",
+    "tabs": {
+      "friends": "Bạn bè",
+      "requests": "Lời mời",
+      "search": "Tìm người"
+    },
+    "empty": "Chưa có bạn bè",
+    "emptyHint": "Tìm bạn theo email ở thẻ “Tìm người”.",
+    "requestsEmpty": "Không có lời mời nào",
+    "received": "Lời mời nhận được",
+    "sent": "Lời mời đã gửi",
+    "searchHint": "Nhập đầy đủ địa chỉ email của người bạn muốn tìm.",
+    "searchPlaceholder": "email@example.com",
+    "search": "Tìm",
+    "emailInvalid": "Hãy nhập đúng địa chỉ email đầy đủ.",
+    "notFound": "Không tìm thấy người dùng.",
+    "nowFriends": "Hai bạn đã trở thành bạn bè.",
+    "traineesOnly": "Chỉ học viên dùng được bạn bè.",
+    "unfriendConfirm": "Huỷ kết bạn với {{name}}?",
+    "actions": {
+      "add": "Kết bạn",
+      "cancel": "Thu hồi",
+      "accept": "Chấp nhận",
+      "decline": "Từ chối",
+      "unfriend": "Huỷ kết bạn"
+    }
+  },
+  "blocks": {
+    "title": "Đã chặn",
+    "empty": "Bạn chưa chặn ai",
+    "unblock": "Bỏ chặn",
+    "block": "Chặn",
+    "blockConfirm": "Chặn {{name}}?",
+    "blockBody": "Hai bạn sẽ không thấy bài viết của nhau và không còn là bạn bè."
+  },
+  "report": {
+    "action": "Báo cáo",
+    "titles": {
+      "post": "Báo cáo bài viết",
+      "comment": "Báo cáo bình luận",
+      "user": "Báo cáo người dùng",
+      "message": "Báo cáo tin nhắn",
+      "group_message": "Báo cáo tin nhắn nhóm"
+    },
+    "description": "Chọn lý do. Quản lý sẽ xem xét báo cáo.",
+    "reasons": {
+      "spam": "Spam",
+      "harassment": "Quấy rối",
+      "inappropriate": "Nội dung không phù hợp",
+      "scam": "Lừa đảo",
+      "other": "Lý do khác"
+    },
+    "noteLabel": "Ghi chú thêm (không bắt buộc)",
+    "send": "Gửi báo cáo",
+    "sent": "Đã gửi báo cáo. Cảm ơn bạn."
+  },
+  "reportsQueue": {
+    "title": "Báo cáo chờ xử lý",
+    "empty": "Không có báo cáo nào",
+    "forbidden": "Chỉ quản lý tổng xem được báo cáo.",
+    "by": "Báo cáo bởi {{name}}",
+    "gone": "Nội dung không còn",
+    "inGroup": "Trong nhóm {{name}}",
+    "openPost": "Mở bài viết",
+    "kinds": {
+      "post": "Bài viết",
+      "comment": "Bình luận",
+      "user": "Người dùng",
+      "message": "Tin nhắn",
+      "group_message": "Tin nhắn nhóm"
+    },
+    "actions": {
+      "kept": "Giữ lại",
+      "deleted": "Xoá nội dung",
+      "hidden": "Ẩn tin nhắn"
+    },
+    "confirm": {
+      "kept": "Giữ nội dung và đóng báo cáo?",
+      "deleted": "Xoá nội dung bị báo cáo?",
+      "hidden": "Ẩn tin nhắn bị báo cáo?"
+    }
+  },
+  "alias": {
+    "set": "Đặt biệt danh",
+    "edit": "Sửa biệt danh",
+    "remove": "Xoá biệt danh",
+    "sheetTitle": "Biệt danh cho {{name}}",
+    "hint": "Chỉ mình bạn thấy tên này.",
+    "realName": "Tên thật: {{name}}",
+    "privateTitle": "Biệt danh riêng của tôi"
+  },
+  "feedExtra": {
+    "reactorsAll": "Tất cả"
+  }
+}

@@ -17,7 +17,9 @@ import { Avatar } from "@/components/Avatar";
 import { ReactionPicker } from "@/components/ReactionPicker";
 import { Sheet, SheetAction } from "@/components/Sheet";
 import { EmptyState, ErrorState, IconButton, Screen, Skeleton, Spinner, Txt } from "@/components/ui";
+import { ReportSheet } from "@/features/social/components/ReportSheet";
 import { currentLocale } from "@/i18n";
+import { parseChatCommand } from "@/lib/chat-commands";
 import {
   applyMessageReaction,
   buildRows,
@@ -36,6 +38,7 @@ import type { ChatApi, SendPayload } from "../api";
 import type { useThread } from "../use-thread";
 import { Composer, type ComposeSubmit } from "./Composer";
 import { MessageBubble } from "./MessageBubble";
+import { EditsSheet, type MessageScope, OriginalSheet, SeenBySheet } from "./MessageSheets";
 import type { PickedSticker } from "./StickerSheet";
 
 type Thread = ReturnType<typeof useThread<unknown>>;
@@ -56,6 +59,19 @@ export type ConversationViewProps = {
   banner?: string | null;
   allowStickers?: boolean;
   headerRight?: React.ReactNode;
+  // Which conversation this is: picks the history/original/report endpoints.
+  scope: MessageScope;
+  isSuperAdmin?: boolean;
+  // DMs cannot be reacted to, replied to or edited (read-only by the API).
+  reactions?: boolean;
+  // Group managers: hide or show a member's message for everyone.
+  canHide?: boolean;
+  onHide?: (message: ChatMsg, hidden: boolean) => void;
+  // Super admin: resolve a PT change alert line.
+  onAlert?: (message: ChatMsg, choice: "keep" | "remove") => void;
+  onOpenInfo?: () => void;
+  // Peer presence in the header: a dot and the text.
+  presence?: { online: boolean; text: string | null } | null;
 };
 
 export const ConversationView = ({
@@ -73,6 +89,14 @@ export const ConversationView = ({
   banner,
   allowStickers = true,
   headerRight,
+  scope,
+  isSuperAdmin = false,
+  reactions = true,
+  canHide = false,
+  onHide,
+  onAlert,
+  onOpenInfo,
+  presence = null,
 }: ConversationViewProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -82,6 +106,10 @@ export const ConversationView = ({
   const [editing, setEditing] = useState<ChatMsg | null>(null);
   const [actionsFor, setActionsFor] = useState<ChatMsg | null>(null);
   const [viewerUri, setViewerUri] = useState<string | null>(null);
+  const [historyId, setHistoryId] = useState<number | null>(null);
+  const [seenId_, setSeenId] = useState<number | null>(null);
+  const [originalId, setOriginalId] = useState<number | null>(null);
+  const [reportId, setReportId] = useState<number | null>(null);
   // What was sent for each unconfirmed bubble, so a failed one can be retried.
   const payloads = useRef(new Map<string, SendPayload>());
 
@@ -114,6 +142,9 @@ export const ConversationView = ({
 
   const sendMessage = (value: ComposeSubmit) => {
     const clientId = uuid();
+    // A leading slash command (/imlang) is applied by the API; the bubble
+    // shows the text without it.
+    const shown = parseChatCommand(value.body).body;
     const payload: SendPayload = {
       ...(value.body ? { body: value.body } : {}),
       ...(value.photoIds.length > 0 ? { photoIds: value.photoIds } : {}),
@@ -124,7 +155,7 @@ export const ConversationView = ({
     thread.putPending(
       optimisticMessage({
         clientId,
-        body: value.body,
+        body: shown,
         photos: value.previews,
         replyTo: replyTo
           ? {
@@ -148,7 +179,11 @@ export const ConversationView = ({
     payloads.current.set(clientId, { sticker });
     thread.putPending({
       ...optimisticMessage({ clientId, body: "" }),
-      sticker: { url: preview.url, alt: preview.alt, kind: "giphy" in sticker ? "giphy" : "custom" },
+      sticker: {
+        url: preview.url,
+        alt: preview.alt,
+        kind: "pack" in sticker ? "pack" : "giphy" in sticker ? "giphy" : "custom",
+      },
     });
     void transmit(clientId);
   };
@@ -255,6 +290,9 @@ export const ConversationView = ({
           onLongPress={setActionsFor}
           onOpenPhoto={setViewerUri}
           onRetry={retry}
+          onOpenHistory={(m) => setHistoryId(m.id)}
+          onOpenSeen={(m) => setSeenId(m.id)}
+          onAlert={isSuperAdmin ? onAlert : undefined}
         />
       </View>
     );
@@ -262,27 +300,51 @@ export const ConversationView = ({
 
   const actions = actionsFor;
   const canEdit =
-    actions !== null && actions.mine && chat !== null && actions.body !== "" && actions.sticker === null;
+    reactions &&
+    actions !== null &&
+    actions.mine &&
+    chat !== null &&
+    actions.body !== "" &&
+    actions.sticker === null &&
+    !actions.deleted;
+  const canReport =
+    actions !== null && !actions.mine && !actions.deleted && scope.kind !== "dm" && actions.kind === "message";
 
   return (
     <Screen>
       <View style={[styles.header, { borderBottomColor: theme.line }]}>
         <IconButton name="chevron-back" label={t("common.back")} onPress={() => router.back()} />
-        <Avatar name={avatarName} uri={avatarUri} size={36} />
-        <View style={{ flex: 1 }}>
-          <Txt weight="600" numberOfLines={1}>
-            {title}
-          </Txt>
-          {peerTyping ? (
-            <Txt tone="accent" size={12}>
-              {t("chat.typing")}
+        <Pressable
+          accessibilityRole="button"
+          disabled={!onOpenInfo}
+          onPress={onOpenInfo}
+          style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm }}
+        >
+          <View>
+            <Avatar name={avatarName} uri={avatarUri} size={36} />
+            {presence?.online ? (
+              <View style={[styles.dot, { backgroundColor: theme.success, borderColor: theme.bg }]} />
+            ) : null}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Txt weight="600" numberOfLines={1}>
+              {title}
             </Txt>
-          ) : subtitle ? (
-            <Txt tone="muted" size={12} numberOfLines={1}>
-              {subtitle}
-            </Txt>
-          ) : null}
-        </View>
+            {peerTyping ? (
+              <Txt tone="accent" size={12}>
+                {t("chat.typing")}
+              </Txt>
+            ) : presence?.text ? (
+              <Txt tone={presence.online ? "accent" : "muted"} size={12} numberOfLines={1}>
+                {presence.text}
+              </Txt>
+            ) : subtitle ? (
+              <Txt tone="muted" size={12} numberOfLines={1}>
+                {subtitle}
+              </Txt>
+            ) : null}
+          </View>
+        </Pressable>
         {headerRight}
       </View>
       <KeyboardAvoidingView
@@ -342,22 +404,47 @@ export const ConversationView = ({
       </KeyboardAvoidingView>
 
       <Sheet visible={actions !== null} onClose={() => setActionsFor(null)}>
-        {actions && chat ? (
+        {actions && actions.deleted ? (
           <View style={{ gap: space.sm }}>
-            <ReactionPicker
-              mine={myReactionOf(actions)}
-              onPick={(emoji) => {
-                setActionsFor(null);
-                void react(actions, emoji);
-              }}
-            />
-            <SheetAction
-              label={t("chat.reply")}
-              onPress={() => {
-                setReplyTo(actions);
-                setActionsFor(null);
-              }}
-            />
+            {isSuperAdmin ? (
+              <SheetAction
+                label={t("chatx.showOriginal")}
+                onPress={() => {
+                  setOriginalId(actions.id);
+                  setActionsFor(null);
+                }}
+              />
+            ) : null}
+            {canHide && actions.hidden ? (
+              <SheetAction
+                label={t("groupMgmt.unhide")}
+                onPress={() => {
+                  setActionsFor(null);
+                  onHide?.(actions, false);
+                }}
+              />
+            ) : null}
+          </View>
+        ) : actions ? (
+          <View style={{ gap: space.sm }}>
+            {reactions && chat ? (
+              <ReactionPicker
+                mine={myReactionOf(actions)}
+                onPick={(emoji) => {
+                  setActionsFor(null);
+                  void react(actions, emoji);
+                }}
+              />
+            ) : null}
+            {reactions && chat && !banner ? (
+              <SheetAction
+                label={t("chat.reply")}
+                onPress={() => {
+                  setReplyTo(actions);
+                  setActionsFor(null);
+                }}
+              />
+            ) : null}
             {canEdit ? (
               <SheetAction
                 label={t("chat.editMessage")}
@@ -367,7 +454,43 @@ export const ConversationView = ({
                 }}
               />
             ) : null}
-            {actions.mine ? (
+            {actions.edited ? (
+              <SheetAction
+                label={t("chatx.editHistory")}
+                onPress={() => {
+                  setHistoryId(actions.id);
+                  setActionsFor(null);
+                }}
+              />
+            ) : null}
+            {scope.kind === "group" && actions.mine ? (
+              <SheetAction
+                label={t("chatx.seenByTitle")}
+                onPress={() => {
+                  setSeenId(actions.id);
+                  setActionsFor(null);
+                }}
+              />
+            ) : null}
+            {canHide && !actions.mine && actions.kind === "message" ? (
+              <SheetAction
+                label={t("groupMgmt.hide")}
+                onPress={() => {
+                  setActionsFor(null);
+                  onHide?.(actions, true);
+                }}
+              />
+            ) : null}
+            {canReport ? (
+              <SheetAction
+                label={t("report.action")}
+                onPress={() => {
+                  setReportId(actions.id);
+                  setActionsFor(null);
+                }}
+              />
+            ) : null}
+            {actions.mine && chat ? (
               <SheetAction
                 danger
                 label={t("chat.unsend")}
@@ -380,6 +503,18 @@ export const ConversationView = ({
           </View>
         ) : null}
       </Sheet>
+
+      <EditsSheet scope={scope} messageId={historyId} onClose={() => setHistoryId(null)} />
+      {scope.kind === "group" ? (
+        <SeenBySheet groupId={scope.groupId} messageId={seenId_} onClose={() => setSeenId(null)} />
+      ) : null}
+      <OriginalSheet scope={scope} messageId={originalId} onClose={() => setOriginalId(null)} />
+      <ReportSheet
+        visible={reportId !== null}
+        onClose={() => setReportId(null)}
+        targetKind={scope.kind === "group" ? "group_message" : "message"}
+        targetId={reportId ?? 0}
+      />
 
       <Modal visible={viewerUri !== null} transparent animationType="fade" onRequestClose={() => setViewerUri(null)}>
         <Pressable style={styles.viewer} onPress={() => setViewerUri(null)} accessibilityRole="button">
@@ -402,6 +537,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   day: { textAlign: "center", marginVertical: space.md },
+  dot: {
+    position: "absolute",
+    right: -1,
+    bottom: -1,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+  },
   banner: { padding: space.lg, borderTopWidth: StyleSheet.hairlineWidth },
   viewer: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
 });

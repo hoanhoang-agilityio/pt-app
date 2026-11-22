@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import en from "../en.json";
+import { extraEn, extraVi, extraZh } from "../extra";
 import vi from "../vi.json";
 import zh from "../zh.json";
 
@@ -20,21 +21,25 @@ const flat = (value: unknown, prefix = ""): [string, string][] =>
       )
     : [[prefix, String(value)]];
 
+const allVi = { ...vi, ...extraVi };
+const allEn = { ...en, ...extraEn };
+const allZh = { ...zh, ...extraZh };
+
 describe("message files", () => {
-  const viKeys = keysOf(vi).sort();
+  const viKeys = keysOf(allVi).sort();
 
   it.each([
-    ["en", en],
-    ["zh", zh],
+    ["en", allEn],
+    ["zh", allZh],
   ])("%s has exactly the keys of vi", (_name, messages) => {
     expect(keysOf(messages).sort()).toEqual(viKeys);
   });
 
   it.each([
-    ["en", en],
-    ["zh", zh],
+    ["en", allEn],
+    ["zh", allZh],
   ])("%s keeps the placeholders of vi", (_name, messages) => {
-    const viMap = new Map(flat(vi));
+    const viMap = new Map(flat(allVi));
 
     for (const [key, text] of flat(messages)) {
       expect(placeholders(text), key).toBe(placeholders(viMap.get(key) ?? ""));
@@ -42,7 +47,7 @@ describe("message files", () => {
   });
 
   it("has no empty strings", () => {
-    for (const messages of [vi, en, zh]) {
+    for (const messages of [allVi, allEn, allZh]) {
       for (const [key, text] of flat(messages)) {
         expect(text.trim(), key).not.toBe("");
       }

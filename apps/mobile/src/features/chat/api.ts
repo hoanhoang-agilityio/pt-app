@@ -4,6 +4,7 @@ import {
   chatInboxResponseSchema,
   chatMessageResponseSchema,
   chatPhotoResponseSchema,
+  type ChatProfile,
   chatThreadResponseSchema,
   chatUnreadResponseSchema,
   dmInboxResponseSchema,
@@ -96,7 +97,12 @@ export type CoachMeta = {
   chatEnabled: boolean;
   userId?: number;
   latestPtName: string | null;
+  latestPtId: number | null;
+  profile: ChatProfile;
+  peerLastSeenAt: string | null;
 };
+
+export const EMPTY_PROFILE: ChatProfile = { nicknames: {}, colors: {} };
 
 export const coachApi = (
   viewer: Extract<Viewer, { kind: "trainee" | "admin" }>,
@@ -126,7 +132,14 @@ export const coachApi = (
         lastChangeAt: 0,
         peerReadUpTo: 0,
         removedIds: [],
-        meta: { conversationId: null, chatEnabled: true, latestPtName: null },
+        meta: {
+          conversationId: null,
+          chatEnabled: true,
+          latestPtName: null,
+          latestPtId: null,
+          profile: EMPTY_PROFILE,
+          peerLastSeenAt: null,
+        },
       };
     }
     const response = await api.get(`${base}/messages`, {
@@ -147,12 +160,15 @@ export const coachApi = (
           conversationId,
           chatEnabled: true,
           latestPtName: null,
+          latestPtId: null,
+          profile: EMPTY_PROFILE,
+          peerLastSeenAt: null,
         },
       };
     }
     return {
-      messages: response.messages.map((m) => fromCoachMessage(m, viewer)),
-      changes: response.changes.map((m) => fromCoachMessage(m, viewer)),
+      messages: response.messages.map((m) => fromCoachMessage(m, viewer, response.profile.colors)),
+      changes: response.changes.map((m) => fromCoachMessage(m, viewer, response.profile.colors)),
       hasMore: response.hasMore,
       lastChangeAt: response.lastChangeAt,
       peerReadUpTo: response.peerReadUpTo,
@@ -162,6 +178,9 @@ export const coachApi = (
         chatEnabled: response.chatEnabled,
         userId: response.userId,
         latestPtName: response.latestPt?.name ?? null,
+        latestPtId: response.latestPt?.id ?? null,
+        profile: response.profile,
+        peerLastSeenAt: response.peerLastSeenAt,
       },
     };
   };
@@ -213,6 +232,9 @@ export type GroupMeta = {
   dissolved: boolean;
   sendBlock: string | null;
   muted: boolean;
+  canManage: boolean;
+  isManager: boolean;
+  isSuperAdmin: boolean;
 };
 
 export const groupApi = (groupId: number, viewerKey: string) => {
@@ -238,6 +260,9 @@ export const groupApi = (groupId: number, viewerKey: string) => {
         dissolved: response.group.dissolved,
         sendBlock: response.viewer.sendBlock,
         muted: response.viewer.muted,
+        canManage: response.viewer.canManage,
+        isManager: response.viewer.isManager,
+        isSuperAdmin: response.viewer.isSuperAdmin,
       },
     };
   };
@@ -307,7 +332,20 @@ export const dmApi = (conversationId: number, myUserId: number) => {
     await api.post(`${base}/read`);
   };
 
-  return { load, markRead };
+  // Sending is switched off by the API (403 DM_DISABLED); a member can still
+  // take back an old message of their own (the photo bytes go too).
+  const chat: ChatApi = {
+    send: () => Promise.reject(new Error("DM_DISABLED")),
+    edit: () => Promise.resolve(),
+    unsend: async (id) => {
+      await api.delete(`/v1/dm/messages/${id}`);
+    },
+    react: () => Promise.resolve(),
+    markRead: () => markRead(),
+    uploadPhoto: () => Promise.reject(new Error("DM_DISABLED")),
+  };
+
+  return { load, markRead, chat };
 };
 
 // ---- Stickers ---------------------------------------------------------------

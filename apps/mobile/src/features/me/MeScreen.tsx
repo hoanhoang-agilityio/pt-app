@@ -13,6 +13,23 @@ import { radius, space, useTheme } from "@/theme";
 
 import { useAuth } from "../auth/auth-context";
 
+const MeLink = ({ icon, label, href }: { icon: keyof typeof Ionicons.glyphMap; label: string; href: string }) => {
+  const theme = useTheme();
+  const router = useRouter();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push(href as string as Href)}
+      style={styles.link}
+    >
+      <Ionicons name={icon} size={22} color={theme.accent} />
+      <Txt style={{ flex: 1 }}>{label}</Txt>
+      <Ionicons name="chevron-forward" size={18} color={theme.muted} />
+    </Pressable>
+  );
+};
+
 export const MeScreen = () => {
   const { t } = useTranslation();
   const theme = useTheme();
@@ -96,6 +113,17 @@ export const MeScreen = () => {
           <Txt style={{ flex: 1 }}>{t("me.devices")}</Txt>
           <Ionicons name="chevron-forward" size={18} color={theme.muted} />
         </Pressable>
+        <Divider />
+        <MeLink icon="person-outline" label={t("me.profile")} href={`/profile/${actor.kind === "admin" ? "admin" : "user"}:${actor.id}`} />
+        {actor.kind === "user" ? (
+          <>
+            <MeLink icon="people-outline" label={t("friends.title")} href="/friends" />
+            <MeLink icon="ban-outline" label={t("blocks.title")} href="/blocked" />
+          </>
+        ) : null}
+        {actor.kind === "admin" && actor.role === "super_admin" ? (
+          <MeLink icon="shield-outline" label={t("reportsQueue.title")} href="/reports" />
+        ) : null}
         <Divider />
 
         <Button label={t("me.logout")} variant="danger" onPress={logout} />

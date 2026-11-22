@@ -1,0 +1,100 @@
+{
+  "profileExtra": {
+    "editBio": "Edit bio"
+  },
+  "friends": {
+    "title": "Friends",
+    "tabs": {
+      "friends": "Friends",
+      "requests": "Requests",
+      "search": "Find people"
+    },
+    "empty": "No friends yet",
+    "emptyHint": "Find people by email in the “Find people” tab.",
+    "requestsEmpty": "No requests",
+    "received": "Received",
+    "sent": "Sent",
+    "searchHint": "Enter the full email address of the person you are looking for.",
+    "searchPlaceholder": "email@example.com",
+    "search": "Search",
+    "emailInvalid": "Enter a complete, valid email address.",
+    "notFound": "No user found.",
+    "nowFriends": "You are now friends.",
+    "traineesOnly": "Friends are for trainees only.",
+    "unfriendConfirm": "Unfriend {{name}}?",
+    "actions": {
+      "add": "Add",
+      "cancel": "Cancel",
+      "accept": "Accept",
+      "decline": "Decline",
+      "unfriend": "Unfriend"
+    }
+  },
+  "blocks": {
+    "title": "Blocked",
+    "empty": "You have not blocked anyone",
+    "unblock": "Unblock",
+    "block": "Block",
+    "blockConfirm": "Block {{name}}?",
+    "blockBody": "You will no longer see each other's posts and you stop being friends."
+  },
+  "report": {
+    "action": "Report",
+    "titles": {
+      "post": "Report post",
+      "comment": "Report comment",
+      "user": "Report user",
+      "message": "Report message",
+      "group_message": "Report group message"
+    },
+    "description": "Pick a reason. A manager will review the report.",
+    "reasons": {
+      "spam": "Spam",
+      "harassment": "Harassment",
+      "inappropriate": "Inappropriate content",
+      "scam": "Scam",
+      "other": "Other"
+    },
+    "noteLabel": "Extra note (optional)",
+    "send": "Send report",
+    "sent": "Report sent. Thank you."
+  },
+  "reportsQueue": {
+    "title": "Open reports",
+    "empty": "No open reports",
+    "forbidden": "Only a super admin can see reports.",
+    "by": "Reported by {{name}}",
+    "gone": "Content no longer exists",
+    "inGroup": "In group {{name}}",
+    "openPost": "Open post",
+    "kinds": {
+      "post": "Post",
+      "comment": "Comment",
+      "user": "User",
+      "message": "Message",
+      "group_message": "Group message"
+    },
+    "actions": {
+      "kept": "Keep",
+      "deleted": "Delete",
+      "hidden": "Hide message"
+    },
+    "confirm": {
+      "kept": "Keep the content and close the report?",
+      "deleted": "Delete the reported content?",
+      "hidden": "Hide the reported message?"
+    }
+  },
+  "alias": {
+    "set": "Set nickname",
+    "edit": "Edit nickname",
+    "remove": "Remove nickname",
+    "sheetTitle": "Nickname for {{name}}",
+    "hint": "Only you see this name.",
+    "realName": "Real name: {{name}}",
+    "privateTitle": "My private nickname"
+  },
+  "feedExtra": {
+    "reactorsAll": "All"
+  }
+}

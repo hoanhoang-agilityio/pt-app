@@ -16,6 +16,7 @@ import { formatAge } from "@/lib/time";
 import { confirmAction, useErrorText } from "@/lib/ui-helpers";
 import { radius, space, useTheme } from "@/theme";
 
+import { ReportSheet } from "../../social/components/ReportSheet";
 import { useDeletePost, useReact } from "../hooks";
 import { PostPhotos } from "./PostPhotos";
 import { ReactorsSheet } from "./ReactorsSheet";
@@ -40,6 +41,7 @@ const PostCardBase = ({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reactorsOpen, setReactorsOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const mine = post.reactions.mine;
   const age = formatAge(post.createdAt, new Date(), currentLocale(), {
     now: t("time.now"),
@@ -84,7 +86,6 @@ const PostCardBase = ({
             </Txt>
           </View>
         </Pressable>
-        {post.canEdit || post.canDelete ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t("common.more")}
@@ -93,7 +94,6 @@ const PostCardBase = ({
           >
             <Ionicons name="ellipsis-horizontal" size={20} color={theme.muted} />
           </Pressable>
-        ) : null}
       </View>
 
       {post.caption ? (
@@ -197,7 +197,22 @@ const PostCardBase = ({
             }}
           />
         ) : null}
+        {!post.canEdit ? (
+          <SheetAction
+            label={t("report.action")}
+            onPress={() => {
+              setMenuOpen(false);
+              setReportOpen(true);
+            }}
+          />
+        ) : null}
       </Sheet>
+      <ReportSheet
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetKind="post"
+        targetId={post.id}
+      />
       <ReactorsSheet
         postId={post.id}
         visible={reactorsOpen}

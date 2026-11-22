@@ -1,0 +1,100 @@
+{
+  "profileExtra": {
+    "editBio": "编辑简介"
+  },
+  "friends": {
+    "title": "好友",
+    "tabs": {
+      "friends": "好友",
+      "requests": "请求",
+      "search": "查找"
+    },
+    "empty": "还没有好友",
+    "emptyHint": "在“查找”标签中按邮箱查找好友。",
+    "requestsEmpty": "没有请求",
+    "received": "收到的请求",
+    "sent": "已发送的请求",
+    "searchHint": "请输入要查找的人的完整邮箱地址。",
+    "searchPlaceholder": "email@example.com",
+    "search": "查找",
+    "emailInvalid": "请输入完整有效的邮箱地址。",
+    "notFound": "未找到用户。",
+    "nowFriends": "你们已成为好友。",
+    "traineesOnly": "好友功能仅限学员。",
+    "unfriendConfirm": "与 {{name}} 解除好友关系？",
+    "actions": {
+      "add": "加好友",
+      "cancel": "撤回",
+      "accept": "接受",
+      "decline": "拒绝",
+      "unfriend": "解除好友"
+    }
+  },
+  "blocks": {
+    "title": "已屏蔽",
+    "empty": "你还没有屏蔽任何人",
+    "unblock": "取消屏蔽",
+    "block": "屏蔽",
+    "blockConfirm": "屏蔽 {{name}}？",
+    "blockBody": "你们将看不到对方的帖子，并解除好友关系。"
+  },
+  "report": {
+    "action": "举报",
+    "titles": {
+      "post": "举报帖子",
+      "comment": "举报评论",
+      "user": "举报用户",
+      "message": "举报消息",
+      "group_message": "举报群消息"
+    },
+    "description": "请选择原因，管理员会审核举报。",
+    "reasons": {
+      "spam": "垃圾信息",
+      "harassment": "骚扰",
+      "inappropriate": "不当内容",
+      "scam": "诈骗",
+      "other": "其他"
+    },
+    "noteLabel": "补充说明（可选）",
+    "send": "提交举报",
+    "sent": "举报已提交，谢谢。"
+  },
+  "reportsQueue": {
+    "title": "待处理举报",
+    "empty": "没有待处理的举报",
+    "forbidden": "只有超级管理员可以查看举报。",
+    "by": "举报人 {{name}}",
+    "gone": "内容已不存在",
+    "inGroup": "在群 {{name}}",
+    "openPost": "打开帖子",
+    "kinds": {
+      "post": "帖子",
+      "comment": "评论",
+      "user": "用户",
+      "message": "消息",
+      "group_message": "群消息"
+    },
+    "actions": {
+      "kept": "保留",
+      "deleted": "删除内容",
+      "hidden": "隐藏消息"
+    },
+    "confirm": {
+      "kept": "保留内容并关闭举报？",
+      "deleted": "删除被举报的内容？",
+      "hidden": "隐藏被举报的消息？"
+    }
+  },
+  "alias": {
+    "set": "设置昵称",
+    "edit": "修改昵称",
+    "remove": "删除昵称",
+    "sheetTitle": "{{name}} 的昵称",
+    "hint": "只有你能看到这个名字。",
+    "realName": "真实姓名：{{name}}",
+    "privateTitle": "我的私人昵称"
+  },
+  "feedExtra": {
+    "reactorsAll": "全部"
+  }
+}

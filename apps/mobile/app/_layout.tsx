@@ -11,6 +11,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorState, Screen } from "@/components/ui";
 import { AuthProvider, useAuth } from "@/features/auth/auth-context";
+import { PresenceHeartbeat } from "@/features/chat/presence";
 import { RealtimeProvider } from "@/features/chat/realtime";
 import { PushEffects } from "@/features/push/PushEffects";
 import { isApiError } from "@/lib/errors";
@@ -53,6 +54,7 @@ const Gate = () => {
     <RealtimeProvider enabled={signedIn && !locked}>
       <StatusBar style="auto" />
       {signedIn ? <PushEffects /> : null}
+      {signedIn ? <PresenceHeartbeat /> : null}
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: theme.bg },
@@ -71,11 +73,19 @@ const Gate = () => {
           <Stack.Screen name="post/[id]" />
           <Stack.Screen name="profile/[key]" />
           <Stack.Screen name="notifications" />
+          <Stack.Screen name="friends" />
+          <Stack.Screen name="blocked" />
+          <Stack.Screen name="reports" />
           <Stack.Screen name="sessions" options={{ title: t("me.devices") }} />
           <Stack.Screen name="chat/coach" options={{ headerShown: false }} />
           <Stack.Screen name="chat/trainee/[userId]" options={{ headerShown: false }} />
           <Stack.Screen name="chat/group/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="chat/dm/[cid]" options={{ headerShown: false }} />
+          <Stack.Screen name="chat/group-info/[id]" />
+          <Stack.Screen name="chat/group-new" />
+          <Stack.Screen name="chat/info" />
+          <Stack.Screen name="chat/search" />
+          <Stack.Screen name="chat/gallery" />
         </Stack.Protected>
       </Stack>
     </RealtimeProvider>

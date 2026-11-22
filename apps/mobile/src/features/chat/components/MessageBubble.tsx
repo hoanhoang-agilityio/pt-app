@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { AuthImage } from "@/components/AuthImage";
-import { Txt } from "@/components/ui";
+import { Button, Txt } from "@/components/ui";
+import { CHAT_TEXT_ON_COLOR, chatColorHex, isChatColorKey } from "@/lib/chat-colors";
 import type { ChatMsg, ThreadRow } from "@/lib/chat-model";
+import { packStickerGlyph } from "@/lib/sticker-suggest";
 import { formatClock } from "@/lib/time";
 import { radius, space, useTheme } from "@/theme";
 
@@ -47,7 +49,16 @@ export const systemLine = (
         { actor: name(event.actorKey) },
       );
     case "pt_changed":
-      return t("chat.group.system.pt_changed");
+      return t(
+        event.resolution
+          ? `groupMgmt.alert.${event.resolution.choice}`
+          : "groupMgmt.alert.open",
+        {
+          member: name(`user:${event.userId}`),
+          from: event.fromPtId ? name(`admin:${event.fromPtId}`) : t("groupMgmt.alert.noPt"),
+          to: event.toPtId ? name(`admin:${event.toPtId}`) : t("groupMgmt.alert.noPt"),
+        },
+      );
   }
 };
 
@@ -92,6 +103,9 @@ const BubbleBase = ({
   onRetry,
   seenLabel,
   showSender,
+  onOpenHistory,
+  onOpenSeen,
+  onAlert,
 }: {
   row: Extract<ThreadRow, { type: "message" }>;
   color: { bg: string; fg: string };
@@ -100,21 +114,52 @@ const BubbleBase = ({
   onRetry: (message: ChatMsg) => void;
   seenLabel: string | null;
   showSender: boolean;
+  onOpenHistory?: (message: ChatMsg) => void;
+  onOpenSeen?: (message: ChatMsg) => void;
+  // Super admin: keep or remove a PT change (the alert line).
+  onAlert?: (message: ChatMsg, choice: "keep" | "remove") => void;
 }) => {
   const { t } = useTranslation();
   const theme = useTheme();
   const { message, isFirstInRun, isLastInRun, showTime } = row;
 
   if (message.kind === "system") {
+    const open = message.systemEvent?.type === "pt_changed" && !message.systemEvent.resolution;
+
     return (
-      <Txt tone="muted" size={12} style={styles.system}>
-        {systemLine(message.systemEvent, message.eventNames, t)}
-      </Txt>
+      <View style={styles.system}>
+        <Txt tone="muted" size={12} style={{ textAlign: "center" }}>
+          {systemLine(message.systemEvent, message.eventNames, t)}
+        </Txt>
+        {open && onAlert ? (
+          <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.xs }}>
+            <Button
+              label={t("groupMgmt.alert.keepAction")}
+              variant="secondary"
+              style={{ minHeight: 36 }}
+              onPress={() => onAlert(message, "keep")}
+            />
+            <Button
+              label={t("groupMgmt.alert.removeAction")}
+              variant="danger"
+              style={{ minHeight: 36 }}
+              onPress={() => onAlert(message, "remove")}
+            />
+          </View>
+        ) : null}
+      </View>
     );
   }
   const mine = message.mine;
-  const bg = mine ? color.bg : theme.bubbleNeutral;
-  const fg = mine ? color.fg : theme.bubbleNeutralFg;
+  const picked = isChatColorKey(message.colorKey) ? message.colorKey : null;
+  const bg = mine
+    ? picked
+      ? chatColorHex(picked)
+      : color.bg
+    : picked
+      ? chatColorHex(picked)
+      : theme.bubbleNeutral;
+  const fg = mine ? (picked ? CHAT_TEXT_ON_COLOR : color.fg) : picked ? CHAT_TEXT_ON_COLOR : theme.bubbleNeutralFg;
   const hasText = message.body !== "";
 
   return (
@@ -131,6 +176,7 @@ const BubbleBase = ({
       {showSender && !mine && isFirstInRun && message.senderName ? (
         <Txt tone="muted" size={12} style={{ marginLeft: space.sm, marginBottom: 2 }}>
           {message.senderName}
+          {message.senderTag ? ` · ${t(`chatx.role.${message.senderTag === "manager" ? "super_admin" : "pt"}`)}` : ""}
         </Txt>
       ) : null}
       {message.replyTo ? (
@@ -148,7 +194,7 @@ const BubbleBase = ({
         </View>
       ) : null}
       <Pressable
-        onLongPress={() => !message.deleted && message.id !== null && onLongPress(message)}
+        onLongPress={() => message.id !== null && onLongPress(message)}
         delayLongPress={250}
         accessibilityRole="button"
         accessibilityHint={t("chat.react")}
@@ -156,12 +202,18 @@ const BubbleBase = ({
         {message.deleted ? (
           <View style={[styles.bubble, { borderColor: theme.line, borderWidth: 1 }]}>
             <Txt tone="muted" size={14} style={{ fontStyle: "italic" }}>
-              {message.kind === "message" && message.body === "" ? t("chat.unsent") : message.body}
+              {message.hidden
+                ? t("chat.hidden")
+                : message.kind === "message" && message.body === ""
+                  ? t("chat.unsent")
+                  : message.body}
             </Txt>
           </View>
         ) : message.sticker ? (
           message.sticker.kind === "pack" ? (
-            <Txt size={44}>{message.sticker.alt}</Txt>
+            <Txt size={52} accessibilityLabel={message.sticker.alt}>
+              {packStickerGlyph(message.sticker.url, message.sticker.alt)}
+            </Txt>
           ) : (
             <AuthImage uri={message.sticker.url} style={styles.sticker} contentFit="contain" />
           )
@@ -206,11 +258,25 @@ const BubbleBase = ({
           {t("chat.sending")}
         </Txt>
       ) : isLastInRun && showTime ? (
-        <Txt tone="muted" size={11} style={{ marginHorizontal: space.sm }}>
-          {formatClock(new Date(message.createdAt))}
-          {message.edited ? ` · ${t("common.edited")}` : ""}
-          {seenLabel ? ` · ${seenLabel}` : ""}
-        </Txt>
+        <View style={{ flexDirection: "row", marginHorizontal: space.sm }}>
+          <Txt tone="muted" size={11}>
+            {formatClock(new Date(message.createdAt))}
+          </Txt>
+          {message.edited ? (
+            <Pressable accessibilityRole="button" onPress={() => onOpenHistory?.(message)} hitSlop={6}>
+              <Txt tone="muted" size={11}>
+                {` · ${t("common.edited")}`}
+              </Txt>
+            </Pressable>
+          ) : null}
+          {seenLabel ? (
+            <Pressable accessibilityRole="button" onPress={() => onOpenSeen?.(message)} hitSlop={6}>
+              <Txt tone="muted" size={11}>
+                {` · ${seenLabel}`}
+              </Txt>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </View>
   );
@@ -242,5 +308,5 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     marginTop: -6,
   },
-  system: { textAlign: "center", marginVertical: space.sm, paddingHorizontal: space.xl },
+  system: { alignItems: "center", marginVertical: space.sm, paddingHorizontal: space.xl },
 });

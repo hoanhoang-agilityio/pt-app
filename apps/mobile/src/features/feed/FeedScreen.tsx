@@ -1,41 +1,14 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type Href, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { View } from "react-native";
 
-import { Button, ErrorState, IconButton, Screen, Spinner, Txt } from "@/components/ui";
-import { qk } from "@/lib/query-keys";
+import { ErrorState, IconButton, Screen, Spinner, Txt } from "@/components/ui";
 import { useErrorText } from "@/lib/ui-helpers";
 import { space } from "@/theme";
 
-import { acceptTerms } from "./api";
+import { TermsGate } from "../social/components/TermsGate";
 import { PostList } from "./components/PostList";
 import { useFeed, useNotifications, useSocialMe } from "./hooks";
-
-const TermsGate = () => {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const errorText = useErrorText();
-  const accept = useMutation({
-    mutationFn: acceptTerms,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: qk.socialMe }),
-  });
-
-  return (
-    <View style={{ flex: 1, padding: space.xl, gap: space.lg, justifyContent: "center" }}>
-      <Txt size={22} weight="700">
-        {t("feed.termsTitle")}
-      </Txt>
-      <Txt tone="muted">{t("feed.termsBody")}</Txt>
-      {accept.isError ? <Txt tone="danger">{errorText(accept.error)}</Txt> : null}
-      <Button
-        label={t("feed.termsAccept")}
-        loading={accept.isPending}
-        onPress={() => accept.mutate()}
-      />
-    </View>
-  );
-};
 
 export const FeedScreen = () => {
   const { t } = useTranslation();

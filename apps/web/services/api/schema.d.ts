@@ -8425,8 +8425,10 @@ export interface operations {
                         chatEnabled: boolean;
                         hasHistory: boolean;
                         latestLoudIncomingId: number | null;
+                        appBadge?: number;
                     } | {
                         count: number;
+                        appBadge?: number;
                         perTrainee: {
                             userId: number;
                             conversationId: number;

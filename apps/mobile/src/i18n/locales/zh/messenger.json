@@ -1,0 +1,117 @@
+{
+  "presence": {
+    "online": "在线",
+    "lastSeen": "{{when}}前在线"
+  },
+  "chatx": {
+    "editHistory": "编辑记录",
+    "editHistoryEmpty": "没有编辑记录。",
+    "seenByTitle": "已读成员",
+    "seenByEmpty": "还没有人阅读。",
+    "showOriginal": "查看原文",
+    "originalTitle": "原文",
+    "originalEmpty": "没有可用的原文。",
+    "addSticker": "+ 添加贴纸",
+    "stickerHoldHint": "长按自己的贴纸可删除",
+    "deleteSticker": "删除这个贴纸？",
+    "commands": {
+      "imlang": "静音发送"
+    },
+    "role": {
+      "super_admin": "管理员",
+      "pt": "教练",
+      "trainee": "学员"
+    }
+  },
+  "chatInfo": {
+    "title": "会话信息",
+    "search": "搜索会话",
+    "gallery": "图片、贴纸和链接",
+    "nicknames": "聊天昵称",
+    "nicknamesHint": "会话中所有人都能看到这些昵称。",
+    "nicknameOf": "{{name}} 的昵称",
+    "nicknameSelf": "我的昵称",
+    "nicknameSheet": "昵称：{{name}}",
+    "colorConversation": "本会话的气泡颜色",
+    "colorOwn": "我的气泡颜色",
+    "colorAdminHint": "仅适用于本会话。",
+    "colorUserHint": "适用于你的所有会话。",
+    "useAccountColor": "使用账号颜色",
+    "colors": {
+      "orange": "橙色",
+      "red": "红色",
+      "pink": "粉色",
+      "purple": "紫色",
+      "indigo": "靛蓝",
+      "blue": "蓝色",
+      "teal": "青色",
+      "green": "绿色"
+    }
+  },
+  "chatSearch": {
+    "title": "搜索消息",
+    "placeholder": "输入关键词…",
+    "hint": "至少输入 {{count}} 个字符。",
+    "empty": "没有找到消息。",
+    "context": "相关消息",
+    "unknownSender": "已删除的教练"
+  },
+  "chatGallery": {
+    "title": "媒体和链接",
+    "tabs": {
+      "photos": "图片",
+      "stickers": "贴纸",
+      "links": "链接"
+    },
+    "empty": {
+      "photos": "还没有图片",
+      "stickers": "还没有贴纸",
+      "links": "还没有链接"
+    }
+  },
+  "groupMgmt": {
+    "createTitle": "创建群",
+    "namePlaceholder": "群名称",
+    "create": "创建群",
+    "search": "搜索成员",
+    "selected": "已选 {{count}}/{{max}}",
+    "noCandidates": "没有可添加的人。",
+    "noMatches": "没有结果。",
+    "trainees": "学员",
+    "pts": "教练",
+    "addSkipped": "{{count}} 人无法添加",
+    "added": "已添加 {{count}} 人",
+    "infoTitle": "群信息",
+    "dissolvedNote": "该群已解散。",
+    "managersOnlyNote": "仅管理员可发言。",
+    "photoChange": "更换头像",
+    "photoRemove": "删除头像",
+    "manage": "群管理",
+    "managersOnly": "仅管理员发言",
+    "managersOnlyHint": "其他成员只能阅读和表情回应。",
+    "addMembers": "添加成员",
+    "addAction": "添加（{{count}}）",
+    "mute": "静音通知",
+    "members": "成员（{{count}}）",
+    "creator": "创建者",
+    "remove": "移除",
+    "removeTitle": "将 {{name}} 移出群？",
+    "leave": "退出群",
+    "leaveTitle": "退出这个群？",
+    "leaveBody": "你将不再收到该群的消息。",
+    "dissolve": "解散群",
+    "dissolveTitle": "解散这个群？",
+    "dissolveBody": "该群将对所有人变为只读。",
+    "hide": "隐藏消息",
+    "unhide": "重新显示消息",
+    "alert": {
+      "open": "{{member}} 的教练由 {{from}} 改为 {{to}}",
+      "keep": "{{member}} 的教练由 {{from}} 改为 {{to}}（已保留）",
+      "remove": "{{member}} 的教练由 {{from}} 改为 {{to}}（已移出群）",
+      "superseded": "{{member}} 的教练再次变更（旧提醒）",
+      "noPt": "无教练",
+      "keepAction": "保留新教练",
+      "removeAction": "移出群"
+    }
+  }
+}

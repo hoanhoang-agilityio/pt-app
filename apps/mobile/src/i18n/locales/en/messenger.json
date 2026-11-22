@@ -1,0 +1,117 @@
+{
+  "presence": {
+    "online": "Online",
+    "lastSeen": "Active {{when}} ago"
+  },
+  "chatx": {
+    "editHistory": "Edit history",
+    "editHistoryEmpty": "No edits.",
+    "seenByTitle": "Seen by",
+    "seenByEmpty": "Nobody has seen it yet.",
+    "showOriginal": "Show original",
+    "originalTitle": "Original text",
+    "originalEmpty": "No original text available.",
+    "addSticker": "+ Add sticker",
+    "stickerHoldHint": "Hold your sticker to delete",
+    "deleteSticker": "Delete this sticker?",
+    "commands": {
+      "imlang": "Send without notification"
+    },
+    "role": {
+      "super_admin": "Manager",
+      "pt": "PT",
+      "trainee": "Trainee"
+    }
+  },
+  "chatInfo": {
+    "title": "Conversation info",
+    "search": "Search in conversation",
+    "gallery": "Photos, stickers and links",
+    "nicknames": "Chat nicknames",
+    "nicknamesHint": "Everyone in this conversation sees these nicknames.",
+    "nicknameOf": "Nickname of {{name}}",
+    "nicknameSelf": "My nickname",
+    "nicknameSheet": "Nickname: {{name}}",
+    "colorConversation": "Bubble colour of this conversation",
+    "colorOwn": "My bubble colour",
+    "colorAdminHint": "Applies to this conversation only.",
+    "colorUserHint": "Applies to all your conversations.",
+    "useAccountColor": "Use account colour",
+    "colors": {
+      "orange": "Orange",
+      "red": "Red",
+      "pink": "Pink",
+      "purple": "Purple",
+      "indigo": "Indigo",
+      "blue": "Blue",
+      "teal": "Teal",
+      "green": "Green"
+    }
+  },
+  "chatSearch": {
+    "title": "Search messages",
+    "placeholder": "Type to search…",
+    "hint": "Type at least {{count}} characters.",
+    "empty": "No messages found.",
+    "context": "Surrounding messages",
+    "unknownSender": "Deleted PT"
+  },
+  "chatGallery": {
+    "title": "Media and links",
+    "tabs": {
+      "photos": "Photos",
+      "stickers": "Stickers",
+      "links": "Links"
+    },
+    "empty": {
+      "photos": "No photos yet",
+      "stickers": "No stickers yet",
+      "links": "No links yet"
+    }
+  },
+  "groupMgmt": {
+    "createTitle": "New group",
+    "namePlaceholder": "Group name",
+    "create": "Create group",
+    "search": "Search people",
+    "selected": "{{count}}/{{max}} selected",
+    "noCandidates": "Nobody to add.",
+    "noMatches": "No matches.",
+    "trainees": "Trainees",
+    "pts": "PTs",
+    "addSkipped": "{{count}} could not be added",
+    "added": "Added {{count}}",
+    "infoTitle": "Group info",
+    "dissolvedNote": "This group was dissolved.",
+    "managersOnlyNote": "Only managers can send messages.",
+    "photoChange": "Change photo",
+    "photoRemove": "Remove photo",
+    "manage": "Manage group",
+    "managersOnly": "Managers only",
+    "managersOnlyHint": "Other members can only read and react.",
+    "addMembers": "Add members",
+    "addAction": "Add ({{count}})",
+    "mute": "Mute notifications",
+    "members": "Members ({{count}})",
+    "creator": "creator",
+    "remove": "Remove",
+    "removeTitle": "Remove {{name}} from the group?",
+    "leave": "Leave group",
+    "leaveTitle": "Leave this group?",
+    "leaveBody": "You will stop receiving this group's messages.",
+    "dissolve": "Dissolve group",
+    "dissolveTitle": "Dissolve this group?",
+    "dissolveBody": "The group becomes read-only for everyone.",
+    "hide": "Hide message",
+    "unhide": "Show message again",
+    "alert": {
+      "open": "{{member}}'s PT changed from {{from}} to {{to}}",
+      "keep": "{{member}}'s PT changed from {{from}} to {{to}} (kept)",
+      "remove": "{{member}}'s PT changed from {{from}} to {{to}} (removed from group)",
+      "superseded": "{{member}}'s PT changed again (old alert)",
+      "noPt": "no PT",
+      "keepAction": "Keep new PT",
+      "removeAction": "Remove from group"
+    }
+  }
+}

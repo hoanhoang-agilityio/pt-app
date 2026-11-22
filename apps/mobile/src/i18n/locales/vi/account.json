@@ -1,0 +1,53 @@
+{
+  "acct": {
+    "avatar": {
+      "change": "Đổi ảnh đại diện",
+      "remove": "Xoá ảnh đại diện",
+      "removeConfirm": "Xoá ảnh đại diện?",
+      "saved": "Đã cập nhật ảnh đại diện",
+      "removed": "Đã xoá ảnh đại diện",
+      "permission": "Hãy cho phép truy cập ảnh trong Cài đặt.",
+      "tooLarge": "Ảnh quá lớn. Chọn ảnh khác."
+    },
+    "statsTitle": "Tổng quan",
+    "stats": {
+      "workouts": "Tuần này: {{completed}}/{{total}} bài đã tập",
+      "nutrition": "{{count}} ngày có ghi dinh dưỡng",
+      "open": "Xem tổng quan tuần"
+    },
+    "bio": {
+      "title": "Giới thiệu",
+      "placeholder": "Vài dòng về bạn",
+      "save": "Lưu giới thiệu",
+      "saved": "Đã lưu giới thiệu",
+      "counter": "{{count}}/{{max}}"
+    },
+    "color": {
+      "title": "Màu tin nhắn",
+      "default": "Mặc định",
+      "saved": "Đã đổi màu tin nhắn",
+      "orange": "Cam",
+      "red": "Đỏ",
+      "pink": "Hồng",
+      "purple": "Tím",
+      "indigo": "Chàm",
+      "blue": "Xanh dương",
+      "teal": "Xanh ngọc",
+      "green": "Xanh lá"
+    },
+    "password": {
+      "title": "Đổi mật khẩu",
+      "current": "Mật khẩu hiện tại",
+      "new": "Mật khẩu mới",
+      "confirm": "Nhập lại mật khẩu mới",
+      "submit": "Đổi mật khẩu",
+      "mismatch": "Mật khẩu nhập lại không khớp",
+      "tooShort": "Mật khẩu mới cần ít nhất {{min}} ký tự",
+      "same": "Mật khẩu mới phải khác mật khẩu hiện tại",
+      "required": "Nhập mật khẩu hiện tại",
+      "changed": "Đã đổi mật khẩu. Các thiết bị khác đã bị đăng xuất.",
+      "hint": "Các thiết bị khác sẽ bị đăng xuất."
+    },
+    "accentNote": "Màu nhấn cá nhân hoá chưa có trên máy chủ."
+  }
+}

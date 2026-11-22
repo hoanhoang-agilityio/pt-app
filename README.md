@@ -109,7 +109,8 @@ Next.js 16 (App Router, Server Actions, `proxy.ts`), React 19, Tailwind CSS 4, c
 ```text
 apps/web/            Next.js (xem bên dưới)
 apps/api/            NestJS API + TypeORM + PostgreSQL (/v1)
-packages/contracts/  schema Zod + giới hạn dùng chung cho web và API
+apps/mobile/         app Expo (React Native): bảng tin và nhắn tin, xem apps/mobile/README.md
+packages/contracts/  schema Zod + giới hạn dùng chung cho web, API và mobile
 docker-compose.yml   PostgreSQL 17 + API (docker compose up -d --build db api)
 
 apps/web/

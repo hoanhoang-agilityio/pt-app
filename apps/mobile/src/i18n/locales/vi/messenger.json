@@ -1,0 +1,117 @@
+{
+  "presence": {
+    "online": "Đang hoạt động",
+    "lastSeen": "Hoạt động {{when}} trước"
+  },
+  "chatx": {
+    "editHistory": "Lịch sử chỉnh sửa",
+    "editHistoryEmpty": "Chưa có chỉnh sửa nào.",
+    "seenByTitle": "Đã xem bởi",
+    "seenByEmpty": "Chưa ai xem.",
+    "showOriginal": "Xem nội dung gốc",
+    "originalTitle": "Nội dung gốc",
+    "originalEmpty": "Không có nội dung gốc.",
+    "addSticker": "+ Thêm sticker",
+    "stickerHoldHint": "Giữ sticker của bạn để xoá",
+    "deleteSticker": "Xoá sticker này?",
+    "commands": {
+      "imlang": "Gửi không thông báo"
+    },
+    "role": {
+      "super_admin": "Quản lý",
+      "pt": "PT",
+      "trainee": "Học viên"
+    }
+  },
+  "chatInfo": {
+    "title": "Thông tin cuộc trò chuyện",
+    "search": "Tìm trong cuộc trò chuyện",
+    "gallery": "Ảnh, sticker và liên kết",
+    "nicknames": "Biệt danh trong chat",
+    "nicknamesHint": "Mọi người trong cuộc trò chuyện đều thấy biệt danh này.",
+    "nicknameOf": "Biệt danh của {{name}}",
+    "nicknameSelf": "Biệt danh của tôi",
+    "nicknameSheet": "Biệt danh: {{name}}",
+    "colorConversation": "Màu tin nhắn của cuộc trò chuyện này",
+    "colorOwn": "Màu tin nhắn của tôi",
+    "colorAdminHint": "Chỉ áp dụng cho cuộc trò chuyện này.",
+    "colorUserHint": "Áp dụng cho mọi cuộc trò chuyện của bạn.",
+    "useAccountColor": "Dùng màu tài khoản",
+    "colors": {
+      "orange": "Cam",
+      "red": "Đỏ",
+      "pink": "Hồng",
+      "purple": "Tím",
+      "indigo": "Chàm",
+      "blue": "Xanh dương",
+      "teal": "Xanh ngọc",
+      "green": "Xanh lá"
+    }
+  },
+  "chatSearch": {
+    "title": "Tìm tin nhắn",
+    "placeholder": "Nhập từ khoá…",
+    "hint": "Nhập ít nhất {{count}} ký tự.",
+    "empty": "Không tìm thấy tin nhắn nào.",
+    "context": "Tin nhắn xung quanh",
+    "unknownSender": "PT đã xoá"
+  },
+  "chatGallery": {
+    "title": "Ảnh và liên kết",
+    "tabs": {
+      "photos": "Ảnh",
+      "stickers": "Sticker",
+      "links": "Liên kết"
+    },
+    "empty": {
+      "photos": "Chưa có ảnh nào",
+      "stickers": "Chưa có sticker nào",
+      "links": "Chưa có liên kết nào"
+    }
+  },
+  "groupMgmt": {
+    "createTitle": "Tạo nhóm",
+    "namePlaceholder": "Tên nhóm",
+    "create": "Tạo nhóm",
+    "search": "Tìm thành viên",
+    "selected": "Đã chọn {{count}}/{{max}}",
+    "noCandidates": "Không có ai để thêm.",
+    "noMatches": "Không có kết quả.",
+    "trainees": "Học viên",
+    "pts": "PT",
+    "addSkipped": "{{count}} người không thêm được",
+    "added": "Đã thêm {{count}} người",
+    "infoTitle": "Thông tin nhóm",
+    "dissolvedNote": "Nhóm đã giải tán.",
+    "managersOnlyNote": "Chỉ quản lý được nhắn tin.",
+    "photoChange": "Đổi ảnh",
+    "photoRemove": "Xoá ảnh",
+    "manage": "Quản lý nhóm",
+    "managersOnly": "Chỉ quản lý nhắn tin",
+    "managersOnlyHint": "Thành viên khác chỉ đọc và thả cảm xúc.",
+    "addMembers": "Thêm thành viên",
+    "addAction": "Thêm ({{count}})",
+    "mute": "Tắt thông báo nhóm",
+    "members": "Thành viên ({{count}})",
+    "creator": "người tạo",
+    "remove": "Xoá",
+    "removeTitle": "Xoá {{name}} khỏi nhóm?",
+    "leave": "Rời nhóm",
+    "leaveTitle": "Rời nhóm này?",
+    "leaveBody": "Bạn sẽ không nhận tin nhắn của nhóm nữa.",
+    "dissolve": "Giải tán nhóm",
+    "dissolveTitle": "Giải tán nhóm này?",
+    "dissolveBody": "Nhóm sẽ chuyển sang chỉ đọc cho mọi người.",
+    "hide": "Ẩn tin nhắn",
+    "unhide": "Hiện lại tin nhắn",
+    "alert": {
+      "open": "PT của {{member}} đổi từ {{from}} sang {{to}}",
+      "keep": "PT của {{member}} đổi từ {{from}} sang {{to}} (đã giữ)",
+      "remove": "PT của {{member}} đổi từ {{from}} sang {{to}} (đã gỡ khỏi nhóm)",
+      "superseded": "PT của {{member}} đã đổi lại (cảnh báo cũ)",
+      "noPt": "chưa có PT",
+      "keepAction": "Giữ PT mới",
+      "removeAction": "Gỡ khỏi nhóm"
+    }
+  }
+}

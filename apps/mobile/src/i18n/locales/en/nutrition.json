@@ -1,0 +1,184 @@
+{
+  "tabs": {
+    "nutrition": "Nutrition"
+  },
+  "nutri": {
+    "title": "Nutrition",
+    "loadError": "Could not load nutrition",
+    "dailyTargets": "Daily targets",
+    "noTarget": "Your PT has not set a nutrition target for this day.",
+    "energy": "Energy",
+    "macro": {
+      "carbs": "Carbs",
+      "protein": "Protein",
+      "fat": "Fat"
+    },
+    "status": {
+      "on": "on target",
+      "under": "under",
+      "over": "over"
+    },
+    "completion": {
+      "complete": "All meals eaten",
+      "partial": "Some meals eaten"
+    },
+    "plan": {
+      "title": "Meal plan",
+      "empty": "No meal plan for this day yet.",
+      "future": "Not this day yet, come back to log later."
+    },
+    "meal": {
+      "title": "Meal {{index}}: {{name}}",
+      "target": "Meal target: {{kcal}} kcal · P {{protein}} · C {{carbs}} · F {{fat}}",
+      "eaten": "Eaten {{eaten}} / {{planned}} kcal",
+      "ptPlan": "PT's plan",
+      "noFoods": "Your PT has not added foods to this meal.",
+      "extra": "Eaten outside the plan",
+      "logEaten": "Log what you ate",
+      "planKcal": "/ {{kcal}} kcal (plan)",
+      "noNutrition": "No nutrition numbers",
+      "archived": "Food removed from the library, numbers kept",
+      "missingFood": "Food is gone from the library, delete and log again",
+      "removeConfirm": "Remove this food from your log?"
+    },
+    "mark": {
+      "achieved": "Done",
+      "achievedHint": "Mark this meal as eaten as planned",
+      "note": "Note for your PT",
+      "notePlaceholder": "e.g. Swapped rice for potato",
+      "save": "Save note",
+      "saved": "Saved"
+    },
+    "log": {
+      "addTitle": "Log food",
+      "editTitle": "Edit food",
+      "searchPlaceholder": "Search foods (e.g. chicken)",
+      "noResults": "No foods found",
+      "moreResults": "More foods exist, type to narrow down.",
+      "freeFood": "Food not in the library",
+      "grams": "Grams",
+      "gramsOptional": "Grams (if known)",
+      "name": "Food name",
+      "namePlaceholder": "e.g. Beef noodle soup",
+      "nutritionOptional": "Nutrition (optional)",
+      "kcal": "Calories (kcal)",
+      "protein": "Protein (g)",
+      "carbs": "Carbs (g)",
+      "fat": "Fat (g)",
+      "add": "Add food",
+      "pickOther": "Pick another food",
+      "searchLibrary": "Search the library",
+      "invalidNumber": "Invalid number",
+      "nameRequired": "Enter a food name",
+      "gramsRequired": "Enter grams above 0",
+      "saved": "Food logged",
+      "updated": "Food updated",
+      "removed": "Food removed"
+    },
+    "prefs": {
+      "title": "Request to your PT",
+      "mealCount": "Meals per day",
+      "mealAny": "PT decides",
+      "foodNote": "Foods you like or avoid",
+      "foodNotePlaceholder": "e.g. No seafood, I like chicken",
+      "save": "Save request",
+      "saved": "Request saved"
+    },
+    "entries": {
+      "title": "Older log",
+      "add": "Quick log a meal",
+      "addTitle": "Log a meal",
+      "editTitle": "Edit meal",
+      "meal": "Meal",
+      "what": "What did you eat?",
+      "whatPlaceholder": "e.g. a bowl of rice, boiled chicken",
+      "estimate": "Estimated grams (optional)",
+      "empty": "Enter the food or some grams",
+      "deleteConfirm": "Delete this meal?",
+      "saved": "Meal logged",
+      "deleted": "Meal deleted"
+    },
+    "meals": {
+      "breakfast": "Breakfast",
+      "lunch": "Lunch",
+      "dinner": "Dinner",
+      "snack": "Snack"
+    },
+    "library": {
+      "link": "Food library",
+      "linkHint": "See calories and macros of each food",
+      "title": "Food library",
+      "search": "Search foods, e.g. chicken",
+      "all": "All",
+      "empty": "No foods yet",
+      "per100": "Per 100 g",
+      "serving": "Serving: {{label}} = {{grams}} g",
+      "calc": "Calculate by weight",
+      "source": "Source: {{source}}"
+    },
+    "group": {
+      "meat": "Meat",
+      "seafood": "Fish & seafood",
+      "egg_dairy": "Eggs & dairy",
+      "starch": "Starches",
+      "vegetable": "Vegetables",
+      "fruit": "Fruit",
+      "legume_nut": "Legumes & nuts",
+      "fat_oil": "Oils & fats",
+      "dish": "Prepared dishes",
+      "other": "Other"
+    },
+    "state": {
+      "raw": "raw",
+      "cooked": "cooked"
+    },
+    "body": {
+      "title": "Body profile",
+      "edit": "Edit",
+      "empty": "Enter your stats to work out a nutrition target.",
+      "sex": "Sex",
+      "male": "Male",
+      "female": "Female",
+      "age": "Age",
+      "height": "Height (cm)",
+      "weight": "Weight (kg)",
+      "activityLabel": "Activity level",
+      "goalLabel": "Goal",
+      "goal": {
+        "cut": "Lose fat",
+        "maintain": "Maintain",
+        "bulk": "Build muscle"
+      },
+      "activity": {
+        "sedentary": "Sedentary",
+        "light": "Light (1-3 days/week)",
+        "moderate": "Moderate (3-5 days/week)",
+        "active": "Active (6-7 days/week)",
+        "very_active": "Very active"
+      },
+      "save": "Save stats",
+      "saved": "Stats saved",
+      "appliedTarget": "Stats saved and target updated from TDEE",
+      "keptManual": "Stats saved. Your PT set a manual target, so it stays.",
+      "invalid": "Check the numbers",
+      "bmr": "BMR {{kcal}} kcal",
+      "tdee": "TDEE {{kcal}} kcal",
+      "target": "Target {{kcal}} kcal",
+      "ageYears": "{{age}} years"
+    },
+    "weight": {
+      "title": "Weight",
+      "today": "Today's weight",
+      "todayLogged": "Today's weight (logged, edit if needed)",
+      "placeholder": "e.g. 72.5",
+      "save": "Save weight",
+      "saved": "Weight logged",
+      "savedTarget": "Weight logged and target updated from TDEE",
+      "invalid": "Weight must be 30 to 250 kg",
+      "latest": "Latest weekly average: {{kg}} kg",
+      "vsLastWeek": "{{change}} kg vs last week",
+      "empty": "No weigh-ins in the last 12 weeks. Log your weight to start.",
+      "chart": "Average weight per week"
+    }
+  }
+}

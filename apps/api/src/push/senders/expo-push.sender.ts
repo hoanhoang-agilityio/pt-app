@@ -72,14 +72,21 @@ const classifyTicket = (ticket: ExpoTicket | undefined): PushSendResult => {
 };
 
 // Expo push for the mobile app: the device token is stored in the
-// subscription's `endpoint`. Always enabled: it needs no key (EXPO_ACCESS_TOKEN
+// subscription's `endpoint`. Enabled by default (EXPO_PUSH_ENABLED): it needs no key (EXPO_ACCESS_TOKEN
 // is only for projects that turned on enhanced push security).
 @Injectable()
 export class ExpoPushSender implements PushSender {
   readonly kind = "expo" as const;
-  readonly enabled = true;
+  readonly enabled: boolean;
 
-  constructor(@Inject(APP_ENV) private readonly env: Env) {}
+  constructor(@Inject(APP_ENV) private readonly env: Env) {
+    // On by default; EXPO_PUSH_ENABLED=false turns it off, and tests never
+    // reach the Expo service unless EXPO_PUSH_ENABLED=true.
+    this.enabled =
+      env.EXPO_PUSH_ENABLED === undefined
+        ? env.NODE_ENV !== "test"
+        : env.EXPO_PUSH_ENABLED === "true";
+  }
 
   async send(
     subscription: StoredPushSubscription,

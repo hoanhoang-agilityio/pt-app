@@ -226,6 +226,25 @@ describe("PushService", () => {
     expect(clock.sleeps).toEqual([250]);
   });
 
+  it("logs a batched device that fails for good, without content", async () => {
+    const expo = {
+      kind: "expo" as const,
+      enabled: true,
+      send: vi.fn(),
+      sendMany: vi.fn().mockResolvedValue(new Map([[1, "failed"]])),
+    };
+    const { service, store } = setup([sub(1, "expo")], [expo]);
+
+    await service.sendToOwner("user:1", payload);
+
+    expect(expo.sendMany).toHaveBeenCalledTimes(1);
+    expect(store.delete).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      { subscriptionId: 1, kind: "expo" },
+      "Push not delivered",
+    );
+  });
+
   it("adds the app badge to the payload of phones only", async () => {
     const web = fake("web", ["ok"]);
     const expo = fake("expo", ["ok"]);

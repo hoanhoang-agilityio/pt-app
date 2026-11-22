@@ -110,6 +110,11 @@ export class PushService {
             await this.store.delete(subscription.id);
           } else if (result === "retry") {
             retry.push(subscription);
+          } else {
+            this.logger.warn(
+              { subscriptionId: subscription.id, kind: subscription.kind },
+              "Push not delivered",
+            );
           }
         }
         pending = retry;

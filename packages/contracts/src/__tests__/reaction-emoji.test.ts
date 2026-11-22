@@ -34,6 +34,15 @@ describe("isReactionEmoji", () => {
     }
   });
 
+  it("needs U+FE0F after a text-presentation base, so a bare symbol is refused", () => {
+    for (const emoji of ["©️", "®️", "™️", "‼️", "↔️", "❤️", "🇻🇳"]) {
+      expect(isReactionEmoji(emoji), emoji).toBe(true);
+    }
+    for (const value of ["©", "®", "™", "‼", "↔", "❤", "♥"]) {
+      expect(isReactionEmoji(value), JSON.stringify(value)).toBe(false);
+    }
+  });
+
   it("refuses stacked combining marks, a lone keycap mark and other junk", () => {
     for (const value of [
       "😀" + "\u0301".repeat(10),

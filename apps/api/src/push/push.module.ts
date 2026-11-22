@@ -15,7 +15,7 @@ import { WebPushSender } from "./senders/web-push.sender.js";
 // into pushes, PushService sends each through the sender of the device's kind.
 // The Expo sender serves the mobile app; an FcmPushSender is one more class and
 // one more entry in `inject` below. Without the VAPID_* variables
-// the web sender is disabled; the Expo sender is always on.
+// the web sender is disabled; the Expo sender is on unless EXPO_PUSH_ENABLED=false.
 @Module({
   imports: [AuthModule, ChatModule],
   controllers: [PushController],

@@ -16,8 +16,11 @@ export const REACTION_EMOJI_MAX_BYTES = 64;
 
 // One whole grapheme must have an emoji shape; a pictograph followed by stray
 // combining marks, or a lone keycap mark, is not an emoji.
-const pictograph =
-  "\\p{Extended_Pictographic}(?:\\uFE0F|\\p{Emoji_Modifier})?(?:[\\u{E0020}-\\u{E007E}]+\\u{E007F})?";
+// A base that is not Emoji_Presentation (©, ®, ™, ‼, ↔, ❤) shows as text unless
+// U+FE0F follows, so it needs one; an emoji-presentation base may take a skin
+// tone or a tag sequence instead.
+const tags = "(?:[\\u{E0020}-\\u{E007E}]+\\u{E007F})?";
+const pictograph = `(?:(?!\\p{Regional_Indicator})\\p{Emoji_Presentation}(?:\\uFE0F|\\p{Emoji_Modifier})?${tags}|\\p{Extended_Pictographic}\\uFE0F${tags})`;
 const emojiShape = new RegExp(
   `^(?:${pictograph}(?:\\u200D${pictograph})*|\\p{Regional_Indicator}{2}|[0-9#*]\\uFE0F?\\u20E3)$`,
   "u",

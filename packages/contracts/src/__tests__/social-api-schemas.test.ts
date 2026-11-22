@@ -89,10 +89,10 @@ describe("post requests with several photos", () => {
 
 describe("reaction and comment requests", () => {
   it("accepts any single emoji and nothing else", () => {
-    for (const emoji of ["❤️", "😂", "😮", "😢", "💪", "👍", "🔥", "🇻🇳", "❤"]) {
+    for (const emoji of ["❤️", "😂", "😮", "😢", "💪", "👍", "🔥", "🇻🇳"]) {
       expect(socialReactionRequestSchema.safeParse({ emoji }).success, emoji).toBe(true);
     }
-    for (const emoji of ["a", "", null, "👍👍", "7"]) {
+    for (const emoji of ["a", "", null, "👍👍", "7", "❤"]) {
       expect(socialReactionRequestSchema.safeParse({ emoji }).success, String(emoji)).toBe(false);
     }
     expect(socialReactionRequestSchema.safeParse({ emoji: "a" }).error?.issues[0].message).toBe(

@@ -14,7 +14,12 @@ import { NotificationsService } from "../social/notifications/notifications.serv
 import { ChatQueries } from "./chat.queries.js";
 
 // Unread numbers a caller already has; a missing one is queried.
-export type KnownUnread = { chat?: number; dm?: number };
+// A number may still be in flight, so the group and notification queries can
+// start while the caller's own query runs.
+export type KnownUnread = {
+  chat?: number | Promise<number>;
+  dm?: number | Promise<number>;
+};
 
 export type AppBadgeParts = {
   // The coach chat: a trainee's unread from their PT, an admin's unread across

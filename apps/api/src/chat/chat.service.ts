@@ -499,6 +499,9 @@ export class ChatService {
     }
     const [message] = await this.views.many([{ ...row, deletedAt: null }], actor);
 
+    if (!message) {
+      throw chatErrors.messageNotFound();
+    }
     return { message: { ...message, deleted: true }, unsentAt: unsentAt.toISOString() };
   }
 

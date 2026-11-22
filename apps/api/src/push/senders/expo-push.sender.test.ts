@@ -213,3 +213,19 @@ describe("ExpoPushSender timeout", () => {
     timeout.mockRestore();
   });
 });
+
+describe("ExpoPushSender enabled flag", () => {
+  const enabled = (values: Partial<Env>) =>
+    new ExpoPushSender(env(values)).enabled;
+
+  it("is on by default, off with EXPO_PUSH_ENABLED=false", () => {
+    expect(enabled({})).toBe(true);
+    expect(enabled({ NODE_ENV: "production" })).toBe(true);
+    expect(enabled({ EXPO_PUSH_ENABLED: "false" })).toBe(false);
+  });
+
+  it("is off under NODE_ENV=test unless explicitly true", () => {
+    expect(enabled({ NODE_ENV: "test" })).toBe(false);
+    expect(enabled({ NODE_ENV: "test", EXPO_PUSH_ENABLED: "true" })).toBe(true);
+  });
+});

@@ -1,3 +1,8 @@
+import {
+  AVATAR_MAX_DATA_URL_LENGTH,
+  AVATAR_SIZE_PX,
+  STICKER_CUSTOM_MAX_BYTES,
+} from "@pt/contracts";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 
@@ -8,6 +13,8 @@ import {
   PHOTO_QUALITIES,
   planResize,
   sizeAfter,
+  squareCrop,
+  STICKER_SIZES,
 } from "./image-plan";
 
 // Picks photos and turns each into JPEG bytes the API accepts (<= 1.5 MB and
@@ -95,3 +102,48 @@ export const preparePhoto = async (photo: PickedPhoto): Promise<PreparedPhoto> =
 };
 
 export const PHOTO_CONTENT_TYPE = "image/jpeg";
+
+// ---- Square images: group avatars and custom stickers ------------------------
+
+const squareImage = async (
+  photo: PickedPhoto,
+  side: number,
+  format: SaveFormat,
+  compress: number,
+  base64: boolean,
+) => {
+  const crop = squareCrop(photo.width, photo.height);
+  const context = ImageManipulator.manipulate(photo.uri).crop(crop).resize({ width: side });
+  const image = await context.renderAsync();
+
+  return image.saveAsync({ format, compress, base64 });
+};
+
+// A 256 px square JPEG as a data URL of at most AVATAR_MAX_DATA_URL_LENGTH
+// (the group avatar route validates it like account avatars).
+export const toAvatarDataUrl = async (photo: PickedPhoto) => {
+  for (const quality of [0.8, 0.6, 0.4]) {
+    const saved = await squareImage(photo, AVATAR_SIZE_PX, SaveFormat.JPEG, quality, true);
+    const url = `data:image/jpeg;base64,${saved.base64 ?? ""}`;
+
+    if (url.length <= AVATAR_MAX_DATA_URL_LENGTH) {
+      return url;
+    }
+  }
+  throw new PhotoTooLargeError();
+};
+
+// A square PNG that fits the custom sticker cap (150 KB), shrinking by steps.
+export const toStickerBlob = async (photo: PickedPhoto) => {
+  for (const side of STICKER_SIZES) {
+    const saved = await squareImage(photo, side, SaveFormat.PNG, 1, false);
+    const blob = await (await fetch(saved.uri)).blob();
+
+    if (blob.size <= STICKER_CUSTOM_MAX_BYTES) {
+      return blob;
+    }
+  }
+  throw new PhotoTooLargeError();
+};
+
+export const STICKER_CONTENT_TYPE = "image/png";

@@ -40,6 +40,12 @@ export type ChatMsg = {
   systemEvent: GroupSystemEvent | null;
   eventNames: Record<string, string | null>;
   delivery: "sent" | "sending" | "failed";
+  // Bubble colour key the sender picked (coach chat), else null.
+  colorKey: string | null;
+  // Group: hidden by a manager (the text is already blanked by the API).
+  hidden: boolean;
+  // Group: "manager" / "pt" tag next to the sender name.
+  senderTag: "manager" | "pt" | null;
 };
 
 export type Viewer =
@@ -64,6 +70,9 @@ const base = (): Omit<
   systemEvent: null,
   eventNames: {},
   delivery: "sent",
+  colorKey: null,
+  hidden: false,
+  senderTag: null,
 });
 
 const photosOf = (view: {
@@ -103,9 +112,18 @@ export const aggregateReactions = (
     .sort((a, b) => b.count - a.count);
 };
 
+// Key a coach message's bubble colour is stored under ("user" / "admin:<id>").
+export const coachColorKey = (message: ChatMessageView) =>
+  message.senderRole === "user"
+    ? "user"
+    : message.senderAdminId === null
+      ? null
+      : `admin:${message.senderAdminId}`;
+
 export const fromCoachMessage = (
   message: ChatMessageView,
   viewer: Viewer,
+  colors: Record<string, string> = {},
 ): ChatMsg => {
   const mine =
     viewer.kind === "trainee"
@@ -141,6 +159,7 @@ export const fromCoachMessage = (
       : null,
     reactions: aggregateReactions(message.reactions, viewerReactorKey(viewer)),
     createdAt: message.createdAt,
+    colorKey: colors[coachColorKey(message) ?? ""] ?? null,
   };
 };
 
@@ -176,6 +195,8 @@ export const fromGroupMessage = (
   seenCount: message.seenCount,
   systemEvent: message.systemEvent,
   eventNames: message.eventNames,
+  hidden: message.hidden,
+  senderTag: message.senderTag,
 });
 
 export const fromDmMessage = (

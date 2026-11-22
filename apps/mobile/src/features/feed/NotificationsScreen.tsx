@@ -9,6 +9,7 @@ import { Avatar } from "@/components/Avatar";
 import { EmptyState, ErrorState, Screen, Skeleton, Txt } from "@/components/ui";
 import { currentLocale } from "@/i18n";
 import { qk } from "@/lib/query-keys";
+import { notificationTarget } from "@/lib/social-rules";
 import { formatAge } from "@/lib/time";
 import { useErrorText } from "@/lib/ui-helpers";
 import { space, useTheme } from "@/theme";
@@ -39,10 +40,14 @@ export const NotificationsScreen = () => {
   }, [query.data, query.unreadCount, queryClient]);
 
   const open = (item: Item) => {
-    if (item.postId !== null) {
-      router.push(`/post/${item.postId}` as string as Href);
+    const target = notificationTarget(item);
+
+    if (target.type === "post") {
+      router.push(`/post/${target.id}` as string as Href);
+    } else if (target.type === "friends") {
+      router.push("/friends" as string as Href);
     } else {
-      router.push(`/profile/${encodeURIComponent(item.actorKey)}` as string as Href);
+      router.push(`/profile/${encodeURIComponent(target.key)}` as string as Href);
     }
   };
 

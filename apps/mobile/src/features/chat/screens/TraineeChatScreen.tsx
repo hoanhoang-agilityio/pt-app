@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
+import { type Href, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -10,7 +10,9 @@ import { useTheme } from "@/theme";
 
 import { coachApi, type CoachMeta, fetchTraineeConversation } from "../api";
 import { ConversationView } from "../components/ConversationView";
+import { usePeerPresence } from "../presence";
 import { useRealtime } from "../realtime";
+import { useRefreshOnFocus } from "../use-refresh-on-focus";
 import { useThread } from "../use-thread";
 import { useTyping } from "../use-typing";
 
@@ -29,6 +31,7 @@ const TraineeThread = ({
 }) => {
   const { t } = useTranslation();
   const theme = useTheme();
+  const router = useRouter();
   const { state } = useAuth();
   const adminId = state.status === "signedIn" ? state.me.actor.id : 0;
   const { follow } = useRealtime();
@@ -43,6 +46,12 @@ const TraineeThread = ({
       void chat.markRead(id).catch(() => undefined);
     },
   });
+  const presence = usePeerPresence(userId, true);
+  const isSuperAdmin =
+    state.status === "signedIn" && state.me.actor.kind === "admin" && state.me.actor.role === "super_admin";
+  const nickname = thread.meta?.profile.nicknames.user;
+
+  useRefreshOnFocus(() => void thread.refresh());
   const typing = useTyping({
     conversationId,
     myRole: "admin",
@@ -58,12 +67,21 @@ const TraineeThread = ({
 
   return (
     <ConversationView
-      title={name}
-      avatarName={name}
+      title={nickname || name}
+      avatarName={nickname || name}
       avatarUri={avatarUrl}
       thread={thread as never}
       chat={chat}
       color={{ bg: theme.accent, fg: theme.accentFg }}
+      scope={{ kind: "coach" }}
+      isSuperAdmin={isSuperAdmin}
+      presence={presence}
+      onOpenInfo={
+        conversationId === null
+          ? undefined
+          : () =>
+              router.push(`/chat/info?cid=${conversationId}&userId=${userId}` as string as Href)
+      }
       seenMode="peer"
       peerTyping={typing.peerTyping}
       onTyping={typing.onTyping}

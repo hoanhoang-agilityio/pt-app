@@ -93,7 +93,7 @@ export const invalidationsFor = (name: string) => {
     case REALTIME_EVENTS.groupMembers:
       return [qk.groups, qk.groupUnread];
     case REALTIME_EVENTS.presence:
-      return [qk.bubbles];
+      return [qk.bubbles, ["chat", "presence"]];
     default:
       return [];
   }

@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
-import { CHAT_BODY_MAX_LENGTH, CHAT_MESSAGE_MAX_PHOTOS, CHAT_PHOTO_UPLOAD_CONCURRENCY } from "@pt/contracts";
-import { useEffect, useState } from "react";
+import { CHAT_BODY_MAX_LENGTH, CHAT_MESSAGE_MAX_PHOTOS, CHAT_PHOTO_UPLOAD_CONCURRENCY , STICKER_PACK_ID, stickerBundledUrl } from "@pt/contracts";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -15,12 +16,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AuthImage } from "@/components/AuthImage";
 import { Txt } from "@/components/ui";
+import { currentLocale } from "@/i18n";
+import { matchCommandSuggestions, parseChatCommand } from "@/lib/chat-commands";
 import type { ChatMsg } from "@/lib/chat-model";
 import { PhotoPermissionError, pickPhotos,type PreparedPhoto } from "@/lib/photos";
+import { qk } from "@/lib/query-keys";
+import { getGiphySuggestQuery, matchStickerSuggestions } from "@/lib/sticker-suggest";
 import { useErrorText } from "@/lib/ui-helpers";
 import { usePhotoUploads } from "@/lib/use-photo-uploads";
 import { radius, space, useTheme } from "@/theme";
 
+import { fetchGiphy } from "../api";
 import { type PickedSticker, StickerSheet } from "./StickerSheet";
 
 export type ComposeSubmit = {
@@ -73,6 +79,32 @@ export const Composer = ({
       setText(editing.body);
     }
   }, [editing]);
+
+  // Debounced text drives the GIPHY suggestions (one request per pause).
+  const [settled, setSettled] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(text), 500);
+
+    return () => clearTimeout(timer);
+  }, [text]);
+
+  const showSuggestions = allowStickers && !editing;
+  const commands = showSuggestions ? matchCommandSuggestions(text) : [];
+  const parsed = parseChatCommand(text);
+  const bundledSuggestions = useMemo(
+    () => (showSuggestions ? matchStickerSuggestions(text, currentLocale()) : []),
+    [showSuggestions, text],
+  );
+  const giphyText = showSuggestions ? getGiphySuggestQuery(settled) : null;
+  const giphyQuery = useQuery({
+    queryKey: qk.giphy(`suggest:${giphyText ?? ""}`),
+    queryFn: () => fetchGiphy(giphyText ?? ""),
+    enabled: giphyText !== null && giphyText === getGiphySuggestQuery(text),
+    staleTime: 5 * 60_000,
+  });
+  const giphySuggestions =
+    giphyText !== null && giphyText === getGiphySuggestQuery(text) ? (giphyQuery.data?.stickers ?? []).slice(0, 6) : [];
 
   const trimmed = text.trim();
   const canSend =
@@ -190,6 +222,62 @@ export const Composer = ({
           </View>
         </ScrollView>
       ) : null}
+      {commands.length > 0 ? (
+        <View style={styles.suggestRow}>
+          {commands.map((command) => (
+            <Pressable
+              key={command.name}
+              accessibilityRole="button"
+              onPress={() => setText(`/${command.name} `)}
+              style={[styles.chip, { borderColor: theme.line }]}
+            >
+              <Txt size={13} weight="600">{`/${command.name}`}</Txt>
+              <Txt size={12} tone="muted">{` ${t(`chatx.commands.${command.name}`)}`}</Txt>
+            </Pressable>
+          ))}
+        </View>
+      ) : parsed.command ? (
+        <Txt tone="accent" size={12} style={{ paddingHorizontal: space.sm, paddingBottom: space.xs }}>
+          {t(`chatx.commands.${parsed.command.name}`)}
+        </Txt>
+      ) : null}
+      {bundledSuggestions.length + giphySuggestions.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" style={{ marginBottom: space.sm }}>
+          <View style={{ flexDirection: "row", gap: space.sm, alignItems: "center" }}>
+            {bundledSuggestions.map((sticker) => (
+              <Pressable
+                key={sticker.id}
+                accessibilityRole="button"
+                accessibilityLabel={sticker.alt}
+                onPress={() => {
+                  onSticker(
+                    { pack: sticker.pack, id: sticker.id },
+                    { url: stickerBundledUrl(STICKER_PACK_ID, sticker.id), alt: sticker.alt },
+                  );
+                  setText("");
+                }}
+                style={styles.suggestCell}
+              >
+                <Txt size={28}>{sticker.glyph}</Txt>
+              </Pressable>
+            ))}
+            {giphySuggestions.map((sticker) => (
+              <Pressable
+                key={sticker.giphyId}
+                accessibilityRole="button"
+                accessibilityLabel={sticker.alt}
+                onPress={() => {
+                  onSticker({ giphyId: sticker.giphyId, url: sticker.url }, { url: sticker.previewUrl || sticker.url, alt: sticker.alt });
+                  setText("");
+                }}
+                style={styles.suggestCell}
+              >
+                <AuthImage uri={sticker.previewUrl || sticker.url} style={{ width: 44, height: 44 }} contentFit="contain" />
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+      ) : null}
       <View style={styles.row}>
         {!editing ? (
           <>
@@ -251,6 +339,9 @@ const styles = StyleSheet.create({
   wrap: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: space.sm, paddingTop: space.sm },
   banner: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.sm, paddingBottom: space.sm },
   row: { flexDirection: "row", alignItems: "flex-end", gap: space.xs },
+  suggestRow: { flexDirection: "row", gap: space.sm, paddingBottom: space.sm },
+  chip: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: space.md, minHeight: 34 },
+  suggestCell: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
   iconButton: { width: 36, height: 40, alignItems: "center", justifyContent: "center" },
   input: {
     flex: 1,

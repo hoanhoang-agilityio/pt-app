@@ -72,3 +72,18 @@ export const photoSlots = (current: number, picked: number, max: number) => {
 
   return { accept: Math.min(free, picked), dropped: Math.max(0, picked - free) };
 };
+
+// The centred square of a width x height image (avatars and custom stickers).
+export const squareCrop = (width: number, height: number) => {
+  const side = Math.min(width, height);
+
+  return {
+    originX: Math.floor((width - side) / 2),
+    originY: Math.floor((height - side) / 2),
+    width: side,
+    height: side,
+  };
+};
+
+// Sizes (px) to try, largest first, until a custom sticker fits its byte cap.
+export const STICKER_SIZES = [512, 384, 256, 192] as const;

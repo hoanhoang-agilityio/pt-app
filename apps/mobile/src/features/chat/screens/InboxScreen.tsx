@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 
 import { Avatar } from "@/components/Avatar";
-import { EmptyState, ErrorState, Screen, Skeleton, Txt } from "@/components/ui";
+import { EmptyState, ErrorState, IconButton, Screen, Skeleton, Txt } from "@/components/ui";
 import { currentLocale } from "@/i18n";
 import { formatListTime } from "@/lib/time";
 import { useErrorText } from "@/lib/ui-helpers";
@@ -91,6 +91,7 @@ export const InboxScreen = () => {
   const { t } = useTranslation();
   const theme = useTheme();
   const errorText = useErrorText();
+  const router = useRouter();
   const { state } = useAuth();
   const me = state.status === "signedIn" ? state.me : null;
   const isAdmin = me?.actor.kind === "admin";
@@ -203,9 +204,18 @@ export const InboxScreen = () => {
   return (
     <Screen>
       <View style={{ paddingHorizontal: space.lg, paddingTop: space.sm }}>
-        <Txt size={24} weight="700">
-          {t("chat.title")}
-        </Txt>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Txt size={24} weight="700">
+            {t("chat.title")}
+          </Txt>
+          {isAdmin && !locked ? (
+            <IconButton
+              name="people-outline"
+              label={t("groupMgmt.createTitle")}
+              onPress={() => router.push("/chat/group-new" as string as Href)}
+            />
+          ) : null}
+        </View>
         <View style={[styles.tabs, { backgroundColor: theme.line }]}>
           {(["chats", "groups"] as const).map((value) => (
             <Pressable

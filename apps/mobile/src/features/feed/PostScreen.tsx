@@ -24,6 +24,7 @@ import { formatAge } from "@/lib/time";
 import { confirmAction, useErrorText } from "@/lib/ui-helpers";
 import { radius, space, useTheme } from "@/theme";
 
+import { ReportSheet } from "../social/components/ReportSheet";
 import { addComment, deleteComment, editComment } from "./api";
 import { PostCard } from "./components/PostCard";
 import { PostSkeleton } from "./components/PostList";
@@ -48,7 +49,7 @@ const CommentRow = ({
 
   return (
     <Pressable
-      onLongPress={() => (comment.canEdit || comment.canDelete) && onMenu(comment)}
+      onLongPress={() => onMenu(comment)}
       style={styles.comment}
     >
       <Pressable
@@ -87,6 +88,7 @@ export const PostScreen = () => {
   const [text, setText] = useState("");
   const [editing, setEditing] = useState<SocialCommentResponse | null>(null);
   const [menu, setMenu] = useState<SocialCommentResponse | null>(null);
+  const [reportId, setReportId] = useState<number | null>(null);
 
   const refreshAll = async () => {
     await queryClient.invalidateQueries({ queryKey: qk.comments(postId) });
@@ -244,7 +246,22 @@ export const PostScreen = () => {
             }}
           />
         ) : null}
+        {menu && !menu.canEdit ? (
+          <SheetAction
+            label={t("report.action")}
+            onPress={() => {
+              setReportId(menu.id);
+              setMenu(null);
+            }}
+          />
+        ) : null}
       </Sheet>
+      <ReportSheet
+        visible={reportId !== null}
+        onClose={() => setReportId(null)}
+        targetKind="comment"
+        targetId={reportId ?? 0}
+      />
     </Screen>
   );
 };

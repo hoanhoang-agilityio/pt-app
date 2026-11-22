@@ -16,7 +16,10 @@ import {
   parseJumpId,
   parseSearchQuery,
 } from "@/features/chat/utils/chat-links";
-import { serializeMessage } from "@/features/chat/utils/chat-thread-rules";
+import {
+  pickCoachAvatar,
+  serializeMessage,
+} from "@/features/chat/utils/chat-thread-rules";
 import { isEmbedParam } from "@/features/chat-bubbles/utils/bubble-links";
 import { parseDmId } from "@/features/social/utils/dm-rules";
 import { requireUser } from "@/services/auth-guard";
@@ -64,6 +67,11 @@ const CoachChatPage = async ({
       isEmbed={isEmbedParam(query.embed)}
       avatars={Object.fromEntries(
         [...adminAvatars].map(([id, url]) => [`admin:${id}`, url]),
+      )}
+      fallbackPeerAvatar={pickCoachAvatar(
+        payload.latestPt?.id ?? null,
+        user.ptAdminId,
+        adminAvatars,
       )}
       conversationId={payload.conversationId}
       replyPost={replyPost}

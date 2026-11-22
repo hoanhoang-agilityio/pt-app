@@ -1,7 +1,9 @@
 {
   "clear": "Xoá",
   "close": "Đóng",
-  "confirm": { "cancel": "Hủy" },
+  "confirm": {
+    "cancel": "Hủy"
+  },
   "errorFallback": {
     "title": "Đã có lỗi xảy ra",
     "serverError": "Server gặp sự cố khi tải trang này. Thử lại sau ít phút; nếu vẫn lỗi, gửi mã bên dưới cho PT.",
@@ -28,14 +30,19 @@
     "dayIsToday": "hôm nay",
     "dayIsSelected": "đang xem"
   },
-  "month": { "previous": "Tháng trước", "next": "Tháng sau" },
+  "month": {
+    "previous": "Tháng trước",
+    "next": "Tháng sau"
+  },
   "photoViewer": {
     "previous": "Ảnh trước",
     "next": "Ảnh sau",
     "download": "Tải xuống",
     "showInChat": "Xem trong tin nhắn"
   },
-  "avatarLightbox": { "label": "Ảnh của {name}" },
+  "avatarLightbox": {
+    "label": "Ảnh của {name}"
+  },
   "verified": "Đã xác minh",
   "loading": "Đang tải…",
   "alias": {
@@ -53,5 +60,14 @@
     "toTop": "Lên đầu trang",
     "toLatest": "Xem tin nhắn mới nhất",
     "newCount": "{count} tin nhắn mới"
+  },
+  "emojiPicker": {
+    "title": "Chọn cảm xúc",
+    "search": "Tìm emoji",
+    "recent": "Dùng gần đây",
+    "empty": "Không tìm thấy emoji",
+    "loading": "Đang tải…",
+    "more": "Thêm cảm xúc khác",
+    "skinTone": "Màu da"
   }
 }

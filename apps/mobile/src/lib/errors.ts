@@ -1,7 +1,7 @@
 // Error type and mapping for every API call. Pure (no React Native imports) so
 // it is unit-testable. Mirrors apps/web/services/api/errors.ts.
 
-export type ApiErrorKind = "http" | "timeout" | "network";
+export type ApiErrorKind = "http" | "timeout" | "network" | "aborted";
 
 export type ApiErrorInit = {
   kind?: ApiErrorKind;
@@ -60,7 +60,13 @@ export const API_CODES = {
   VALIDATION_FAILED: "VALIDATION_FAILED",
   UNREACHABLE: "API_UNREACHABLE",
   TIMEOUT: "API_TIMEOUT",
+  ABORTED: "API_ABORTED",
 } as const;
+
+// The caller cancelled the request (navigated away, superseded query): not a
+// failure to show to the user.
+export const isAbortedError = (error: unknown) =>
+  isApiError(error) && error.kind === "aborted";
 
 // The 401 codes that mean "this session is over" (not wrong credentials).
 export const isSessionEndedError = (error: unknown) =>

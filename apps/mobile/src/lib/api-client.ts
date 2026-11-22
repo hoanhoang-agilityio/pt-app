@@ -71,6 +71,14 @@ const isAbort = (error: unknown) =>
   ((error as { name?: string }).name === "AbortError" ||
     (error as { name?: string }).name === "TimeoutError");
 
+// A 401 for a token that is no longer the current one (it was rotated while
+// the request was in flight) says nothing about the new session.
+export const shouldRetryWithCurrentToken = (
+  sent: string | null,
+  current: string | null,
+  retried: boolean,
+) => !retried && sent !== null && current !== null && sent !== current;
+
 const readBody = async (response: Response) => {
   const text = await response.text().catch(() => "");
 
@@ -101,6 +109,8 @@ export const createApiClient = (deps: ClientDeps) => {
       timeoutMs?: number;
       anonymous?: boolean;
     },
+    // True on the one retry after the token rotated mid-request.
+    retried = false,
   ): Promise<Response> => {
     const headers: Record<string, string> = {
       accept: "application/json",
@@ -128,6 +138,9 @@ export const createApiClient = (deps: ClientDeps) => {
 
     init.signal?.addEventListener("abort", onAbort);
     try {
+      if (init.signal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+      }
       const response = await doFetch(buildUrl(deps.baseUrl, path, init.query), {
         method,
         headers,
@@ -142,6 +155,11 @@ export const createApiClient = (deps: ClientDeps) => {
         });
 
         if (!init.anonymous && isSessionEndedError(error)) {
+          // The token was rotated while this request was in flight: the 401 is
+          // about the old token. Retry once with the current one.
+          if (shouldRetryWithCurrentToken(token, deps.getToken(), retried)) {
+            return await send(method, path, init, true);
+          }
           deps.onSessionEnded?.();
         }
         throw error;
@@ -153,6 +171,16 @@ export const createApiClient = (deps: ClientDeps) => {
       }
       const wasTimeout = isAbort(error) && timedOut;
 
+      if (isAbort(error) && !timedOut) {
+        throw new ApiError({
+          kind: "aborted",
+          status: 0,
+          code: API_CODES.ABORTED,
+          message: "Request was cancelled",
+          method,
+          path,
+        });
+      }
       throw new ApiError({
         kind: wasTimeout ? "timeout" : "network",
         status: 0,

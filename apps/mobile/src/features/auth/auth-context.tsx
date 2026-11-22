@@ -15,7 +15,7 @@ import { AppState } from "react-native";
 import { deviceLanguage, isAppLocale, pickLocale, setAppLocale } from "@/i18n";
 import { setSessionEndedHandler, setSessionToken } from "@/lib/api";
 import { isApiError } from "@/lib/errors";
-import { shouldRefreshSession } from "@/lib/session-refresh";
+import { shouldRefreshSession, singleFlight } from "@/lib/session-refresh";
 import {
   readLocale,
   readToken,
@@ -47,6 +47,8 @@ type AuthContextValue = {
   // Re-reads /auth/me (e.g. after a passcode unlock changed `locked`).
   reloadMe: () => Promise<void>;
   changeLocale: (locale: string) => Promise<void>;
+  // Ends the session without calling the API (the server already revoked it).
+  endSession: () => Promise<void>;
   // Hooks run before the token is dropped on logout (e.g. push unregister).
   onBeforeSignOut: (handler: SignOutHandler) => () => void;
 };
@@ -75,10 +77,23 @@ export const useMe = () => {
   return state.me;
 };
 
+// One rotation at a time: the foreground refresh and the bootstrap share it.
+const rotateToken = singleFlight(async () => {
+  const fresh = await refreshSession();
+
+  setSessionToken(fresh.token);
+  await writeToken(fresh.token);
+  return fresh;
+});
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
   const [state, setState] = useState<AuthState>({ status: "loading" });
   const beforeSignOut = useRef(new Set<SignOutHandler>());
+  // True while a token is held; makes clearSession idempotent.
+  const hasSession = useRef(false);
+  // A voluntary sign-out in progress: its own 401 is not "session ended".
+  const signingOut = useRef(false);
 
   const applyLocale = useCallback(async (me: MeResponse) => {
     const stored = await readLocale();
@@ -91,6 +106,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const clearSession = useCallback(
     async (sessionEnded: boolean) => {
+      if (!hasSession.current) {
+        return;
+      }
+      hasSession.current = false;
       if (sessionEnded) {
         // Forced sign-out: run the cleanups best effort, never block on them.
         for (const handler of beforeSignOut.current) {
@@ -117,11 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return me;
     }
     try {
-      const fresh = await refreshSession();
-
-      setSessionToken(fresh.token);
-      await writeToken(fresh.token);
-      return fresh;
+      return await rotateToken();
     } catch {
       return me;
     }
@@ -137,6 +152,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     setSessionToken(token);
+    hasSession.current = true;
     try {
       const me = await refreshIfNeeded(await fetchMe());
 
@@ -144,6 +160,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setState({ status: "signedIn", me });
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
+        // The client already reported a session-ended 401 to onSessionEnded;
+        // clearSession is a no-op the second time.
         await clearSession(true);
         return;
       }
@@ -153,7 +171,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     setSessionEndedHandler(() => {
-      void clearSession(true);
+      if (!signingOut.current) {
+        void clearSession(true);
+      }
     });
     // Bootstrap reads the stored token and sets state once, on mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -173,11 +193,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       await applyLocale(result);
       try {
         setSessionToken(result.token);
+        hasSession.current = true;
         await writeToken(result.token);
         queryClient.clear();
         setState({ status: "signedIn", me: result });
       } catch (error) {
         setSessionToken(null);
+        hasSession.current = false;
         await writeToken(null);
         throw error;
       }
@@ -216,20 +238,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [refreshIfNeeded]);
 
   const signOut = useCallback(async () => {
-    for (const handler of beforeSignOut.current) {
-      try {
-        await handler({ forced: false });
-      } catch {
-        // Never block a sign out on a best-effort cleanup.
-      }
-    }
+    signingOut.current = true;
     try {
-      await logoutSession();
-    } catch {
-      // Already gone or offline: the token is dropped either way.
+      for (const handler of beforeSignOut.current) {
+        try {
+          await handler({ forced: false });
+        } catch {
+          // Never block a sign out on a best-effort cleanup.
+        }
+      }
+      try {
+        await logoutSession();
+      } catch {
+        // Already gone or offline: the token is dropped either way.
+      }
+      await clearSession(false);
+    } finally {
+      signingOut.current = false;
     }
-    await clearSession(false);
   }, [clearSession]);
+
+  const endSession = useCallback(() => clearSession(true), [clearSession]);
 
   const changeLocale = useCallback(
     async (locale: string) => {
@@ -269,12 +298,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       state,
       signIn,
       signOut,
+      endSession,
       retry: () => void bootstrap(),
       reloadMe,
       changeLocale,
       onBeforeSignOut,
     }),
-    [state, signIn, signOut, bootstrap, reloadMe, changeLocale, onBeforeSignOut],
+    [state, signIn, signOut, endSession, bootstrap, reloadMe, changeLocale, onBeforeSignOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

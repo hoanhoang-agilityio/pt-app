@@ -2,6 +2,7 @@ import { Image, type ImageProps } from "expo-image";
 import { useMemo } from "react";
 
 import { api, authHeaders, getSessionToken } from "@/lib/api";
+import { isApiTarget } from "@/lib/api-url";
 import { API_URL } from "@/lib/config";
 
 type Props = Omit<ImageProps, "source"> & {
@@ -19,7 +20,7 @@ export const AuthImage = ({ uri, ...rest }: Props) => {
       return null;
     }
     const url = api.url(uri);
-    const isApi = uri.startsWith("/") || url.startsWith(API_URL);
+    const isApi = isApiTarget(uri, API_URL);
 
     return {
       uri: url,

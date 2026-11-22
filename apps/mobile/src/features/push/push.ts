@@ -34,18 +34,15 @@ export const configureNotificationHandler = () => {
 const deleteDevice = (token: string) =>
   api.delete("/v1/push/devices", { body: { token } });
 
-// Retry the DELETEs that failed earlier (offline, revoked session). The token
-// that is about to be registered again is skipped: the server upsert already
-// moves it to the signed-in user, and a DELETE would remove that new row.
-const flushPending = async (skip?: string) => {
+// Retry the DELETEs that failed earlier (offline, revoked session). It runs
+// before the new registration; a token that is registered again afterwards is
+// removed from the queue by registerForPush, so a stale DELETE cannot remove
+// the new row.
+const flushPending = async () => {
   const pending = await readPendingPushTokens();
   let left = pending;
 
   for (const token of pending) {
-    if (token === skip) {
-      left = removePendingToken(left, token);
-      continue;
-    }
     try {
       await deleteDevice(token);
       left = removePendingToken(left, token);

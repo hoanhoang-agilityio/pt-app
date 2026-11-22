@@ -9,7 +9,8 @@ import {
   mergeMessages,
   newestIncomingId,
 } from "@/lib/chat-model";
-import { threadActionFor,type ThreadTarget } from "@/lib/realtime-events";
+import { threadActionFor, type ThreadTarget } from "@/lib/realtime-events";
+import { createSyncScheduler } from "@/lib/sync-scheduler";
 
 import type { ThreadPage, ThreadQuery } from "./api";
 import { useRealtime, useRealtimeListener } from "./realtime";
@@ -58,7 +59,6 @@ export const useThread = <Meta>({
   const onReadRef = useRef(onRead);
   const messagesRef = useRef<ChatMsg[]>([]);
   const lastChangeAt = useRef(0);
-  const syncing = useRef(false);
   const readSent = useRef(0);
   const { state: socketState } = useRealtime();
 
@@ -96,16 +96,12 @@ export const useThread = <Meta>({
     }
   }, [commit]);
 
-  const sync = useCallback(async () => {
-    if (syncing.current) {
-      return;
-    }
+  const runSync = useCallback(async () => {
     // Nothing loaded yet (empty thread or first load failed): load again.
     if (messagesRef.current.length === 0) {
       await initial();
       return;
     }
-    syncing.current = true;
     try {
       for (let round = 0; round < SYNC_PAGES_MAX; round += 1) {
         const page = await loadRef.current({
@@ -138,10 +134,17 @@ export const useThread = <Meta>({
       }
     } catch {
       // A failed background sync is retried by the next event or poll.
-    } finally {
-      syncing.current = false;
     }
   }, [commit, initial]);
+
+  // A sync requested while one runs is queued, not dropped.
+  const runSyncRef = useRef(runSync);
+  const scheduler = useRef(createSyncScheduler(() => runSyncRef.current()));
+  const sync = scheduler.current;
+
+  useEffect(() => {
+    runSyncRef.current = runSync;
+  });
 
   const loadOlder = useCallback(async () => {
     const before = firstStoredId(messagesRef.current);

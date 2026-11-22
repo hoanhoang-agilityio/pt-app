@@ -58,7 +58,7 @@ export const RealtimeProvider = ({
   children: ReactNode;
 }) => {
   const queryClient = useQueryClient();
-  const { signOut } = useAuth();
+  const { endSession } = useAuth();
   const [state, setState] = useState<RealtimeState>("connecting");
   const socketRef = useRef<Socket | null>(null);
   const listeners = useRef(new Set<RealtimeListener>());
@@ -112,7 +112,7 @@ export const RealtimeProvider = ({
     socket.onAny((name: string, data: unknown) => {
       if (isAuthRevoked(name)) {
         socket.disconnect();
-        void signOut();
+        void endSession();
         return;
       }
       for (const key of invalidationsFor(name)) {
@@ -140,7 +140,7 @@ export const RealtimeProvider = ({
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [enabled, notifyConnect, queryClient, signOut]);
+  }, [enabled, notifyConnect, queryClient, endSession]);
 
   const subscribe = useCallback((listener: RealtimeListener) => {
     listeners.current.add(listener);

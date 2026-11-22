@@ -16,12 +16,27 @@ configureNotificationHandler();
 // Module level so a remount does not navigate to the same notification again.
 const markHandled = createHandledTracker();
 
-// Mounted while signed in: registers the device once, drops the registration
-// on logout, and opens the right screen when a notification is tapped.
+// Always mounted (also behind the admin passcode lock screen), so every
+// sign-out path drops the push registration and the badge.
+export const PushSignOutCleanup = () => {
+  const { onBeforeSignOut } = useAuth();
+
+  useEffect(
+    () =>
+      onBeforeSignOut(async ({ forced }) => {
+        void syncBadge(0);
+        await unregisterPush({ forced });
+      }),
+    [onBeforeSignOut],
+  );
+
+  return null;
+};
+
+// Mounted while signed in: registers the device once, and opens the right screen when a notification is tapped.
 export const PushEffects = () => {
   const { t } = useTranslation();
   const router = useRouter();
-  const { onBeforeSignOut } = useAuth();
   const unread = useUnread();
   const badge = parseAppBadge(unread.data);
   const badgeRef = useRef<number | null>(null);
@@ -53,15 +68,6 @@ export const PushEffects = () => {
     // Register once per sign-in: the language of the channel name is cosmetic.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(
-    () =>
-      onBeforeSignOut(async ({ forced }) => {
-        void syncBadge(0);
-        await unregisterPush({ forced });
-      }),
-    [onBeforeSignOut],
-  );
 
   useEffect(() => {
     const open = (response: Notifications.NotificationResponse | null) => {

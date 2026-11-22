@@ -158,6 +158,69 @@ describe("createApiClient", () => {
     expect(onSessionEnded).toHaveBeenCalledTimes(1);
   });
 
+  it("retries once with the current token when it rotated during the request", async () => {
+    let current = "old";
+    const seen: (string | null)[] = [];
+    const onSessionEnded = vi.fn();
+    const client = clientWith(
+      (async (_url: unknown, init?: RequestInit) => {
+        const auth = (init?.headers as Record<string, string>).authorization;
+
+        seen.push(auth);
+        if (auth === "Bearer old") {
+          current = "new";
+          return json(401, { code: API_CODES.SESSION_INVALID, message: "over" });
+        }
+        return json(200, { ok: true });
+      }) as unknown as typeof fetch,
+      { getToken: () => current, onSessionEnded },
+    );
+
+    await expect(client.get("/x")).resolves.toEqual({ ok: true });
+    expect(seen).toEqual(["Bearer old", "Bearer new"]);
+    expect(onSessionEnded).not.toHaveBeenCalled();
+  });
+
+  it("ends the session when the retry with the current token is also a 401", async () => {
+    let current = "old";
+    const onSessionEnded = vi.fn();
+    const client = clientWith(
+      (async () => {
+        current = "new";
+        return json(401, { code: API_CODES.SESSION_INVALID, message: "over" });
+      }) as unknown as typeof fetch,
+      { getToken: () => current, onSessionEnded },
+    );
+
+    await expect(client.get("/x")).rejects.toMatchObject({ status: 401 });
+    expect(onSessionEnded).toHaveBeenCalledTimes(1);
+  });
+
+  it("maps a caller abort to an aborted error, before and during fetch", async () => {
+    const fetchImpl = vi.fn(async () => json(200, {}));
+    const client = clientWith(fetchImpl as unknown as typeof fetch);
+    const early = new AbortController();
+
+    early.abort();
+    await expect(client.get("/x", { signal: early.signal })).rejects.toMatchObject({
+      kind: "aborted",
+      code: API_CODES.ABORTED,
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+
+    const late = new AbortController();
+    const hanging = clientWith(((_url: unknown, init?: RequestInit) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () =>
+          reject(new DOMException("Aborted", "AbortError")),
+        );
+      })) as unknown as typeof fetch);
+    const pending = hanging.get("/x", { signal: late.signal });
+
+    late.abort();
+    await expect(pending).rejects.toMatchObject({ kind: "aborted" });
+  });
+
   it("does not end the session for a wrong password on login", async () => {
     const onSessionEnded = vi.fn();
     const client = clientWith(

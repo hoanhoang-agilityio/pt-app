@@ -14,9 +14,9 @@ import { AdminLockScreen, AdminLockWatcher } from "@/features/admin/screens/Admi
 import { AuthProvider, useAuth } from "@/features/auth/auth-context";
 import { PresenceHeartbeat } from "@/features/chat/presence";
 import { RealtimeProvider } from "@/features/chat/realtime";
-import { PushEffects } from "@/features/push/PushEffects";
+import { PushEffects, PushSignOutCleanup } from "@/features/push/PushEffects";
 import { useFontsReady } from "@/features/splash/use-app-ready";
-import { isApiError } from "@/lib/errors";
+import { isAbortedError, isApiError } from "@/lib/errors";
 import { useTheme } from "@/theme";
 
 void SplashScreen.preventAutoHideAsync();
@@ -29,7 +29,7 @@ const makeQueryClient = () =>
       queries: {
         staleTime: 15_000,
         retry: (count, error) =>
-          count < 2 && !(isApiError(error) && error.isClientError),
+          count < 2 && !isAbortedError(error) && !(isApiError(error) && error.isClientError),
       },
     },
   });
@@ -123,6 +123,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
+            <PushSignOutCleanup />
             <Gate />
           </AuthProvider>
         </QueryClientProvider>

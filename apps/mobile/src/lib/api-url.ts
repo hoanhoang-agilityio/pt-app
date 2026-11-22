@@ -31,3 +31,36 @@ export const resolveBuildApiUrl = (
   }
   return DEFAULT_API_URL;
 };
+
+const DEFAULT_PORTS: Record<string, string> = { "http:": "80", "https:": "443" };
+
+// protocol + host + port of an absolute http(s) URL, or null (not absolute,
+// other scheme, credentials in the authority). Hand parsed: React Native's URL
+// polyfill is incomplete.
+export const originOf = (url: string) => {
+  const match = /^(https?:)\/\/([^/?#]*)/i.exec(url.trim());
+
+  if (!match || match[2].includes("@")) {
+    return null;
+  }
+  const protocol = match[1].toLowerCase();
+  const authority = /^(.*?)(?::(\d*))?$/.exec(match[2].toLowerCase());
+  const host = authority?.[1];
+
+  if (!host) {
+    return null;
+  }
+  return `${protocol}//${host}:${authority?.[2] || DEFAULT_PORTS[protocol]}`;
+};
+
+// May the session token be sent to `target`? Only to a relative API path or
+// an absolute URL on exactly the API's origin (not a lookalike host that
+// merely starts with the API URL).
+export const isApiTarget = (target: string, apiUrl: string) => {
+  if (target.startsWith("/") && !target.startsWith("//")) {
+    return true;
+  }
+  const origin = originOf(target);
+
+  return origin !== null && origin === originOf(apiUrl);
+};

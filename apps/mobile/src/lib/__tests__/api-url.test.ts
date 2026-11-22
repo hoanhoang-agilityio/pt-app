@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_API_URL,
+  isApiTarget,
   isDevelopmentBuild,
   normalizeApiUrl,
   pickApiUrl,
@@ -46,5 +47,24 @@ describe("resolveBuildApiUrl", () => {
     expect(isDevelopmentBuild(undefined)).toBe(true);
     expect(isDevelopmentBuild("development")).toBe(true);
     expect(isDevelopmentBuild("production")).toBe(false);
+  });
+});
+
+describe("isApiTarget", () => {
+  const api = "https://api.example.com";
+
+  it("accepts relative API paths and the exact origin", () => {
+    expect(isApiTarget("/v1/chat/photos/3", api)).toBe(true);
+    expect(isApiTarget("https://api.example.com/v1/x", api)).toBe(true);
+    expect(isApiTarget("https://API.example.com:443/v1/x", api)).toBe(true);
+  });
+
+  it("rejects lookalike hosts, other ports, schemes and protocol-relative URLs", () => {
+    expect(isApiTarget("https://api.example.com.evil.io/x", api)).toBe(false);
+    expect(isApiTarget("https://api.example.com@evil.io/x", api)).toBe(false);
+    expect(isApiTarget("https://api.example.com:8443/x", api)).toBe(false);
+    expect(isApiTarget("http://api.example.com/x", api)).toBe(false);
+    expect(isApiTarget("//evil.io/x", api)).toBe(false);
+    expect(isApiTarget("file:///tmp/a.jpg", api)).toBe(false);
   });
 });

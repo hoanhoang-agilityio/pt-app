@@ -23,17 +23,27 @@ describe("isReactionEmoji", () => {
   });
 
   it("accepts one cluster: flags, skin tones, ZWJ families and keycaps", () => {
-    for (const emoji of [
-      "🇻🇳",
-      "👍🏽",
-      "👨‍👩‍👧‍👦",
-      "🏳️‍🌈",
-      "1️⃣",
-      "#️⃣",
-      "🔥",
-      "🥹",
-    ]) {
+    for (const emoji of ["🇻🇳", "👍🏽", "👨‍👩‍👧‍👦", "🏳️‍🌈", "1️⃣", "#️⃣", "🔥", "🥹"]) {
       expect(isReactionEmoji(emoji), emoji).toBe(true);
+    }
+  });
+
+  it("accepts the emoji shapes: VS16, skin tone, ZWJ, flag, keycap, tag flag", () => {
+    for (const emoji of ["❤️", "👍🏽", "👨‍👩‍👧", "🇻🇳", "1️⃣", "🏴󠁧󠁢󠁳󠁣󠁴󠁿"]) {
+      expect(isReactionEmoji(emoji), emoji).toBe(true);
+    }
+  });
+
+  it("refuses stacked combining marks, a lone keycap mark and other junk", () => {
+    for (const value of [
+      "😀" + "\u0301".repeat(10),
+      "\u20E3",
+      "a",
+      "👍👍",
+      "1\u20E3\u0301",
+      "🇻",
+    ]) {
+      expect(isReactionEmoji(value), JSON.stringify(value)).toBe(false);
     }
   });
 

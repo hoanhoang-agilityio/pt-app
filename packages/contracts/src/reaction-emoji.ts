@@ -14,7 +14,14 @@ export const DEFAULT_REACTION_EMOJIS = [
 // The stored column is text; keep one reaction small.
 export const REACTION_EMOJI_MAX_BYTES = 64;
 
-const pictographic = /\p{Extended_Pictographic}|\p{Regional_Indicator}|⃣/u;
+// One whole grapheme must have an emoji shape; a pictograph followed by stray
+// combining marks, or a lone keycap mark, is not an emoji.
+const pictograph =
+  "\\p{Extended_Pictographic}(?:\\uFE0F|\\p{Emoji_Modifier})?(?:[\\u{E0020}-\\u{E007E}]+\\u{E007F})?";
+const emojiShape = new RegExp(
+  `^(?:${pictograph}(?:\\u200D${pictograph})*|\\p{Regional_Indicator}{2}|[0-9#*]\\uFE0F?\\u20E3)$`,
+  "u",
+);
 
 const utf8Length = (value: string) => {
   let bytes = 0;
@@ -32,14 +39,14 @@ const graphemeCount = (value: string) => {
 };
 
 // Exactly one grapheme cluster (a flag, a keycap, a skin-tone or ZWJ sequence
-// each count as one), at most 64 UTF-8 bytes, and a pictographic, regional
-// indicator (flag) or keycap in it, so plain letters, digits and punctuation
-// are refused. Every emoji stored before this rule still passes.
+// each count as one), at most 64 UTF-8 bytes, and the whole cluster is a
+// pictograph sequence, a flag (two regional indicators) or a keycap, so plain
+// letters, digits, punctuation and stacked combining marks are refused.
 export const isReactionEmoji = (value: string) =>
   value.length > 0 &&
   utf8Length(value) <= REACTION_EMOJI_MAX_BYTES &&
   graphemeCount(value) === 1 &&
-  pictographic.test(value);
+  emojiShape.test(value);
 
 export const reactionEmojiSchema = (message: string) =>
   z.string().refine(isReactionEmoji, message);

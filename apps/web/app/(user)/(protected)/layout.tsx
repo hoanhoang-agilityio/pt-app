@@ -1,4 +1,5 @@
 import { UserTabBar } from "@/components/layout/UserTabBar";
+import { AppIconBadge } from "@/features/app-badge/components/AppIconBadge";
 import { PresenceHeartbeat } from "@/features/chat/components/PresenceHeartbeat";
 import { ChatBubbleHost } from "@/features/chat-bubbles/components/ChatBubbleHost";
 import { EmbedBridge } from "@/features/chat-bubbles/components/EmbedBridge";
@@ -17,6 +18,7 @@ const UserProtectedLayout = async ({ children }: LayoutProps<"/">) => {
       {restriction && <RestrictionBanner restriction={restriction} />}
       {children}
       <PresenceHeartbeat role="user" />
+      <AppIconBadge role="user" />
       <InstallPrompt />
       <UserTabBar />
       <ChatBubbleHost role="user" />

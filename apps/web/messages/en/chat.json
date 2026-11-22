@@ -131,6 +131,13 @@
     "empty": "No messages found",
     "loadMore": "Load more results"
   },
+  "searchResultBar": {
+    "backToResults": "Back to search results",
+    "resultsFor": "Results for “{query}”",
+    "older": "Older result",
+    "newer": "Newer result",
+    "close": "Close search results"
+  },
   "messageActions": {
     "title": "Message options",
     "sentAt": "Sent at {time}",
@@ -218,9 +225,6 @@
       "teal": "Teal",
       "green": "Green"
     }
-  },
-  "adminChatThread": {
-    "title": "Chat with {name}"
   },
   "adminInbox": {
     "passcodeRequired": "Set a passcode before hiding trainees.",
@@ -329,5 +333,8 @@
     "slotsFull": "At most {max} photos per message.",
     "trimmed": "Only {count} more photos fit (max {max}). The rest were skipped.",
     "pending": "Wait for the photos to finish uploading or remove the failed ones."
+  },
+  "adminChatThread": {
+    "title": "Chat with {name}"
   }
 }

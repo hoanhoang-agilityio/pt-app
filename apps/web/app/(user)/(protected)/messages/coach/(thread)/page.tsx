@@ -11,7 +11,11 @@ import {
   listAdminAvatarUrls,
   listVerifiedAdminIds,
 } from "@/features/chat/services/chat-team";
-import { parseJumpId } from "@/features/chat/utils/chat-links";
+import {
+  chatPaths,
+  parseJumpId,
+  parseSearchQuery,
+} from "@/features/chat/utils/chat-links";
 import { serializeMessage } from "@/features/chat/utils/chat-thread-rules";
 import { isEmbedParam } from "@/features/chat-bubbles/utils/bubble-links";
 import { parseDmId } from "@/features/social/utils/dm-rules";
@@ -31,6 +35,8 @@ const CoachChatPage = async ({
   // `?m=<id>`: open at that message (from the gallery or a search result).
   const query = await searchParams;
   const jumpId = parseJumpId(query.m);
+  // `?q=` comes from a search result; it shows the result bar in the chat.
+  const searchQuery = jumpId === null ? null : parseSearchQuery(query.q);
   // Chat off: the thread opens read-only (old messages, if any, and the
   // locked banner). The conversation exists once the trainee wrote or a PT
   // wrote to them; the thread says which.
@@ -48,6 +54,10 @@ const CoachChatPage = async ({
 
   return (
     <TraineeChatThread
+      // A new `?m=` (the result bar's up/down) comes with a new message
+      // window, but the thread keeps its messages in client state seeded only
+      // on mount; remount per jump target so the new window is used.
+      key={jump ? jumpId : "latest"}
       initialPeerName={payload.latestPt?.name ?? null}
       verifiedAdminIds={await listVerifiedAdminIds("user")}
       userId={user.id}
@@ -59,6 +69,15 @@ const CoachChatPage = async ({
       replyPost={replyPost}
       jumpToId={jump ? jumpId : null}
       jumpMissed={jumpId !== null && !jump}
+      searchContext={
+        searchQuery === null
+          ? null
+          : {
+              query: searchQuery,
+              endpoint: "/api/chat/search",
+              paths: chatPaths("user", user.id),
+            }
+      }
       initial={{
         ...payload,
         messages: payload.messages.map(serializeMessage),

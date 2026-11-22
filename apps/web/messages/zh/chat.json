@@ -131,6 +131,13 @@
     "empty": "未找到消息",
     "loadMore": "查看更多结果"
   },
+  "searchResultBar": {
+    "backToResults": "返回搜索结果",
+    "resultsFor": "“{query}”的结果",
+    "older": "更早的结果",
+    "newer": "更新的结果",
+    "close": "关闭搜索结果"
+  },
   "messageActions": {
     "title": "消息选项",
     "sentAt": "发送于 {time}",
@@ -218,9 +225,6 @@
       "teal": "青色",
       "green": "绿色"
     }
-  },
-  "adminChatThread": {
-    "title": "与 {name} 聊天"
   },
   "adminInbox": {
     "passcodeRequired": "隐藏学员前请先设置密码锁。",
@@ -329,5 +333,8 @@
     "slotsFull": "每条消息最多 {max} 张照片。",
     "trimmed": "只能再添加 {count} 张照片（最多 {max} 张），其余已跳过。",
     "pending": "请等待照片上传完成，或移除上传失败的照片。"
+  },
+  "adminChatThread": {
+    "title": "与 {name} 聊天"
   }
 }

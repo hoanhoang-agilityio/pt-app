@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { ChevronLeft, Search } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
@@ -11,11 +12,17 @@ import { Spinner } from "@/components/common/Spinner";
 import { ICON_BUTTON, PAGE_CONTAINER } from "@/constants/styles";
 import { type ChatPaths, jumpHref } from "@/features/chat/utils/chat-links";
 import {
+  clearSearchRestore,
+  extraPagesToLoad,
+  readSearchRestore,
+  saveSearchRestore,
+} from "@/features/chat/utils/search-restore";
+import {
   formatResultTime,
   isSearchableQuery,
+  isSearchPage,
   SEARCH_MAX_LENGTH,
   SEARCH_MIN_LENGTH,
-  type SearchPage,
   type SearchResult,
   searchSenderLabel,
 } from "@/features/chat/utils/search-rules";
@@ -28,14 +35,12 @@ interface ChatSearchProps {
   endpoint: string;
   paths: ChatPaths;
   nicknames: Readonly<Record<string, string>>;
+  // `?q=` of the page: the search the URL already holds (back from a chat).
+  initialQuery?: string;
 }
 
 const DEBOUNCE_MS = 300;
-
-const isSearchPage = (value: unknown): value is SearchPage =>
-  typeof value === "object" &&
-  value !== null &&
-  Array.isArray((value as SearchPage).results);
+const RESTORE_HIGHLIGHT_MS = 1800;
 
 type State =
   | { kind: "idle" }
@@ -46,6 +51,8 @@ type State =
       query: string;
       results: SearchResult[];
       nextCursor: number | null;
+      // Result pages loaded so far; saved before a result is opened.
+      pages: number;
     };
 
 // Search inside the open conversation (KAN-160, S1 and S2). Two characters or
@@ -57,13 +64,21 @@ export const ChatSearch = ({
   endpoint,
   paths,
   nicknames,
+  initialQuery = "",
 }: ChatSearchProps) => {
-  const [text, setText] = useState("");
+  const router = useRouter();
+  const [text, setText] = useState(initialQuery);
   const [state, setState] = useState<State>({ kind: "idle" });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   // The newest request wins; an older answer is dropped.
   const requestId = useRef(0);
   const [now] = useState(() => Date.now());
+  // What to bring back after the first load: set once from sessionStorage when
+  // the page opens with a query, consumed when the list is scrolled back.
+  const restore = useRef<ReturnType<typeof readSearchRestore>>(null);
+  const hasInitialRun = useRef(false);
+  const [highlightId, setHighlightId] = useState<number | null>(null);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const query = text.trim();
@@ -75,40 +90,139 @@ export const ChatSearch = ({
     }
     const id = requestId.current;
     const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      setState({ kind: "loading" });
-      try {
-        const response = await fetch(
-          `${endpoint}?${new URLSearchParams({ q: query })}`,
-          { cache: "no-store", signal: controller.signal },
-        );
-        const data: unknown = response.ok ? await response.json() : null;
+    const isFirstRun = !hasInitialRun.current;
 
-        if (id !== requestId.current) {
-          return;
+    hasInitialRun.current = true;
+    if (isFirstRun && query === initialQuery.trim()) {
+      restore.current = readSearchRestore(endpoint, query);
+    }
+    const pending = restore.current;
+    // The first run of a restored page does not wait for typing to settle.
+    const timer = setTimeout(
+      async () => {
+        setState({ kind: "loading" });
+        try {
+          const fetchPage = async (before?: number) => {
+            const params = new URLSearchParams({ q: query });
+
+            if (before !== undefined) {
+              params.set("before", String(before));
+            }
+            const response = await fetch(`${endpoint}?${params}`, {
+              cache: "no-store",
+              signal: controller.signal,
+            });
+            const data: unknown = response.ok ? await response.json() : null;
+
+            return isSearchPage(data) ? data : null;
+          };
+          let page = await fetchPage();
+          let results = page?.results ?? [];
+          let pages = 1;
+
+          // Reload as many pages as were open when a result was tapped.
+          while (page !== null && pending !== null) {
+            if (extraPagesToLoad(pending, pages, page.nextCursor) === 0) {
+              break;
+            }
+            const next = await fetchPage(page.nextCursor ?? undefined);
+
+            if (id !== requestId.current) {
+              return;
+            }
+            if (next === null) {
+              break;
+            }
+            results = [
+              ...results,
+              ...next.results.filter(
+                (result) =>
+                  !results.some(
+                    (known) => known.messageId === result.messageId,
+                  ),
+              ),
+            ];
+            page = { results, nextCursor: next.nextCursor };
+            pages += 1;
+          }
+          if (id !== requestId.current) {
+            return;
+          }
+          setState(
+            page
+              ? {
+                  kind: "done",
+                  query,
+                  results,
+                  nextCursor: page.nextCursor,
+                  pages,
+                }
+              : { kind: "error" },
+          );
+        } catch {
+          if (id === requestId.current) {
+            setState({ kind: "error" });
+          }
         }
-        setState(
-          isSearchPage(data)
-            ? {
-                kind: "done",
-                query,
-                results: data.results,
-                nextCursor: data.nextCursor,
-              }
-            : { kind: "error" },
-        );
-      } catch {
-        if (id === requestId.current) {
-          setState({ kind: "error" });
-        }
-      }
-    }, DEBOUNCE_MS);
+      },
+      isFirstRun ? 0 : DEBOUNCE_MS,
+    );
 
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
+    // `initialQuery` only matters on the first run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, endpoint]);
+
+  // Keep the query in the URL, so a back from the chat reopens this search.
+  useEffect(() => {
+    const query = text.trim();
+    const timer = setTimeout(() => {
+      router.replace(
+        isSearchableQuery(query)
+          ? `${paths.search}?${new URLSearchParams({ q: query })}`
+          : paths.search,
+        { scroll: false },
+      );
+    }, DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [text, paths.search, router]);
+
+  // After a restore: bring the tapped result into view and flash it.
+  useEffect(() => {
+    const pending = restore.current;
+
+    if (pending === null || state.kind !== "done") {
+      return;
+    }
+    restore.current = null;
+    clearSearchRestore(endpoint, state.query);
+    const node = document.querySelector(
+      `[data-search-result="${pending.messageId}"]`,
+    );
+
+    if (!node) {
+      return;
+    }
+    node.scrollIntoView({ block: "center", behavior: "auto" });
+    setHighlightId(pending.messageId);
+    highlightTimer.current = setTimeout(() => {
+      highlightTimer.current = null;
+      setHighlightId(null);
+    }, RESTORE_HIGHLIGHT_MS);
+  }, [state, endpoint]);
+
+  useEffect(
+    () => () => {
+      if (highlightTimer.current !== null) {
+        clearTimeout(highlightTimer.current);
+      }
+    },
+    [],
+  );
 
   const loadMore = async () => {
     if (state.kind !== "done" || state.nextCursor === null || isLoadingMore) {
@@ -141,6 +255,7 @@ export const ChatSearch = ({
           ),
         ],
         nextCursor: data.nextCursor,
+        pages: state.pages + 1,
       });
     } catch {
       // The button stays; the user can tap again.
@@ -221,9 +336,18 @@ export const ChatSearch = ({
                 {state.results.map((result) => (
                   <li key={result.messageId}>
                     <Link
-                      href={jumpHref(paths.chat, result.messageId)}
+                      href={jumpHref(paths.chat, result.messageId, state.query)}
                       data-search-result={result.messageId}
-                      className="block rounded-xl px-2 py-3 transition active:bg-line"
+                      onClick={() =>
+                        saveSearchRestore(endpoint, state.query, {
+                          pages: state.pages,
+                          messageId: result.messageId,
+                        })
+                      }
+                      className={clsx(
+                        "block rounded-xl px-2 py-3 transition active:bg-line",
+                        highlightId === result.messageId && "bg-line",
+                      )}
                     >
                       <span className="flex items-baseline justify-between gap-3">
                         <span className="truncate text-sm font-semibold text-fg">

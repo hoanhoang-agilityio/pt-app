@@ -125,6 +125,7 @@ const AdminMessagesPage = async ({
       conversationId={conversationId}
       replyPost={replyPost}
       jumpToId={around ? jumpId : null}
+      jumpMissed={jumpId !== null && !around}
       viewer={{
         role: "admin",
         adminId: admin.id,

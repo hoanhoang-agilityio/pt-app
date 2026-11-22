@@ -20,6 +20,7 @@ interface AdminChatThreadProps extends Pick<
   | "userId"
   | "conversationId"
   | "jumpToId"
+  | "jumpMissed"
   | "viewer"
   | "emptyText"
   | "ariaLabel"

@@ -58,6 +58,7 @@ const CoachChatPage = async ({
       conversationId={payload.conversationId}
       replyPost={replyPost}
       jumpToId={jump ? jumpId : null}
+      jumpMissed={jumpId !== null && !jump}
       initial={{
         ...payload,
         messages: payload.messages.map(serializeMessage),

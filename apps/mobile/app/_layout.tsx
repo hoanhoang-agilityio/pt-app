@@ -13,10 +13,13 @@ import { ErrorState, Screen } from "@/components/ui";
 import { AuthProvider, useAuth } from "@/features/auth/auth-context";
 import { RealtimeProvider } from "@/features/chat/realtime";
 import { PushEffects } from "@/features/push/PushEffects";
+import { useFontsReady } from "@/features/splash/use-app-ready";
 import { isApiError } from "@/lib/errors";
 import { useTheme } from "@/theme";
 
 void SplashScreen.preventAutoHideAsync();
+// Fade the native splash out instead of cutting to the app.
+SplashScreen.setOptions({ duration: 350, fade: true });
 
 const makeQueryClient = () =>
   new QueryClient({
@@ -36,11 +39,18 @@ const Gate = () => {
   const signedIn = state.status === "signedIn";
   const locked = state.status === "signedIn" && state.me.actor.kind === "admin" && state.me.actor.locked;
 
+  const fontsReady = useFontsReady();
+  const ready = fontsReady && state.status !== "loading";
+
   useEffect(() => {
-    if (state.status !== "loading") {
+    if (ready) {
       void SplashScreen.hideAsync();
     }
-  }, [state.status]);
+  }, [ready]);
+
+  if (!ready) {
+    return null;
+  }
 
   if (state.status === "unreachable") {
     return (

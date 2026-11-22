@@ -1,3 +1,4 @@
+import { INT4_MAX } from "@pt/contracts";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
@@ -24,7 +25,7 @@ const MessagesInfoPage = async () => {
   // The thread answer carries the nicknames, colours, the chat switch and the
   // PT who wrote last; only its first page of messages is not needed here.
   const [state, adminAvatars] = await Promise.all([
-    loadMyThread({ after: 2_000_000_000 }),
+    loadMyThread({ after: INT4_MAX }),
     listAdminAvatarUrls("user"),
   ]);
   const sender = state.latestPt;

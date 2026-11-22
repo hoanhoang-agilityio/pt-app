@@ -1,3 +1,4 @@
+import { INT4_MAX } from "@pt/contracts";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -49,14 +50,15 @@ const MessagesInboxPage = async () => {
   const dm = await getTranslations("social.dm");
   const locale = await getLocale();
   const user = await requireUser();
-  // The coach row shows the PT who wrote last, else the assigned PT; the
-  // thread answer (without its messages) names the last PT.
+  // The coach row shows the PT who wrote last, else the assigned PT. Neither
+  // the unread payload nor the inbox lists carry the last PT, so this asks for
+  // the thread past its newest message (no messages come back, only latestPt).
   const [unread, chats, groups, adminAvatars, coachThread] = await Promise.all([
     loadUserUnread(),
     listDmInbox(),
     listMyGroups("user"),
     listAdminAvatarUrls("user"),
-    loadMyThread({ after: 2_000_000_000 }).catch(() => null),
+    loadMyThread({ after: INT4_MAX }).catch(() => null),
   ]);
 
   return (

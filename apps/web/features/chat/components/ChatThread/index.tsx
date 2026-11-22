@@ -663,37 +663,58 @@ export const ChatThread = ({
   };
 
   // Runs `action` at once on the newest page; from a jumped window it first
-  // loads the newest page so the sent bubble lands at the real end.
-  const afterLatest = (action: () => void) => {
+  // loads the newest page so the sent bubble lands at the real end. Resolves
+  // false (action not run, error toast already shown) when that load failed.
+  const afterLatest = (action: () => void): true | Promise<boolean> => {
     if (!hasNewerRef.current) {
       action();
-      return;
+      return true;
     }
-    void goToLatest({ smooth: false }).then((isReady) => {
+    return goToLatest({ smooth: false }).then((isReady) => {
       if (isReady) {
         action();
       }
+      return isReady;
     });
   };
 
-  const handleSend = (body: string, photos?: SentPhoto[]) => {
+  // Reply and quote are cleared only once the message is on its way, so a
+  // failed jump back to the newest page loses neither them nor the draft (the
+  // composer keeps its own text and photos until this resolves true).
+  const handleSend = (
+    body: string,
+    photos?: SentPhoto[],
+  ): void | Promise<boolean> => {
     // A post reply needs a text; a photo sent without one leaves it in place.
     const post = activeQuote && body.trim() !== "" ? activeQuote : null;
 
     const reply = replyMessage;
+    const finish = () => {
+      setReplyId(null);
+      if (post) {
+        clearQuote();
+      }
+    };
 
     // Sending from a jumped window: the bubble belongs at the newest page.
-    afterLatest(() => {
+    const result = afterLatest(() => {
       if (photos) {
         chat.sendPhotos(photos, body, reply, post);
       } else {
         chat.send(body, reply, post);
       }
     });
-    setReplyId(null);
-    if (post) {
-      clearQuote();
+
+    if (result === true) {
+      finish();
+      return;
     }
+    return result.then((isSent) => {
+      if (isSent) {
+        finish();
+      }
+      return isSent;
+    });
   };
 
   const openStickers = () => {
@@ -705,9 +726,18 @@ export const ChatThread = ({
     sticker: Parameters<typeof chat.sendSticker>[0],
   ) => {
     const reply = replyMessage;
+    const result = afterLatest(() => chat.sendSticker(sticker, reply));
 
-    afterLatest(() => chat.sendSticker(sticker, reply));
-    setReplyId(null);
+    // On failure goToLatest has shown the error toast; the reply stays.
+    if (result === true) {
+      setReplyId(null);
+    } else {
+      void result.then((isSent) => {
+        if (isSent) {
+          setReplyId(null);
+        }
+      });
+    }
   };
 
   const handleSaveEdit = (body: string) => {

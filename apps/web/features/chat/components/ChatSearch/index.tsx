@@ -11,6 +11,7 @@ import { Input } from "@/components/common/Input";
 import { Spinner } from "@/components/common/Spinner";
 import { ICON_BUTTON, PAGE_CONTAINER } from "@/constants/styles";
 import { type ChatPaths, jumpHref } from "@/features/chat/utils/chat-links";
+import { clearSearchCache } from "@/features/chat/utils/search-cache";
 import {
   clearSearchRestore,
   extraPagesToLoad,
@@ -83,6 +84,8 @@ export const ChatSearch = ({
   useEffect(() => {
     const query = text.trim();
 
+    // A new search (or opening this page) drops what the result bar cached.
+    clearSearchCache();
     requestId.current += 1;
     if (!isSearchableQuery(query)) {
       // Nothing to look up; the view below shows the hint.

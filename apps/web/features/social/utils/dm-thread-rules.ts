@@ -62,3 +62,11 @@ export const lastSeenOwnId = (
 
   return own.length === 0 ? null : own[own.length - 1].id;
 };
+
+// What the thread scrolls to the bottom for: the newest confirmed message and
+// how many own messages are still unconfirmed. A new incoming message lands
+// before a pending/failed own one (so the last item's clientId does not
+// change), yet it moves the first number; sending adds to the second. Older
+// messages prepended by "load older" move neither.
+export const scrollKey = (items: DmThreadItem[]) =>
+  `${lastServerId(items)}:${items.filter((item) => item.pending).length}`;

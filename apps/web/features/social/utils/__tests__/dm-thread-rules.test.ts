@@ -7,6 +7,7 @@ import {
   lastServerId,
   mergeThread,
   prependOlder,
+  scrollKey,
 } from "@/features/social/utils/dm-thread-rules";
 
 const msg = (id: number, senderId = 1, clientId = `c${id}`): DmMessageView => ({
@@ -69,5 +70,30 @@ describe("helpers", () => {
 
     expect(lastSeenOwnId(items, 1, 3)).toBe(3);
     expect(lastSeenOwnId(items, 1, 0)).toBeNull();
+  });
+});
+
+describe("scrollKey", () => {
+  const failed: DmThreadItem = { ...msg(-9, 1, "mine"), pending: "failed" };
+
+  it("changes when a message arrives before a failed own message", () => {
+    expect(scrollKey([msg(1), failed])).not.toBe(
+      scrollKey([msg(1), msg(2, 2), failed]),
+    );
+  });
+
+  it("changes when an own message is queued", () => {
+    const queued: DmThreadItem = { ...msg(-10, 1, "next"), pending: "sending" };
+
+    expect(scrollKey([msg(1)])).not.toBe(scrollKey([msg(1), queued]));
+    expect(scrollKey([msg(1), failed])).not.toBe(
+      scrollKey([msg(1), failed, queued]),
+    );
+  });
+
+  it("stays when older messages are prepended", () => {
+    expect(scrollKey([msg(5), failed])).toBe(
+      scrollKey([msg(3), msg(4), msg(5), failed]),
+    );
   });
 });

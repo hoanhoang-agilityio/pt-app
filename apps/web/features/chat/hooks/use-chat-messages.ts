@@ -1,5 +1,6 @@
 "use client";
 
+import { INT4_MAX } from "@pt/contracts";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -37,10 +38,11 @@ import { useLocalizeMessage } from "@/i18n/use-localize-message";
 const MARK_READ_DEBOUNCE_MS = 600;
 // An `after` cursor past every message. While the newest messages are not
 // loaded (a jump left a gap), polling still needs the read cursor, lock state
-// and changes, but must not append anything after the gap. Asking for messages
-// after this id returns none (and the 204 fast path when nothing changed), so
+// and changes, but must not append anything after the gap. The largest int4
+// (ids are int4 in PostgreSQL; a bigger number is rejected). Asking for
+// messages after this id returns none (and the 204 fast path when nothing changed), so
 // the stored cursor stays where the loaded window ends.
-const PAST_NEWEST_CURSOR = Number.MAX_SAFE_INTEGER;
+const PAST_NEWEST_CURSOR = INT4_MAX;
 
 export interface ThreadSnapshot {
   messages: SerializedChatMessage[];

@@ -82,6 +82,7 @@ const CoachChatPage = async ({
           ? null
           : {
               query: searchQuery,
+              viewerId: `user:${user.id}`,
               endpoint: "/api/chat/search",
               paths: chatPaths("user", user.id),
             }

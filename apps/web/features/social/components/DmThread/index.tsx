@@ -27,7 +27,10 @@ import { DmPostQuote } from "@/features/social/components/DmPostQuote";
 import { DM_BODY_MAX_LENGTH } from "@/features/social/constants/dm";
 import { useDmThread } from "@/features/social/hooks/use-dm-thread";
 import type { DmReplyPostView, DmThreadPage } from "@/features/social/types/dm";
-import { lastSeenOwnId } from "@/features/social/utils/dm-thread-rules";
+import {
+  lastSeenOwnId,
+  scrollKey,
+} from "@/features/social/utils/dm-thread-rules";
 import { profilePath } from "@/features/social/utils/post-rules";
 import { useLoadOlderOnScroll } from "@/hooks/use-load-older-on-scroll";
 import { useScrollAway } from "@/hooks/use-scroll-away";
@@ -82,10 +85,11 @@ export const DmThread = ({
 
   useClearNotifications(dmNotificationTags(conversationId), lastCount);
 
-  // Keyed on the newest message, not the count: older messages prepended by
-  // the load-older hook change the count but must not jump to the bottom.
-  // clientId is stable across the pending -> sent swap of the same message.
-  const lastKey = thread.items.at(-1)?.clientId ?? null;
+  // Keyed on the newest confirmed message and the pending count, not the
+  // item count: older messages prepended by the load-older hook change the
+  // count but must not jump to the bottom, and a message arriving before a
+  // pending/failed own one leaves the last item unchanged.
+  const lastKey = scrollKey(thread.items);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });

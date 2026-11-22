@@ -17,8 +17,6 @@ export const CHAT_PREVIEW_LENGTH = 80;
 export const USER_READER_KEY = "user";
 export const adminReaderKey = (adminId: number) => `admin:${adminId}`;
 
-// The picker's quick list; any emoji the API accepts can be stored and shown.
-
 export const REPLY_SNIPPET_LENGTH = 120;
 export const CHANGES_PAGE_SIZE = 200;
 

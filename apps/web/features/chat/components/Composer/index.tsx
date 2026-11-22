@@ -34,7 +34,10 @@ import {
 interface ComposerProps {
   // `photos` are the images picked with the photo button (KAN-160, up to 10),
   // already resized and uploaded; the text is then their optional caption.
-  onSend: (body: string, photos?: SentPhoto[]) => void;
+  // Returns a promise when the send first has to leave a jumped window: the
+  // draft, chip and photos are kept until it resolves true, so a failure
+  // loses nothing.
+  onSend: (body: string, photos?: SentPhoto[]) => void | Promise<boolean>;
   // Shows the photo button (hidden while editing). Needs `uploadPhoto`.
   canAttachPhoto?: boolean;
   // Uploads one resized photo and returns its id (throws with a message).
@@ -85,6 +88,8 @@ export const Composer = ({
   const tTray = useTranslations("chat.photoTray");
   const [value, setValue] = useState("");
   const [draft, setDraft] = useState("");
+  // A send that first loads the newest page is out; no second submit.
+  const isSendingRef = useRef(false);
   const [seenEditId, setSeenEditId] = useState<number | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -158,7 +163,7 @@ export const Composer = ({
   }, [editId, replyId]);
 
   const submit = () => {
-    if (!canSend) {
+    if (!canSend || isSendingRef.current) {
       return;
     }
     if (editing && onSaveEdit) {
@@ -172,16 +177,33 @@ export const Composer = ({
     }
     const sent = photos.ready();
 
-    onSend(
+    const clear = () => {
+      photos.reset();
+      setValue("");
+      setChip(null);
+      // The textarea shrinks after React clears it.
+      requestAnimationFrame(resize);
+      inputRef.current?.focus();
+    };
+    const result = onSend(
       activeChip ? composeCommandMessage(activeChip, value) : value,
       sent.length > 0 ? sent : undefined,
     );
-    photos.reset();
-    setValue("");
-    setChip(null);
-    // The textarea shrinks after React clears it.
-    requestAnimationFrame(resize);
-    inputRef.current?.focus();
+
+    if (result === undefined) {
+      clear();
+      return;
+    }
+    isSendingRef.current = true;
+    void result
+      .then((isSent) => {
+        if (isSent) {
+          clear();
+        }
+      })
+      .finally(() => {
+        isSendingRef.current = false;
+      });
   };
 
   const pickSticker = (sticker: PickedSticker) => {

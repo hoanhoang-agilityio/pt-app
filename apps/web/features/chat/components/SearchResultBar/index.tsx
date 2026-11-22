@@ -13,12 +13,20 @@ import {
   jumpHref,
   searchHref,
 } from "@/features/chat/utils/chat-links";
+import {
+  type Loaded,
+  readSearchCache,
+  searchCacheKey,
+  writeSearchCache,
+} from "@/features/chat/utils/search-cache";
 import { appendIds, resultNav } from "@/features/chat/utils/search-result-nav";
 import { isSearchPage } from "@/features/chat/utils/search-rules";
 
 export interface SearchContext {
   // The searched text (`?q=` of the chat page).
   query: string;
+  // Who is searching: keeps cached results apart per account.
+  viewerId: string;
   // The route that answers the search (`?q=<text>&before=<cursor>`).
   endpoint: string;
   paths: ChatPaths;
@@ -30,20 +38,8 @@ interface SearchResultBarProps {
   currentId: number | null;
 }
 
-interface Loaded {
-  ids: number[];
-  nextCursor: number | null;
-}
-
-// Result ids already fetched, per endpoint and query. Moving to another
-// result remounts the thread (new message window), so the bar starts from
-// here instead of searching again.
-const cache = new Map<string, Loaded>();
 // Pages fetched to find an opened message that is not on the first page.
 const MAX_FIND_PAGES = 10;
-
-const cacheKey = ({ endpoint, query }: SearchContext) =>
-  `${endpoint}\n${query}`;
 
 const fetchIds = async (
   { endpoint, query }: SearchContext,
@@ -73,9 +69,9 @@ export const SearchResultBar = ({
 }: SearchResultBarProps) => {
   const t = useTranslations("chat.searchResultBar");
   const router = useRouter();
-  const key = cacheKey(context);
-  const [loaded, setLoaded] = useState<Loaded | null>(
-    () => cache.get(key) ?? null,
+  const key = searchCacheKey(context.viewerId, context.endpoint, context.query);
+  const [loaded, setLoaded] = useState<Loaded | null>(() =>
+    readSearchCache(key),
   );
   const [hasFailed, setHasFailed] = useState(false);
   const findPages = useRef(0);
@@ -83,7 +79,7 @@ export const SearchResultBar = ({
   const isLoading = useRef(false);
 
   const store = (next: Loaded) => {
-    cache.set(key, next);
+    writeSearchCache(key, next);
     setLoaded(next);
   };
 

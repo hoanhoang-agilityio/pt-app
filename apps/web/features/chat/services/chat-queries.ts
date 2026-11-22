@@ -1,9 +1,10 @@
 import "server-only";
 
-import type {
-  ChatMessageView,
-  ChatThreadQuery,
-  ChatThreadResponse,
+import {
+  type ChatMessageView,
+  type ChatThreadQuery,
+  type ChatThreadResponse,
+  INT4_MAX,
 } from "@pt/contracts";
 
 import { webizeUrls } from "@/features/chat/utils/api-urls";
@@ -135,7 +136,7 @@ export const loadConversationThreadAround = async (
 };
 
 // Nicknames, colours and the chat switch without the messages.
-export const loadMyChatState = () => loadMyThread({ after: 2_000_000_000 });
+export const loadMyChatState = () => loadMyThread({ after: INT4_MAX });
 
 export const loadConversationThread = async (
   conversationId: number,

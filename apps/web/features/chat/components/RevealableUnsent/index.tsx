@@ -10,6 +10,7 @@ import type {
   UnsentKind,
 } from "@/features/chat/services/unsent-reveal";
 import { revealUnsentMessageAction } from "@/features/chat/services/unsent-reveal-actions";
+import { useLocalizeMessage } from "@/i18n/use-localize-message";
 
 interface RevealableUnsentProps {
   kind: UnsentKind;
@@ -31,6 +32,7 @@ export const RevealableUnsent = ({
   label,
 }: RevealableUnsentProps) => {
   const t = useTranslations("chat.messageBubble");
+  const localize = useLocalizeMessage();
   const [content, setContent] = useState<RevealedUnsent | null>(null);
   const [isShown, setShown] = useState(false);
   const [isPending, setPending] = useState(false);
@@ -57,7 +59,7 @@ export const RevealableUnsent = ({
         setContent(result.content);
         setShown(true);
       } else {
-        setError(result.message);
+        setError(localize(result.message));
       }
     } catch {
       setError(t("revealFailed"));

@@ -140,6 +140,7 @@ const AdminMessagesPage = async ({
           ? null
           : {
               query: searchQuery,
+              viewerId: `admin:${admin.id}`,
               endpoint: `/api/admin/chat/${conversationId}/search`,
               paths: chatPaths("admin", header.userId),
             }

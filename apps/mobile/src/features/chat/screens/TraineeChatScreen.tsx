@@ -1,0 +1,109 @@
+import { useQuery } from "@tanstack/react-query";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
+import { ErrorState, Screen, Spinner } from "@/components/ui";
+import { useAuth } from "@/features/auth/auth-context";
+import { useErrorText } from "@/lib/ui-helpers";
+import { useTheme } from "@/theme";
+
+import { coachApi, type CoachMeta, fetchTraineeConversation } from "../api";
+import { ConversationView } from "../components/ConversationView";
+import { useRealtime } from "../realtime";
+import { useThread } from "../use-thread";
+import { useTyping } from "../use-typing";
+
+const TraineeThread = ({
+  userId,
+  conversationId,
+  name,
+  avatarUrl,
+  chatEnabled,
+}: {
+  userId: number;
+  conversationId: number | null;
+  name: string;
+  avatarUrl: string | null;
+  chatEnabled: boolean;
+}) => {
+  const { t } = useTranslation();
+  const theme = useTheme();
+  const { state } = useAuth();
+  const adminId = state.status === "signedIn" ? state.me.actor.id : 0;
+  const { follow } = useRealtime();
+  const { load, chat } = useMemo(
+    () => coachApi({ kind: "admin", adminId }, conversationId, userId),
+    [adminId, conversationId, userId],
+  );
+  const thread = useThread<CoachMeta>({
+    target: { kind: "coach", conversationId },
+    load,
+    onRead: (id) => {
+      void chat.markRead(id).catch(() => undefined);
+    },
+  });
+  const typing = useTyping({
+    conversationId,
+    myRole: "admin",
+    myKey: `admin:${adminId}`,
+  });
+
+  useEffect(() => {
+    if (conversationId === null) {
+      return undefined;
+    }
+    return follow(conversationId);
+  }, [follow, conversationId]);
+
+  return (
+    <ConversationView
+      title={name}
+      avatarName={name}
+      avatarUri={avatarUrl}
+      thread={thread as never}
+      chat={chat}
+      color={{ bg: theme.accent, fg: theme.accentFg }}
+      seenMode="peer"
+      peerTyping={typing.peerTyping}
+      onTyping={typing.onTyping}
+      banner={chatEnabled ? null : t("chat.coachLocked")}
+    />
+  );
+};
+
+// Admin side: one trainee's conversation, found by the trainee's user id.
+export const TraineeChatScreen = () => {
+  const params = useLocalSearchParams<{ userId: string }>();
+  const userId = Number(params.userId);
+  const errorText = useErrorText();
+  const header = useQuery({
+    queryKey: ["chat", "trainee", userId],
+    queryFn: () => fetchTraineeConversation(userId),
+    enabled: Number.isInteger(userId) && userId > 0,
+  });
+
+  if (header.isPending) {
+    return (
+      <Screen>
+        <Spinner />
+      </Screen>
+    );
+  }
+  if (header.isError) {
+    return (
+      <Screen>
+        <ErrorState message={errorText(header.error)} onRetry={() => void header.refetch()} />
+      </Screen>
+    );
+  }
+  return (
+    <TraineeThread
+      userId={userId}
+      conversationId={header.data.conversationId}
+      name={header.data.displayName}
+      avatarUrl={header.data.avatarUrl}
+      chatEnabled={header.data.chatEnabled}
+    />
+  );
+};

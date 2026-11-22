@@ -24,7 +24,11 @@ fixes.
    `sendMany`; `PushService` uses it for a kind that has it and retries only the
    temporary failures (429, 5xx, network, `MessageRateExceeded`, 3 attempts).
    `DeviceNotRegistered` deletes the subscription. Always enabled (no key
-   needed); `EXPO_ACCESS_TOKEN` is sent as a Bearer token when set.
+   needed); `EXPO_ACCESS_TOKEN` is optional and sent as a Bearer token when
+   set. Each request times out after 10 seconds (a retryable failure).
+   Expo push receipts are not polled yet: a dead token is removed only when the
+   send ticket says `DeviceNotRegistered`, so a token Expo reports later through
+   a receipt stays until its next send fails that way.
 3. **Push data.** Each message carries `data: { url, tag, kind, ids }`, derived
    from the push tag: `chat_message` / `chat_reaction` (`conversationId`),
    `group_message` (`groupId`), `social` (`postId` when the tag has one),
@@ -34,12 +38,15 @@ fixes.
    actor, with the same queries as each module's own badge poll. `GET
    /v1/chat/unread` adds `appBadge`; `PushService` adds `badge` to the payload of
    Expo devices only (web payloads are unchanged). A failed count never blocks a
-   push.
+   push. `GET /v1/chat/unread` reuses the coach, DM and admin chat numbers it
+   already computes and queries only groups and notifications on top.
 5. **Reactions.** Chat, group chat and social share one rule
    (`isReactionEmoji`, `packages/contracts/src/reaction-emoji.ts`): exactly one
-   grapheme cluster (`Intl.Segmenter`), at most 64 UTF-8 bytes, containing an
-   Extended_Pictographic, a regional indicator or a keycap mark. Plain letters,
-   digits and punctuation fail. `DEFAULT_REACTION_EMOJIS` is the picker's first
+   grapheme cluster (`Intl.Segmenter`), at most 64 UTF-8 bytes, whose whole
+   cluster is an emoji shape: an Extended_Pictographic sequence (optional VS16
+   or skin tone, ZWJ joins, tag sequences), two regional indicators or a keycap
+   (`[0-9#*]` + optional VS16 + U+20E3). Plain letters, digits, punctuation,
+   stacked combining marks and a lone keycap mark fail. `DEFAULT_REACTION_EMOJIS` is the picker's first
    row. `CHAT_REACTION_EMOJIS` / `SOCIAL_REACTION_EMOJIS` are removed from the
    contracts (the web keeps its own list). The 💪 stored earlier stays valid. No
    database constraint existed, none was added.

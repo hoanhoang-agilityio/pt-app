@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { AppState } from "react-native";
 
 import { deviceLanguage, isAppLocale, pickLocale, setAppLocale } from "@/i18n";
 import { setSessionEndedHandler, setSessionToken } from "@/lib/api";
@@ -45,8 +46,11 @@ type AuthContextValue = {
   retry: () => void;
   changeLocale: (locale: string) => Promise<void>;
   // Hooks run before the token is dropped on logout (e.g. push unregister).
-  onBeforeSignOut: (handler: () => Promise<void>) => () => void;
+  onBeforeSignOut: (handler: SignOutHandler) => () => void;
 };
+
+// `forced`: the server already ended the session (401 or authRevoked).
+export type SignOutHandler = (info: { forced: boolean }) => Promise<void>;
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -72,7 +76,7 @@ export const useMe = () => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
   const [state, setState] = useState<AuthState>({ status: "loading" });
-  const beforeSignOut = useRef(new Set<() => Promise<void>>());
+  const beforeSignOut = useRef(new Set<SignOutHandler>());
 
   const applyLocale = useCallback(async (me: MeResponse) => {
     const stored = await readLocale();
@@ -85,6 +89,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const clearSession = useCallback(
     async (sessionEnded: boolean) => {
+      if (sessionEnded) {
+        // Forced sign-out: run the cleanups best effort, never block on them.
+        for (const handler of beforeSignOut.current) {
+          void handler({ forced: true }).catch(() => undefined);
+        }
+      }
       setSessionToken(null);
       await writeToken(null);
       queryClient.clear();
@@ -92,6 +102,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     },
     [queryClient],
   );
+
+  // Rotates the token when the session is close to expiring; keeps the
+  // current one if the refresh fails.
+  const refreshIfNeeded = useCallback(async (me: MeResponse) => {
+    if (
+      !shouldRefreshSession({
+        role: me.actor.kind === "admin" ? "admin" : "user",
+        expiresAt: me.session.expiresAt,
+      })
+    ) {
+      return me;
+    }
+    try {
+      const fresh = await refreshSession();
+
+      setSessionToken(fresh.token);
+      await writeToken(fresh.token);
+      return fresh;
+    } catch {
+      return me;
+    }
+  }, []);
 
   const bootstrap = useCallback(async () => {
     setState({ status: "loading" });
@@ -104,24 +136,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     setSessionToken(token);
     try {
-      let me = await fetchMe();
+      const me = await refreshIfNeeded(await fetchMe());
 
-      if (
-        shouldRefreshSession({
-          role: me.actor.kind === "admin" ? "admin" : "user",
-          expiresAt: me.session.expiresAt,
-        })
-      ) {
-        try {
-          const fresh = await refreshSession();
-
-          setSessionToken(fresh.token);
-          await writeToken(fresh.token);
-          me = fresh;
-        } catch {
-          // Keep the current token: it still works until it expires.
-        }
-      }
       await applyLocale(me);
       setState({ status: "signedIn", me });
     } catch (error) {
@@ -131,7 +147,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       setState({ status: "unreachable" });
     }
-  }, [applyLocale, clearSession]);
+  }, [applyLocale, clearSession, refreshIfNeeded]);
 
   useEffect(() => {
     setSessionEndedHandler(() => {
@@ -150,19 +166,57 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           ? await loginAdmin(login, password)
           : await loginTrainee(login, password);
 
-      setSessionToken(result.token);
-      await writeToken(result.token);
+      // Locale first: nothing is stored yet if it throws. Later steps roll the
+      // token back so a half finished sign-in never leaves a stored session.
       await applyLocale(result);
-      queryClient.clear();
-      setState({ status: "signedIn", me: result });
+      try {
+        setSessionToken(result.token);
+        await writeToken(result.token);
+        queryClient.clear();
+        setState({ status: "signedIn", me: result });
+      } catch (error) {
+        setSessionToken(null);
+        await writeToken(null);
+        throw error;
+      }
     },
     [applyLocale, queryClient],
   );
 
+  // Coming back to the foreground: rotate a session that is about to expire.
+  const stateRef = useRef(state);
+  const refreshing = useRef(false);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (next) => {
+      const current = stateRef.current;
+
+      if (next !== "active" || current.status !== "signedIn" || refreshing.current) {
+        return;
+      }
+      refreshing.current = true;
+      void refreshIfNeeded(current.me)
+        .then((me) => {
+          if (me !== current.me) {
+            setState((latest) => (latest.status === "signedIn" ? { status: "signedIn", me } : latest));
+          }
+        })
+        .finally(() => {
+          refreshing.current = false;
+        });
+    });
+
+    return () => subscription.remove();
+  }, [refreshIfNeeded]);
+
   const signOut = useCallback(async () => {
     for (const handler of beforeSignOut.current) {
       try {
-        await handler();
+        await handler({ forced: false });
       } catch {
         // Never block a sign out on a best-effort cleanup.
       }
@@ -195,7 +249,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [],
   );
 
-  const onBeforeSignOut = useCallback((handler: () => Promise<void>) => {
+  const onBeforeSignOut = useCallback((handler: SignOutHandler) => {
     beforeSignOut.current.add(handler);
     return () => {
       beforeSignOut.current.delete(handler);

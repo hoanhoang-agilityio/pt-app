@@ -3,7 +3,17 @@ import { Platform } from "react-native";
 
 import { api } from "@/lib/api";
 import { EAS_PROJECT_ID } from "@/lib/config";
-import { readPushToken, writePushToken } from "@/lib/token-store";
+import {
+  addPendingToken,
+  isPushPlatform,
+  removePendingToken,
+} from "@/lib/push-pending";
+import {
+  readPendingPushTokens,
+  readPushToken,
+  writePendingPushTokens,
+  writePushToken,
+} from "@/lib/token-store";
 
 // Expo push registration: ask permission, get the Expo push token, tell the
 // API (POST /v1/push/devices) and forget it on logout (DELETE). Every step is
@@ -21,9 +31,42 @@ export const configureNotificationHandler = () => {
   });
 };
 
+const deleteDevice = (token: string) =>
+  api.delete("/v1/push/devices", { body: { token } });
+
+// Retry the DELETEs that failed earlier (offline, revoked session). The token
+// that is about to be registered again is skipped: the server upsert already
+// moves it to the signed-in user, and a DELETE would remove that new row.
+const flushPending = async (skip?: string) => {
+  const pending = await readPendingPushTokens();
+  let left = pending;
+
+  for (const token of pending) {
+    if (token === skip) {
+      left = removePendingToken(left, token);
+      continue;
+    }
+    try {
+      await deleteDevice(token);
+      left = removePendingToken(left, token);
+    } catch {
+      // Still failing: keep it for the next launch or sign-in.
+    }
+  }
+  await writePendingPushTokens(left);
+};
+
 export const registerForPush = async (channelName: string) => {
   const projectId = EAS_PROJECT_ID;
 
+  if (!isPushPlatform(Platform.OS)) {
+    return null;
+  }
+  try {
+    await flushPending();
+  } catch {
+    // Best effort.
+  }
   if (!projectId) {
     return null;
   }
@@ -45,25 +88,47 @@ export const registerForPush = async (channelName: string) => {
     }
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
 
+    // Every sign-in registers again: the server upsert moves the token to the
+    // signed-in account.
     await api.post("/v1/push/devices", {
       body: { token, platform: Platform.OS },
     });
     await writePushToken(token);
+    await writePendingPushTokens(
+      removePendingToken(await readPendingPushTokens(), token),
+    );
     return token;
   } catch {
     return null;
   }
 };
 
-export const unregisterPush = async () => {
+// `forced`: the session is already revoked (401 / authRevoked), so the DELETE
+// cannot succeed; the token is queued and retried after the next sign-in.
+export const unregisterPush = async ({ forced = false } = {}) => {
   const token = await readPushToken();
 
   if (!token) {
     return;
   }
+  await writePushToken(null);
+  if (!forced) {
+    try {
+      await deleteDevice(token);
+      return;
+    } catch {
+      // Offline: fall through and remember it.
+    }
+  }
+  await writePendingPushTokens(
+    addPendingToken(await readPendingPushTokens(), token),
+  );
+};
+
+export const syncBadge = async (count: number) => {
   try {
-    await api.delete("/v1/push/devices", { body: { token } });
-  } finally {
-    await writePushToken(null);
+    await Notifications.setBadgeCountAsync(count);
+  } catch {
+    // Badges are cosmetic (and unsupported on some launchers).
   }
 };

@@ -57,3 +57,18 @@ export const routeForNotificationData = (data: unknown): AppRoute => {
 
   return routeForPushUrl(url);
 };
+
+// getLastNotificationResponse() keeps returning the same response, so a
+// remount would navigate again. Remember the handled notification ids (module
+// level, survives remounts).
+export const createHandledTracker = () => {
+  const seen = new Set<string>();
+
+  return (id: string | null | undefined) => {
+    if (!id || seen.has(id)) {
+      return false;
+    }
+    seen.add(id);
+    return true;
+  };
+};

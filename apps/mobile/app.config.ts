@@ -1,9 +1,27 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
+import { type ConfigPlugin, withAndroidManifest } from "expo/config-plugins";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000";
+// @ts-expect-error The Expo config loader needs the explicit .ts extension.
+import { isDevelopmentBuild, resolveBuildApiUrl } from "./src/lib/api-url.ts";
+
+const BUILD_PROFILE = process.env.EAS_BUILD_PROFILE;
+// Throws for a non-development EAS build without EXPO_PUBLIC_API_URL.
+const API_URL = resolveBuildApiUrl(process.env.EXPO_PUBLIC_API_URL, BUILD_PROFILE);
+
+// Cleartext HTTP (LAN / 10.0.2.2 API) is allowed on Android only in
+// development builds; release builds must use HTTPS.
+const withCleartextTraffic: ConfigPlugin<{ enabled: boolean }> = (config, { enabled }) =>
+  withAndroidManifest(config, (mod) => {
+    const application = mod.modResults.manifest.application?.[0];
+
+    if (application) {
+      application.$["android:usesCleartextTraffic"] = enabled ? "true" : "false";
+    }
+    return mod;
+  });
 const EAS_PROJECT_ID = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
+const baseConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "PT App",
   slug: "pt-app-mobile",
@@ -54,3 +72,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...(EAS_PROJECT_ID ? { eas: { projectId: EAS_PROJECT_ID } } : {}),
   },
 });
+
+export default (context: ConfigContext): ExpoConfig =>
+  withCleartextTraffic(baseConfig(context), { enabled: isDevelopmentBuild(BUILD_PROFILE) });

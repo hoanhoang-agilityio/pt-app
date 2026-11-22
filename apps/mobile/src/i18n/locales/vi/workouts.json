@@ -1,0 +1,85 @@
+{
+  "train": {
+    "weekPrev": "Tuần trước",
+    "weekNext": "Tuần sau",
+    "weekNow": "Tuần này",
+    "weekProgress": "{{completed}}/{{total}} bài · {{percent}}%",
+    "weekProgressLabel": "Tiến độ tuần",
+    "summaryLink": "Tổng quan tuần",
+    "today": "Hôm nay",
+    "exerciseCount": "{{count}} bài",
+    "rest": "Nghỉ",
+    "dayDone": "đã tập xong",
+    "workoutTitle": "Bài tập hôm nay",
+    "restTitle": "Ngày nghỉ",
+    "restDayTitle": "Nghỉ ngơi & hồi phục",
+    "restDayDescription": "Chưa có bài tập cho ngày này. Ngủ đủ, uống đủ nước nhé!",
+    "dayProgress": "Tiến độ trong ngày",
+    "dayComplete": "Hoàn thành buổi tập! Nghỉ ngơi tốt nhé.",
+    "completedAt": "Đã tập {{time}} · {{date}}",
+    "personalBest": "Kỷ lục mới",
+    "openYoutube": "Mở trên YouTube",
+    "playVideo": "Xem video {{title}}",
+    "sets": "{{count}} hiệp",
+    "loadError": "Không tải được lịch tập",
+    "logger": {
+      "weightUnit": "kg",
+      "repsUnit": "lần",
+      "bodyweightHint": "Để trống kg nếu tập với trọng lượng cơ thể",
+      "addRow": "Thêm hiệp",
+      "removeRow": "Xoá hiệp {{n}}",
+      "save": "Lưu",
+      "saving": "Đang lưu…",
+      "saved": "Đã lưu số liệu",
+      "personalBest": "Kỷ lục mới! Đã lưu số liệu",
+      "nothingToSave": "Nhập ít nhất một hiệp để lưu",
+      "hint": "Lần trước: {{set}}",
+      "bodyweight": "Tự trọng",
+      "weightPlaceholder": "kg",
+      "repsPlaceholder": "lần",
+      "err": {
+        "missingReps": "Hiệp {{n}}: nhập số lần",
+        "weight": "Hiệp {{n}}: mức tạ từ 0,5 đến 500 kg",
+        "weightStep": "Hiệp {{n}}: mức tạ phải chia hết cho 0,5 kg",
+        "reps": "Hiệp {{n}}: số lần từ 1 đến 100",
+        "repsInteger": "Hiệp {{n}}: số lần phải là số nguyên",
+        "invalid": "Hiệp {{n}}: số liệu không hợp lệ",
+        "tooMany": "Tối đa 10 hiệp"
+      }
+    },
+    "logged": {
+      "prefix": "Đã ghi:",
+      "none": "Chưa ghi hiệp nào"
+    },
+    "timedHint": "Bài tính giờ: không cần ghi hiệp",
+    "completion": {
+      "done": "Đã tập xong · {{time}}",
+      "undo": "(chạm để bỏ)",
+      "notDue": "Chưa tới ngày tập",
+      "mark": "Đánh dấu đã tập",
+      "toast": "Đã đánh dấu hoàn thành"
+    },
+    "weekday": {
+      "0": "T2",
+      "1": "T3",
+      "2": "T4",
+      "3": "T5",
+      "4": "T6",
+      "5": "T7",
+      "6": "CN"
+    },
+    "summary": {
+      "title": "Tổng quan tuần",
+      "sessions": "{{completed}}/{{total}} bài đã tập",
+      "workouts": "Tập luyện",
+      "nutrition": "Dinh dưỡng",
+      "weight": "Cân nặng",
+      "openWorkouts": "Xem lịch tập",
+      "openNutrition": "Xem dinh dưỡng",
+      "loggedDays": "{{count}} ngày có ghi",
+      "onTargetDays": "{{count}} ngày đạt mục tiêu",
+      "avgPerDay": "TB/ngày: {{kcal}} kcal",
+      "noNutrition": "Chưa ghi dinh dưỡng trong tuần này."
+    }
+  }
+}

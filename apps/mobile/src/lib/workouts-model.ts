@@ -1,8 +1,6 @@
 import {
   parseDecimal,
   SET_LIMITS,
-  type ScheduleDayResponse,
-  type ScheduleExerciseResponse,
   type SetInput,
   setInputSchema,
   WORKOUT_MESSAGES,
@@ -173,9 +171,7 @@ const toProgress = (completed: number, total: number): Progress => ({
   percent: calculatePercent(completed, total),
 });
 
-type ProgressDay = Pick<ScheduleDayResponse, "exercises"> & {
-  exercises: Pick<ScheduleExerciseResponse, "completedAt">[];
-};
+type ProgressDay = { exercises: { completedAt: string | null }[] };
 
 export const getDayProgress = (day: ProgressDay) =>
   toProgress(

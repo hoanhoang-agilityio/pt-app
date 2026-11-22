@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   dayAfterWeekChange,
   formatDayMonth,
+  formatVnClock,
+  formatVnShortDate,
   formatWeekRange,
   shiftWeek,
   weekdayIndexOf,
@@ -27,5 +29,10 @@ describe("week helpers", () => {
   it("keeps the weekday on a week change and snaps to today in this week", () => {
     expect(dayAfterWeekChange("2026-11-18", "2026-11-09", "2026-11-22")).toBe("2026-11-11");
     expect(dayAfterWeekChange("2026-11-11", "2026-11-16", "2026-11-22")).toBe("2026-11-22");
+  });
+  it("shows Vietnam local time for an ISO instant", () => {
+    expect(formatVnClock("2026-11-22T17:30:00.000Z")).toBe("00:30");
+    expect(formatVnShortDate("2026-11-22T17:30:00.000Z")).toBe("23/11");
+    expect(formatVnClock("nope")).toBe("");
   });
 });

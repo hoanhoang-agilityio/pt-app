@@ -2,8 +2,9 @@
 // mark (the dumbbell of the web PWA icon, apps/web/public/icons/icon.svg).
 // Needs `sharp`, which is not an app dependency:
 //   NODE_PATH=<a node_modules folder that contains sharp> node scripts/generate-brand-assets.mjs
-import { createRequire } from "node:module";
+import { Buffer } from "node:buffer";
 import { mkdirSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 

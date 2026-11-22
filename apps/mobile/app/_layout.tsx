@@ -72,11 +72,12 @@ const Gate = () => {
           contentStyle: { backgroundColor: theme.bg },
         }}
       >
-        <Stack.Protected guard={!signedIn && state.status !== "loading"}>
+        <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="login" options={{ headerShown: false }} />
         </Stack.Protected>
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(trainee)" options={{ headerShown: false }} />
           <Stack.Screen name="compose" options={{ presentation: "modal" }} />
           <Stack.Screen name="post/[id]" />
           <Stack.Screen name="profile/[key]" />

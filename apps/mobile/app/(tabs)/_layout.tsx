@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { useTranslation } from "react-i18next";
 
+import { useAuth } from "@/features/auth/auth-context";
 import { useUnreadTotal } from "@/features/chat/hooks";
 import { useTheme } from "@/theme";
 
@@ -9,6 +10,9 @@ export default function TabsLayout() {
   const { t } = useTranslation();
   const theme = useTheme();
   const unread = useUnreadTotal();
+  const { state } = useAuth();
+  // Nutrition is a trainee feature; admins do not get the tab.
+  const isTrainee = state.status === "signedIn" && state.me.actor.kind === "user";
 
   return (
     <Tabs
@@ -40,6 +44,14 @@ export default function TabsLayout() {
         options={{
           title: t("tabs.workouts"),
           tabBarIcon: ({ color, size }) => <Ionicons name="barbell-outline" color={color as string} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="nutrition"
+        options={{
+          title: t("tabs.nutrition"),
+          href: isTrainee ? undefined : null,
+          tabBarIcon: ({ color, size }) => <Ionicons name="nutrition-outline" color={color as string} size={size} />,
         }}
       />
       <Tabs.Screen

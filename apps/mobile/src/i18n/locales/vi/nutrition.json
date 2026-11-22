@@ -1,0 +1,184 @@
+{
+  "tabs": {
+    "nutrition": "Dinh dưỡng"
+  },
+  "nutri": {
+    "title": "Dinh dưỡng",
+    "loadError": "Không tải được dinh dưỡng",
+    "dailyTargets": "Mục tiêu trong ngày",
+    "noTarget": "PT chưa đặt mục tiêu dinh dưỡng cho ngày này.",
+    "energy": "Năng lượng",
+    "macro": {
+      "carbs": "Carb",
+      "protein": "Protein",
+      "fat": "Fat"
+    },
+    "status": {
+      "on": "đạt",
+      "under": "thiếu",
+      "over": "vượt"
+    },
+    "completion": {
+      "complete": "Đã ăn đủ các bữa",
+      "partial": "Đã ăn một số bữa"
+    },
+    "plan": {
+      "title": "Plan bữa ăn",
+      "empty": "PT chưa lên plan bữa ăn cho ngày này.",
+      "future": "Chưa tới ngày này, quay lại ghi sau nhé."
+    },
+    "meal": {
+      "title": "Bữa {{index}}: {{name}}",
+      "target": "Mục tiêu bữa: {{kcal}} kcal · P {{protein}} · C {{carbs}} · F {{fat}}",
+      "eaten": "Đã ăn {{eaten}} / {{planned}} kcal",
+      "ptPlan": "Plan của PT",
+      "noFoods": "PT chưa thêm món cho bữa này.",
+      "extra": "Đã ăn thêm ngoài plan",
+      "logEaten": "Ghi món đã ăn",
+      "planKcal": "/ {{kcal}} kcal (plan)",
+      "noNutrition": "Chưa có số liệu dinh dưỡng",
+      "archived": "Món đã xoá khỏi thư viện, số liệu giữ nguyên",
+      "missingFood": "Món không còn trong thư viện, hãy xoá rồi ghi lại",
+      "removeConfirm": "Xoá món này khỏi nhật ký?"
+    },
+    "mark": {
+      "achieved": "Đạt",
+      "achievedHint": "Đánh dấu đã ăn đúng plan của bữa này",
+      "note": "Ghi chú cho PT",
+      "notePlaceholder": "VD: Thay cơm bằng khoai",
+      "save": "Lưu ghi chú",
+      "saved": "Đã lưu"
+    },
+    "log": {
+      "addTitle": "Ghi món đã ăn",
+      "editTitle": "Sửa món",
+      "searchPlaceholder": "Tìm món (VD: uc ga)",
+      "noResults": "Không tìm thấy món nào",
+      "moreResults": "Còn nhiều món nữa, gõ thêm để thu hẹp.",
+      "freeFood": "Món không có trong thư viện",
+      "grams": "Số gram",
+      "gramsOptional": "Số gram (nếu biết)",
+      "name": "Tên món",
+      "namePlaceholder": "VD: Phở bò",
+      "nutritionOptional": "Dinh dưỡng (không bắt buộc)",
+      "kcal": "Calo (kcal)",
+      "protein": "Protein (g)",
+      "carbs": "Carb (g)",
+      "fat": "Fat (g)",
+      "add": "Thêm món",
+      "pickOther": "Chọn món khác",
+      "searchLibrary": "Tìm trong thư viện",
+      "invalidNumber": "Số không hợp lệ",
+      "nameRequired": "Nhập tên món",
+      "gramsRequired": "Nhập số gram lớn hơn 0",
+      "saved": "Đã ghi món ăn",
+      "updated": "Đã sửa món ăn",
+      "removed": "Đã xoá món ăn"
+    },
+    "prefs": {
+      "title": "Yêu cầu gửi PT",
+      "mealCount": "Số bữa mỗi ngày",
+      "mealAny": "Tuỳ PT",
+      "foodNote": "Món bạn thích hoặc kiêng",
+      "foodNotePlaceholder": "VD: Không ăn hải sản, thích gà",
+      "save": "Gửi yêu cầu",
+      "saved": "Đã lưu yêu cầu của bạn"
+    },
+    "entries": {
+      "title": "Nhật ký cũ",
+      "add": "Ghi nhanh bữa ăn",
+      "addTitle": "Ghi bữa ăn",
+      "editTitle": "Sửa bữa ăn",
+      "meal": "Bữa",
+      "what": "Đã ăn gì?",
+      "whatPlaceholder": "VD: 1 bát cơm, ức gà luộc",
+      "estimate": "Ước lượng gram (không bắt buộc)",
+      "empty": "Nhập món đã ăn hoặc số gram",
+      "deleteConfirm": "Xoá bữa ăn này?",
+      "saved": "Đã ghi bữa ăn",
+      "deleted": "Đã xoá bữa ăn"
+    },
+    "meals": {
+      "breakfast": "Bữa sáng",
+      "lunch": "Bữa trưa",
+      "dinner": "Bữa tối",
+      "snack": "Bữa phụ"
+    },
+    "library": {
+      "link": "Thư viện thực phẩm",
+      "linkHint": "Xem calo, protein, carb, fat của từng món",
+      "title": "Thư viện thực phẩm",
+      "search": "Tìm món, ví dụ: uc ga",
+      "all": "Tất cả",
+      "empty": "Chưa có món nào",
+      "per100": "Trên 100 g",
+      "serving": "Khẩu phần: {{label}} = {{grams}} g",
+      "calc": "Tính theo khối lượng",
+      "source": "Nguồn: {{source}}"
+    },
+    "group": {
+      "meat": "Thịt",
+      "seafood": "Cá & hải sản",
+      "egg_dairy": "Trứng & sữa",
+      "starch": "Tinh bột",
+      "vegetable": "Rau",
+      "fruit": "Trái cây",
+      "legume_nut": "Đậu & hạt",
+      "fat_oil": "Dầu & chất béo",
+      "dish": "Món chế biến",
+      "other": "Khác"
+    },
+    "state": {
+      "raw": "sống",
+      "cooked": "chín"
+    },
+    "body": {
+      "title": "Chỉ số cơ thể",
+      "edit": "Sửa chỉ số",
+      "empty": "Nhập chỉ số để tính mục tiêu dinh dưỡng.",
+      "sex": "Giới tính",
+      "male": "Nam",
+      "female": "Nữ",
+      "age": "Tuổi",
+      "height": "Chiều cao (cm)",
+      "weight": "Cân nặng (kg)",
+      "activityLabel": "Mức vận động",
+      "goalLabel": "Mục tiêu",
+      "goal": {
+        "cut": "Giảm mỡ",
+        "maintain": "Giữ cân",
+        "bulk": "Tăng cơ"
+      },
+      "activity": {
+        "sedentary": "Ít vận động",
+        "light": "Nhẹ (1–3 buổi/tuần)",
+        "moderate": "Vừa (3–5 buổi/tuần)",
+        "active": "Nhiều (6–7 buổi/tuần)",
+        "very_active": "Rất nhiều"
+      },
+      "save": "Lưu chỉ số",
+      "saved": "Đã lưu chỉ số",
+      "appliedTarget": "Đã lưu chỉ số và cập nhật mục tiêu theo TDEE",
+      "keptManual": "Đã lưu chỉ số. PT đang đặt mục tiêu riêng nên mục tiêu giữ nguyên.",
+      "invalid": "Kiểm tra lại các chỉ số",
+      "bmr": "BMR {{kcal}} kcal",
+      "tdee": "TDEE {{kcal}} kcal",
+      "target": "Mục tiêu {{kcal}} kcal",
+      "ageYears": "{{age}} tuổi"
+    },
+    "weight": {
+      "title": "Cân nặng",
+      "today": "Cân hôm nay",
+      "todayLogged": "Cân hôm nay (đã ghi, sửa nếu cần)",
+      "placeholder": "VD: 72,5",
+      "save": "Lưu cân nặng",
+      "saved": "Đã ghi cân nặng hôm nay",
+      "savedTarget": "Đã ghi cân nặng và cập nhật mục tiêu theo TDEE",
+      "invalid": "Cân nặng từ 30 đến 250 kg",
+      "latest": "TB tuần gần nhất: {{kg}} kg",
+      "vsLastWeek": "{{change}} kg so với tuần trước",
+      "empty": "Chưa có số cân nào trong 12 tuần qua. Ghi cân nặng để bắt đầu.",
+      "chart": "Cân nặng trung bình theo tuần"
+    }
+  }
+}

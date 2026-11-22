@@ -43,3 +43,25 @@ export const formatWeekRange = (weekStart: string) =>
 
 export const weekdayIndexOf = (date: string) =>
   (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7;
+
+const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
+const pad2 = (value: number) => String(value).padStart(2, "0");
+
+// Vietnam is UTC+7 all year, so no Intl time zone support is needed.
+const toVn = (iso: string) => new Date(Date.parse(iso) + VN_OFFSET_MS);
+
+export const formatVnClock = (iso: string) => {
+  const date = toVn(iso);
+
+  return Number.isNaN(date.getTime())
+    ? ""
+    : `${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}`;
+};
+
+export const formatVnShortDate = (iso: string) => {
+  const date = toVn(iso);
+
+  return Number.isNaN(date.getTime())
+    ? ""
+    : `${pad2(date.getUTCDate())}/${pad2(date.getUTCMonth() + 1)}`;
+};

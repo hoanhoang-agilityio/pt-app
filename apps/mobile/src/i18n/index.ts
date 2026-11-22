@@ -3,6 +3,7 @@ import { createInstance } from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import en from "./en.json";
+import { deepMerge, featureMessages } from "./locales";
 import vi from "./vi.json";
 import zh from "./zh.json";
 
@@ -32,9 +33,9 @@ const i18next = createInstance();
 
 void i18next.use(initReactI18next).init({
   resources: {
-    vi: { translation: vi },
-    en: { translation: en },
-    zh: { translation: zh },
+    vi: { translation: deepMerge(vi, ...featureMessages.vi) },
+    en: { translation: deepMerge(en, ...featureMessages.en) },
+    zh: { translation: deepMerge(zh, ...featureMessages.zh) },
   },
   lng: DEFAULT_LOCALE,
   fallbackLng: DEFAULT_LOCALE,

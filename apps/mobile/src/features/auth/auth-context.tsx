@@ -44,6 +44,8 @@ type AuthContextValue = {
   signIn: (kind: "trainee" | "admin", login: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   retry: () => void;
+  // Re-reads /auth/me (e.g. after a passcode unlock changed `locked`).
+  reloadMe: () => Promise<void>;
   changeLocale: (locale: string) => Promise<void>;
   // Hooks run before the token is dropped on logout (e.g. push unregister).
   onBeforeSignOut: (handler: SignOutHandler) => () => void;
@@ -249,6 +251,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [],
   );
 
+  const reloadMe = useCallback(async () => {
+    const me = await fetchMe();
+
+    setState((current) => (current.status === "signedIn" ? { status: "signedIn", me } : current));
+  }, []);
+
   const onBeforeSignOut = useCallback((handler: SignOutHandler) => {
     beforeSignOut.current.add(handler);
     return () => {
@@ -257,8 +265,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const value = useMemo(
-    () => ({ state, signIn, signOut, retry: () => void bootstrap(), changeLocale, onBeforeSignOut }),
-    [state, signIn, signOut, bootstrap, changeLocale, onBeforeSignOut],
+    () => ({
+      state,
+      signIn,
+      signOut,
+      retry: () => void bootstrap(),
+      reloadMe,
+      changeLocale,
+      onBeforeSignOut,
+    }),
+    [state, signIn, signOut, bootstrap, reloadMe, changeLocale, onBeforeSignOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

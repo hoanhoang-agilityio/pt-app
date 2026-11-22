@@ -3,6 +3,9 @@ import { createInstance } from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import en from "./en.json";
+import adminEn from "./locales/en/admin.json";
+import adminVi from "./locales/vi/admin.json";
+import adminZh from "./locales/zh/admin.json";
 import vi from "./vi.json";
 import zh from "./zh.json";
 
@@ -32,9 +35,9 @@ const i18next = createInstance();
 
 void i18next.use(initReactI18next).init({
   resources: {
-    vi: { translation: vi },
-    en: { translation: en },
-    zh: { translation: zh },
+    vi: { translation: { ...vi, admin: adminVi } },
+    en: { translation: { ...en, admin: adminEn } },
+    zh: { translation: { ...zh, admin: adminZh } },
   },
   lng: DEFAULT_LOCALE,
   fallbackLng: DEFAULT_LOCALE,

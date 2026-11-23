@@ -123,7 +123,7 @@ export const ChatInfo = ({
           ) : (
             <Avatar name={shownName} className="size-28 text-4xl" />
           )}
-          <h2 className="text-xl font-bold text-fg" data-chat-info-name>
+          <h2 className="text-xl font-semibold text-fg" data-chat-info-name>
             {shownName}
           </h2>
           <PresenceStatus presence={presence} className="justify-center" />

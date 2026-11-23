@@ -79,7 +79,7 @@ export const TraineeMealCard = ({
           />
         </div>
         <div className="min-w-0 flex-1 self-center">
-          <h3 className="text-lg font-bold text-fg">{mealName}</h3>
+          <h3 className="text-lg font-semibold text-fg">{mealName}</h3>
           {target && (
             <p className="mt-0.5 text-xs text-muted tabular-nums">
               {t("mealTarget", {

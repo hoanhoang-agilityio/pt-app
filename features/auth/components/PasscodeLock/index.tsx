@@ -75,7 +75,7 @@ export const PasscodeLock = ({ nextPath }: PasscodeLockProps) => {
       <span className="flex size-14 items-center justify-center rounded-full bg-accent/15 text-accent">
         <Lock className="size-7" aria-hidden />
       </span>
-      <h1 className="mt-4 text-xl font-bold text-fg">{t("title")}</h1>
+      <h1 className="mt-4 text-xl font-semibold text-fg">{t("title")}</h1>
       <p role="alert" className="mt-2 min-h-5 text-sm font-medium text-danger">
         {error}
       </p>

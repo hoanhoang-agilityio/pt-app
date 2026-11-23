@@ -36,7 +36,7 @@ export const DayPlanSummary = ({
   return (
     <section className={`${CARD} space-y-3 p-4`} aria-label={t("sectionLabel")}>
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-base font-bold text-fg">{t("title")}</h3>
+        <h3 className="text-base font-semibold text-fg">{t("title")}</h3>
         <p className="text-sm font-semibold text-fg tabular-nums">
           {Math.round(kcalOf(totals))} kcal
           {target && (

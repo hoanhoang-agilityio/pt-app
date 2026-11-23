@@ -85,15 +85,30 @@
   --color-macro-protein: var(--macro-protein);
   --color-macro-fat: var(--macro-fat);
   --color-chart-weight: var(--chart-weight);
-  /* SF Pro on iPhone; covers Vietnamese diacritics without a web font. */
+  /* Be Vietnam Pro (body) and Bricolage Grotesque (display) come from
+     next/font in app/layout.tsx. The system stack is the fallback while they
+     load and for zh glyphs. */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+    var(--font-body-loaded), -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display:
+    var(--font-display-loaded), var(--font-body-loaded), -apple-system,
+    BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
 }
 
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Headings use the display font at 600 max. Utilities still win (layered). */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+  }
 }
 
 body {

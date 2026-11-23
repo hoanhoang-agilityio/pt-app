@@ -68,7 +68,7 @@ export const ProfileView = ({
             isOwn={isOwn}
           />
           <div className="flex min-w-0 flex-col gap-1">
-            <h2 className="flex items-center gap-1.5 text-xl font-bold text-fg">
+            <h2 className="flex items-center gap-1.5 text-xl font-semibold text-fg">
               <span className="break-words [overflow-wrap:anywhere]">
                 {profile.name}
               </span>
@@ -132,7 +132,7 @@ export const ProfileView = ({
       <section className="space-y-3" aria-labelledby="profile-posts-title">
         <h2
           id="profile-posts-title"
-          className="flex items-center gap-2 text-lg font-bold text-fg"
+          className="flex items-center gap-2 text-lg font-semibold text-fg"
         >
           <MessageSquare className="size-5 text-accent" aria-hidden />
           {t("posts")}

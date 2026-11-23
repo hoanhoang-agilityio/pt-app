@@ -170,7 +170,7 @@ const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
         className={`${PAGE_CONTAINER} space-y-6 pt-4 pb-[calc(env(safe-area-inset-bottom)+2rem)]`}
       >
         {!isSuper && (
-          <h2 className="text-lg font-bold text-fg">
+          <h2 className="text-lg font-semibold text-fg">
             {t("workspace", { username: admin.username })}
           </h2>
         )}

@@ -109,7 +109,7 @@ const PanelContent = ({
           className="size-8 text-xs"
         />
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-base leading-tight font-bold text-fg">
+          <h2 className="truncate text-base leading-tight font-semibold text-fg">
             {meta.name}
           </h2>
           <PresenceStatus presence={presence} />

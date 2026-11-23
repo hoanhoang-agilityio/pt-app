@@ -47,7 +47,7 @@ export const AppHeader = ({
           {eyebrow && (
             <p className="truncate text-xs font-medium text-muted">{eyebrow}</p>
           )}
-          <h1 className="truncate text-lg leading-tight font-bold text-fg">
+          <h1 className="truncate text-lg leading-tight font-semibold text-fg">
             {title}
           </h1>
         </div>

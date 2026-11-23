@@ -34,7 +34,7 @@ export const FoodAmountCalculator = ({ food }: FoodAmountCalculatorProps) => {
 
   return (
     <section className={`${CARD} space-y-4 p-4`} aria-labelledby="amount-title">
-      <h2 id="amount-title" className="text-lg font-bold text-fg">
+      <h2 id="amount-title" className="text-lg font-semibold text-fg">
         {t("title")}
       </h2>
 

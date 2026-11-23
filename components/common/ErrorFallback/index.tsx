@@ -29,7 +29,7 @@ export const ErrorFallback = ({ error, onRetry }: ErrorFallbackProps) => {
         <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-danger/12 text-danger">
           <TriangleAlert className="size-7" aria-hidden />
         </span>
-        <h1 className="mt-4 text-xl font-bold text-fg">{t("title")}</h1>
+        <h1 className="mt-4 text-xl font-semibold text-fg">{t("title")}</h1>
         <p className="mt-2 text-sm text-muted">
           {IS_DEVELOPMENT ? error.message : t("serverError")}
         </p>

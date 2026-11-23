@@ -32,7 +32,7 @@ export const DayHeading = ({
           {total > 0 &&
             ` · ${completed > 0 ? t("progressDone", { completed, total }) : t("exerciseCount", { count: total })}`}
         </p>
-        <h2 className="mt-0.5 text-2xl leading-tight font-bold text-balance text-fg">
+        <h2 className="mt-0.5 text-2xl leading-tight font-semibold text-balance text-fg">
           {day.title || fallbackTitle}
         </h2>
         {day.note && (

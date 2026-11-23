@@ -14,7 +14,7 @@ const HomePage = () => {
         <span className="flex size-16 items-center justify-center rounded-3xl bg-accent text-accent-fg shadow-lg shadow-accent/30">
           <Dumbbell className="size-8" aria-hidden />
         </span>
-        <h1 className="mt-5 text-3xl font-bold tracking-tight text-fg">
+        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-fg">
           PT App
         </h1>
         <p className="mt-2 text-muted">{t("tagline")}</p>

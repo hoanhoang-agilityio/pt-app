@@ -1,6 +1,7 @@
 import "./globals.css";
 
 import type { Metadata, Viewport } from "next";
+import { Be_Vietnam_Pro, Bricolage_Grotesque } from "next/font/google";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
@@ -14,6 +15,22 @@ import { getViewerAccent } from "@/features/theme/services/theme-queries";
 import { buildThemeCss } from "@/features/theme/utils/theme-css";
 import { pickClientMessages } from "@/i18n/client-namespaces";
 import { parseTheme, THEME_COOKIE } from "@/utils/theme";
+
+// Both fonts ship the vietnamese subset (diacritics). Exposed as CSS variables
+// that app/globals.css maps to --font-sans and --font-display.
+const bodyFont = Be_Vietnam_Pro({
+  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-body-loaded",
+});
+
+const displayFont = Bricolage_Grotesque({
+  subsets: ["latin", "vietnamese"],
+  axes: ["opsz"],
+  display: "swap",
+  variable: "--font-display-loaded",
+});
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const t = await getTranslations("layout.meta");
@@ -62,7 +79,12 @@ const RootLayout = async ({ children }: LayoutProps<"/">) => {
   const themeCss = buildThemeCss(await getViewerAccent());
 
   return (
-    <html lang={locale} data-theme={theme} suppressHydrationWarning>
+    <html
+      lang={locale}
+      data-theme={theme}
+      className={`${bodyFont.variable} ${displayFont.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: INSTALL_CAPTURE_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: EMBED_MARKER_SCRIPT }} />

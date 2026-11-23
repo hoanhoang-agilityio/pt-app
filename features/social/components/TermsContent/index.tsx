@@ -9,7 +9,7 @@ import {
 export const TermsContent = () => (
   <article className={`${CARD} space-y-5 p-5`}>
     <header className="space-y-2">
-      <h2 className="text-lg font-bold text-fg">{TERMS_TITLE}</h2>
+      <h2 className="text-lg font-semibold text-fg">{TERMS_TITLE}</h2>
       <p className="text-sm text-muted">{TERMS_INTRO}</p>
     </header>
     {TERMS_SECTIONS.map((section) => (

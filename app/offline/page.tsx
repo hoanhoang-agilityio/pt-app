@@ -17,7 +17,7 @@ const OfflinePage = async () => {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-6 text-center">
-      <h1 className="text-xl font-bold">{t("title")}</h1>
+      <h1 className="text-xl font-semibold">{t("title")}</h1>
       <p className="mt-2 text-sm text-muted">{t("body")}</p>
       <OfflineRetryButton />
     </main>

@@ -106,7 +106,7 @@ export const ChatHeader = ({
           data-chat-header-name
           className="min-w-0 flex-1 py-2"
         >
-          <h1 className="truncate text-base leading-tight font-bold text-fg">
+          <h1 className="truncate text-base leading-tight font-semibold text-fg">
             {title}
             {verified && <VerifiedBadge className="ml-1" />}
           </h1>

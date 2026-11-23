@@ -18,7 +18,7 @@ const AdminLoginPage = () => {
         <span className="flex size-16 items-center justify-center rounded-3xl bg-fg text-bg">
           <ShieldCheck className="size-8" aria-hidden />
         </span>
-        <h1 className="mt-5 text-3xl font-bold tracking-tight text-fg">
+        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-fg">
           {t("title")}
         </h1>
         <p className="mt-2 text-muted">{t("tagline")}</p>

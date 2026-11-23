@@ -270,7 +270,7 @@ export const GroupInfo = ({
           tone="soft"
           className="size-24 text-3xl"
         />
-        <h2 className="text-xl font-bold text-fg">{group.name}</h2>
+        <h2 className="text-xl font-semibold text-fg">{group.name}</h2>
         {isReadOnly && (
           <p role="status" className="text-sm text-muted">
             {t("info.dissolvedNote")}

@@ -26,7 +26,7 @@ export const generateMetadata = async (): Promise<Metadata> => {
   };
 };
 
-const THEME_COLORS = { light: "#f4f4f5", dark: "#0c0c0e" };
+const THEME_COLORS = { light: "#f5f4f0", dark: "#0e0e0c" };
 
 // A forced theme sets one browser chrome color; "Hệ thống" follows the OS.
 export const generateViewport = async (): Promise<Viewport> => {

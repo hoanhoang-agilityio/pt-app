@@ -1,22 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f4f4f5;
+  --bg: #f5f4f0;
   --surface: #ffffff;
-  --fg: #111113;
-  --muted: #6b6b76;
-  --line: #e4e4e9;
-  --accent: #e8590c;
+  --fg: #17160f;
+  --muted: #5c5a52;
+  --line: #e2dfd7;
+  --accent: #c2410c;
   --accent-fg: #ffffff;
-  --bubble-neutral: #18181b;
+  --bubble-neutral: #17160f;
   --bubble-neutral-fg: #ffffff;
-  --danger: #dc2626;
+  --danger: #b91c1c;
   --success: #15803d;
   --success-fg: #ffffff;
-  --warning: #b45309;
-  --macro-carbs: #d97706;
-  --macro-protein: #e11d48;
-  --macro-fat: #0284c7;
+  --warning: #a15c07;
+  --macro-carbs: #a15c07;
+  --macro-protein: #be123c;
+  --macro-fat: #0369a1;
   /* Validated with the dataviz palette checks on both surfaces. */
   --chart-weight: var(--accent);
   color-scheme: light;
@@ -27,14 +27,14 @@
    it. Keep the two dark blocks identical. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
-    --bg: #0c0c0e;
-    --surface: #18181b;
-    --fg: #f4f4f5;
-    --muted: #a1a1aa;
-    --line: #2a2a30;
-    --accent: #ff7a2e;
-    --accent-fg: #1a0a00;
-    --bubble-neutral: #3f3f46;
+    --bg: #0e0e0c;
+    --surface: #181815;
+    --fg: #f3f2ec;
+    --muted: #a8a69c;
+    --line: #2f2e29;
+    --accent: #ff7a3d;
+    --accent-fg: #1a0900;
+    --bubble-neutral: #3a3934;
     --bubble-neutral-fg: #ffffff;
     --danger: #f87171;
     --success: #4ade80;
@@ -48,14 +48,14 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #0c0c0e;
-  --surface: #18181b;
-  --fg: #f4f4f5;
-  --muted: #a1a1aa;
-  --line: #2a2a30;
-  --accent: #ff7a2e;
-  --accent-fg: #1a0a00;
-  --bubble-neutral: #3f3f46;
+  --bg: #0e0e0c;
+  --surface: #181815;
+  --fg: #f3f2ec;
+  --muted: #a8a69c;
+  --line: #2f2e29;
+  --accent: #ff7a3d;
+  --accent-fg: #1a0900;
+  --bubble-neutral: #3a3934;
   --bubble-neutral-fg: #ffffff;
   --danger: #f87171;
   --success: #4ade80;

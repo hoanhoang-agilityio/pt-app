@@ -452,8 +452,7 @@ export const sendChatPush = async (
 export interface SendReactionPushInput {
   // The author of the reacted message, the only person who is notified.
   recipient:
-    | { role: "user"; userId: number }
-    | { role: "admin"; adminId: number };
+    { role: "user"; userId: number } | { role: "admin"; adminId: number };
   reactorName: string;
   // The reactor's chat key ("user" / "admin:<id>"): the conversation's shared
   // nickname for them, if any, replaces `reactorName`.

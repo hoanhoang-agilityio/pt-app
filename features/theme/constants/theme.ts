@@ -1,13 +1,13 @@
 // Page backgrounds the accent has to stand out from (app/globals.css).
-export const LIGHT_BACKGROUNDS = ["#f4f4f5", "#ffffff"] as const;
-export const DARK_BACKGROUNDS = ["#0c0c0e", "#18181b"] as const;
+export const LIGHT_BACKGROUNDS = ["#f5f4f0", "#ffffff"] as const;
+export const DARK_BACKGROUNDS = ["#0e0e0c", "#181815"] as const;
 
 // WCAG: text on the accent, and the accent as a UI component on the page.
 export const MIN_TEXT_RATIO = 4.5;
 export const MIN_UI_RATIO = 3;
 
 // The dark variant is never darker than this lightness, so it reads as the
-// brighter sibling of the light color (like #e8590c -> #ff7a2e).
+// brighter sibling of the light color (like #c2410c -> #ff7a3d).
 export const DARK_MIN_LIGHTNESS = 55;
 
 export const FOREGROUND_LIGHT = "#ffffff";
@@ -25,10 +25,10 @@ export type LockScope = (typeof LOCK_SCOPES)[number];
 
 export const THEME_CACHE_TAG = "theme-settings";
 
-export const DEFAULT_ACCENT = "#e8590c";
+export const DEFAULT_ACCENT = "#c2410c";
 
 export const PRESET_COLORS = [
-  "#e8590c",
+  "#c2410c",
   "#dc2626",
   "#db2777",
   "#7c3aed",

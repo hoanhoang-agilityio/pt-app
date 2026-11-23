@@ -48,7 +48,7 @@ export const buildManifest = ({
   lang: "vi",
   orientation: "portrait",
   display: "standalone",
-  background_color: "#f4f4f5",
-  theme_color: "#f4f4f5",
+  background_color: "#f5f4f0",
+  theme_color: "#f5f4f0",
   icons: ICONS,
 });

@@ -15,18 +15,18 @@ type Mode = "light" | "dark";
 // The page tokens of app/globals.css for each mode.
 const SURFACES: Record<Mode, Record<string, string>> = {
   light: {
-    "--bg": "#f4f4f5",
+    "--bg": "#f5f4f0",
     "--surface": "#ffffff",
-    "--fg": "#111113",
-    "--muted": "#6b6b76",
-    "--line": "#e4e4e9",
+    "--fg": "#17160f",
+    "--muted": "#5c5a52",
+    "--line": "#e2dfd7",
   },
   dark: {
-    "--bg": "#0c0c0e",
-    "--surface": "#18181b",
-    "--fg": "#f4f4f5",
-    "--muted": "#a1a1aa",
-    "--line": "#2a2a30",
+    "--bg": "#0e0e0c",
+    "--surface": "#181815",
+    "--fg": "#f3f2ec",
+    "--muted": "#a8a69c",
+    "--line": "#2f2e29",
   },
 };
 

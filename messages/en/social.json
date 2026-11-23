@@ -156,7 +156,7 @@
     "loadOlder": "Load older messages",
     "loadOlderRetry": "Couldn't load. Try again",
     "conversationStart": "Start of the conversation",
-    "noMessages": "No messages yet. Say hello!",
+    "noMessages": "No messages yet. Say hello.",
     "replying": "Replying to a post",
     "cancelReply": "Cancel reply to post",
     "photoAlt": "Selected photo",
@@ -231,7 +231,7 @@
   "pages": {
     "eyebrow": "Social",
     "feedTitle": "Feed",
-    "feedEmpty": "No posts yet. Be the first to post!",
+    "feedEmpty": "No posts yet. Be the first to post.",
     "feedTerms": "Read and agree to the terms to use the Feed.",
     "friendsLink": "Friends",
     "friendsTitle": "Friends",

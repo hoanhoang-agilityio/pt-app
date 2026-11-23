@@ -43,9 +43,9 @@
     "workoutTitle": "Bài tập hôm nay",
     "restTitle": "Ngày nghỉ",
     "progressLabel": "Tiến độ trong ngày",
-    "complete": "Hoàn thành buổi tập! Nghỉ ngơi tốt nhé.",
+    "complete": "Hoàn thành buổi tập. Nghỉ ngơi tốt nhé.",
     "restDayTitle": "Nghỉ ngơi & hồi phục",
-    "restDayDescription": "Chưa có bài tập cho ngày này. Ngủ đủ, uống đủ nước nhé!"
+    "restDayDescription": "Chưa có bài tập cho ngày này. Ngủ đủ, uống đủ nước nhé."
   },
   "dayTabs": {
     "exerciseCount": "{count, plural, other {# bài}}",
@@ -111,7 +111,7 @@
     "saving": "Đang lưu…",
     "save": "Lưu",
     "nothingToSave": "Nhập ít nhất một hiệp",
-    "personalBest": "Kỷ lục mới! 🏆",
+    "personalBest": "Kỷ lục mới 🏆",
     "saved": "Đã lưu các hiệp"
   },
   "setInputRow": {

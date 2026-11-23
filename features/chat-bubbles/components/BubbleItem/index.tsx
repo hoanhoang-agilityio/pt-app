@@ -84,7 +84,7 @@ export const BubbleItem = ({
         name={meta.name}
         src={meta.avatarSrc}
         className={clsx(
-          "size-14 text-lg shadow-lg ring-[3px]",
+          "size-14 text-lg shadow-lg ring-4",
           isActive ? "ring-accent" : "ring-bg",
         )}
       />
@@ -98,7 +98,7 @@ export const BubbleItem = ({
         <span
           role="status"
           aria-label={badgeLabel}
-          className="absolute -top-1 -right-1 inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-danger px-1.5 text-xs leading-none font-bold text-white ring-2 ring-bg"
+          className="absolute -top-1 -right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1.5 text-xs leading-none font-bold text-white ring-2 ring-bg"
         >
           {badge > MAX_SHOWN ? `${MAX_SHOWN}+` : badge}
         </span>

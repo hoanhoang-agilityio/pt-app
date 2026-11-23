@@ -111,7 +111,7 @@ const THEME_VALUES: Theme[] = ["light", "dark", "system"];
 const THEME_ICONS = { light: Sun, dark: Moon, system: Monitor } as const;
 
 const SECTION_HEADING =
-  "flex items-center gap-1.5 px-1.5 pb-1.5 text-xs font-semibold tracking-wide text-muted uppercase";
+  "flex items-center gap-1.5 px-1.5 pb-1.5 text-xs font-medium text-muted";
 
 const readCurrentTheme = () =>
   parseTheme(document.documentElement.dataset.theme);

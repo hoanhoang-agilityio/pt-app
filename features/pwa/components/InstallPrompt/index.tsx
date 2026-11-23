@@ -87,7 +87,7 @@ export const InstallPrompt = () => {
               <button
                 type="button"
                 onClick={install}
-                className={`${BUTTON_BASE} bg-accent text-accent-fg shadow-md shadow-accent/25`}
+                className={`${BUTTON_BASE} bg-accent text-accent-fg`}
               >
                 {t("install")}
               </button>

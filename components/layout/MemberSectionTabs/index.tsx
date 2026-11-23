@@ -49,7 +49,7 @@ export const MemberSectionTabs = ({
               className={clsx(
                 "flex min-h-11 items-center justify-center rounded-xl px-0.5 text-xs font-semibold min-[360px]:text-small sm:text-sm transition-colors duration-200",
                 active === section.key
-                  ? "bg-accent text-accent-fg shadow-md shadow-accent/25"
+                  ? "bg-accent text-accent-fg"
                   : "text-muted active:bg-line",
               )}
             >

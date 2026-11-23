@@ -21,5 +21,4 @@ export const INPUT = `${INPUT_BASE} min-h-12 px-4`;
 export const TEXTAREA = `${INPUT} min-h-24 py-3`;
 export const LABEL = "mb-1.5 block text-sm font-medium text-fg";
 export const FIELD_ERROR = "mt-1.5 text-sm text-danger";
-export const SECTION_TITLE =
-  "text-xs font-semibold uppercase tracking-wide text-muted";
+export const SECTION_TITLE = "text-xs font-medium text-muted";

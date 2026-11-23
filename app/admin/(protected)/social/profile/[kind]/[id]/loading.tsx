@@ -22,7 +22,7 @@ export default async function Loading() {
       }
     >
       <div className="flex items-center gap-4">
-        <Skeleton className="size-[88px] shrink-0 rounded-full" />
+        <Skeleton className="size-22 shrink-0 rounded-full" />
         <div className="flex flex-col gap-2">
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-4 w-24" />

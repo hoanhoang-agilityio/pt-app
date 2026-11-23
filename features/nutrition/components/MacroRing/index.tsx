@@ -45,7 +45,7 @@ export const MacroRing = ({ macro, eaten, target }: MacroRingProps) => {
         aria-valuemax={target ? 100 : undefined}
         aria-valuenow={target ? percent : undefined}
         data-percent={target ? percent : undefined}
-        className="relative size-[60px] shrink-0"
+        className="relative size-15 shrink-0"
       >
         <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="size-full -rotate-90">
           <circle

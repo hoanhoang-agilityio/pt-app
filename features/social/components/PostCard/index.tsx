@@ -177,7 +177,7 @@ export const PostCard = ({ post, mode, isDetail = false }: PostCardProps) => {
           <Avatar
             name={post.authorName}
             src={post.authorAvatarUrl}
-            className="size-[46px] text-base"
+            className="size-12 text-base"
           />
           <span className="min-w-0">
             <span className="flex items-center gap-1 font-semibold text-fg">

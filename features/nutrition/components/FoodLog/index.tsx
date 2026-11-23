@@ -51,7 +51,7 @@ export const FoodLog = ({
       {meals.length ? (
         meals.map((meal) => (
           <div key={meal} className={`${CARD} overflow-hidden`}>
-            <h3 className="border-b border-line px-4 py-2 text-xs font-semibold tracking-wide text-muted uppercase">
+            <h3 className="border-b border-line px-4 py-2 text-xs font-medium text-muted">
               {tLabels(MEAL_LABEL_KEYS[meal])}
             </h3>
             <ul className="divide-y divide-line">

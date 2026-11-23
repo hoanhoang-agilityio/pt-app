@@ -378,7 +378,7 @@ export const Composer = ({
             resize();
           }}
           onKeyDown={handleKeyDown}
-          className="min-h-8 max-h-[120px] min-w-0 flex-1 resize-none self-center bg-transparent py-1 text-base leading-6 text-fg placeholder:text-muted focus:outline-none"
+          className="min-h-8 max-h-30 min-w-0 flex-1 resize-none self-center bg-transparent py-1 text-base leading-6 text-fg placeholder:text-muted focus:outline-none"
         />
         {onOpenStickers && !editing && (
           <button
@@ -400,7 +400,7 @@ export const Composer = ({
           tabIndex={canSend ? 0 : -1}
           aria-hidden={!canSend}
           className={clsx(
-            "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg transition-all duration-150 active:scale-90",
+            "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg transition-[transform,opacity] duration-150 active:scale-90",
             canSend
               ? "scale-100 opacity-100"
               : "pointer-events-none w-0 scale-50 opacity-0",

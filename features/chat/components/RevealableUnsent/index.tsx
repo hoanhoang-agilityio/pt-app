@@ -91,7 +91,7 @@ export const RevealableUnsent = ({
                 height={120}
                 unoptimized
                 draggable={false}
-                className="size-[120px] object-contain"
+                className="size-30 object-contain"
               />
             )}
             {content.photos.map((photo, index) => (

@@ -4,7 +4,7 @@
   },
   "workouts": {
     "metaTitle": "Workouts",
-    "eyebrow": "Hello"
+    "eyebrow": "This week"
   },
   "summary": {
     "metaTitle": "Summary",
@@ -31,7 +31,7 @@
   },
   "nutrition": {
     "metaTitle": "Nutrition",
-    "eyebrow": "Hello"
+    "eyebrow": "Today"
   },
   "foods": {
     "metaTitle": "Foods",

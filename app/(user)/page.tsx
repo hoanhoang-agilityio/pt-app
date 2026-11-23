@@ -11,7 +11,7 @@ const HomePage = () => {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-4 pt-[calc(env(safe-area-inset-top)+3rem)] pb-[calc(env(safe-area-inset-bottom)+3rem)]">
       <div className="mb-8 flex flex-col items-center text-center">
-        <span className="flex size-16 items-center justify-center rounded-3xl bg-accent text-accent-fg shadow-lg shadow-accent/30">
+        <span className="flex size-16 items-center justify-center rounded-3xl bg-accent text-accent-fg">
           <Dumbbell className="size-8" aria-hidden />
         </span>
         <h1 className="mt-5 text-3xl font-bold tracking-tight text-fg">

@@ -35,7 +35,7 @@ export const SetLogger = ({ exercise }: SetLoggerProps) => {
       aria-label={t("sectionLabel", { title: exercise.title })}
       className="space-y-3 border-t border-line px-4 py-4"
     >
-      <div className="grid grid-cols-[1.75rem_1fr_1fr_2.75rem] gap-2 text-center text-xs font-semibold tracking-wide text-muted uppercase">
+      <div className="grid grid-cols-[1.75rem_1fr_1fr_2.75rem] gap-2 text-center text-xs font-medium text-muted">
         <span>#</span>
         <span>{t("weightUnit")}</span>
         <span>{t("repsUnit")}</span>

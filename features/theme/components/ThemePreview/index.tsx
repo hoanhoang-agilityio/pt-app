@@ -55,9 +55,7 @@ const Panel = ({ mode, accent }: { mode: Mode; accent: string }) => {
       style={style}
       className="flex flex-col gap-3 rounded-2xl border border-line bg-bg p-3 text-fg"
     >
-      <p className="text-xs font-semibold tracking-wide text-muted uppercase">
-        {t(mode)}
-      </p>
+      <p className="text-xs font-medium text-muted">{t(mode)}</p>
       <button
         type="button"
         tabIndex={-1}

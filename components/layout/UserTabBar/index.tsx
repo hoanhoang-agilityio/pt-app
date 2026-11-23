@@ -89,7 +89,7 @@ export const UserTabBar = () => {
                 className={clsx(
                   "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-dock-item text-micro min-[360px]:text-caption font-semibold transition-colors duration-200",
                   isActive
-                    ? "bg-accent text-accent-fg shadow-md shadow-accent/30"
+                    ? "bg-accent text-accent-fg"
                     : "text-muted active:bg-line/70",
                 )}
               >

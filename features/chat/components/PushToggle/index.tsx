@@ -80,8 +80,8 @@ export const PushToggle = ({ role, itemClassName }: PushToggleProps) => {
           >
             <span
               className={clsx(
-                "absolute top-0.5 size-5 rounded-full bg-surface shadow transition-all",
-                push.isSubscribed ? "left-[18px]" : "left-0.5",
+                "absolute top-0.5 left-0.5 size-5 rounded-full bg-surface shadow transition-transform",
+                push.isSubscribed && "translate-x-4",
               )}
             />
           </span>

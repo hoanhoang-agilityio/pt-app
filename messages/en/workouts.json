@@ -43,9 +43,9 @@
     "workoutTitle": "Today's workout",
     "restTitle": "Rest day",
     "progressLabel": "Progress today",
-    "complete": "Session complete! Rest well.",
+    "complete": "Session complete. Rest well.",
     "restDayTitle": "Rest & recovery",
-    "restDayDescription": "No exercises for this day yet. Get enough sleep and drink enough water!"
+    "restDayDescription": "No exercises for this day yet. Get enough sleep and drink enough water."
   },
   "dayTabs": {
     "exerciseCount": "{count, plural, one {# exercise} other {# exercises}}",
@@ -111,7 +111,7 @@
     "saving": "Saving…",
     "save": "Save",
     "nothingToSave": "Enter at least one set",
-    "personalBest": "New personal best! 🏆",
+    "personalBest": "New personal best 🏆",
     "saved": "Sets saved"
   },
   "setInputRow": {

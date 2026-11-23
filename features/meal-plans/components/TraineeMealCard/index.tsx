@@ -104,9 +104,7 @@ export const TraineeMealCard = ({
 
       <div id={bodyId} hidden={isCollapsed} className="space-y-3">
         <div>
-          <p className="text-xs font-semibold tracking-wide text-muted uppercase">
-            {t("ptPlan")}
-          </p>
+          <p className="text-xs font-medium text-muted">{t("ptPlan")}</p>
           {meal.items.length ? (
             <ul className="mt-1 divide-y divide-line">
               {meal.items.map((item) => (
@@ -128,9 +126,7 @@ export const TraineeMealCard = ({
 
         {logs.length > 0 && (
           <div>
-            <p className="text-xs font-semibold tracking-wide text-muted uppercase">
-              {t("extraLogged")}
-            </p>
+            <p className="text-xs font-medium text-muted">{t("extraLogged")}</p>
             <MealLogList
               logs={logs}
               onEdit={isLoggable ? card.openEdit : undefined}

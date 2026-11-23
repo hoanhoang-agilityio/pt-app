@@ -72,7 +72,7 @@ export const PushOptInCard = ({ role }: PushOptInCardProps) => {
             type="button"
             onClick={enable}
             disabled={busy}
-            className={`${BUTTON_BASE} bg-accent text-accent-fg shadow-md shadow-accent/25 disabled:opacity-50`}
+            className={`${BUTTON_BASE} bg-accent text-accent-fg disabled:opacity-50`}
           >
             {t("enable")}
           </button>

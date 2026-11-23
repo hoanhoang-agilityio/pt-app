@@ -35,9 +35,7 @@ export const MealLogSummary = ({ items, logs, mark }: MealLogSummaryProps) => {
       aria-label={t("sectionLabel")}
       role="group"
     >
-      <p className="text-xs font-semibold tracking-wide text-muted uppercase">
-        {t("sectionLabel")}
-      </p>
+      <p className="text-xs font-medium text-muted">{t("sectionLabel")}</p>
       {mark?.achieved && (
         <p className="flex items-center gap-1.5 text-sm font-semibold text-success">
           <CircleCheck className="size-4 shrink-0" aria-hidden />

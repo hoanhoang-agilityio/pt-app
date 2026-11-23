@@ -143,7 +143,7 @@ export const CustomStickerGrid = ({
             className={clsx(
               CELL,
               "w-full",
-              isEditing && "animate-pulse motion-reduce:animate-none",
+              isEditing && "ring-2 ring-accent/60 ring-inset",
             )}
           >
             <Image

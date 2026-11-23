@@ -37,7 +37,7 @@ export const ProfileAvatar = ({
   const hasOpened = useHasOpened(isOpen);
 
   return (
-    <div className="relative size-[88px] shrink-0">
+    <div className="relative size-22 shrink-0">
       <Avatar name={name} src={src} className="size-full text-3xl" />
       {isOwn && (
         <>

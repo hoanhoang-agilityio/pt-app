@@ -270,7 +270,7 @@ export const DmThread = ({
                 placeholder={t("placeholder")}
                 aria-label={t("messageLabel")}
                 onChange={(event) => setText(event.target.value)}
-                className="max-h-[120px] min-h-11 min-w-0 flex-1 resize-none rounded-2xl border border-line bg-surface px-4 py-2.5 text-base leading-6 text-fg placeholder:text-muted focus:border-accent focus:outline-none"
+                className="max-h-30 min-h-11 min-w-0 flex-1 resize-none rounded-2xl border border-line bg-surface px-4 py-2.5 text-base leading-6 text-fg placeholder:text-muted focus:border-accent focus:outline-none"
               />
               <button
                 type="button"

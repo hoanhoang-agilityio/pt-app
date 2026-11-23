@@ -43,9 +43,9 @@
     "workoutTitle": "今日训练",
     "restTitle": "休息日",
     "progressLabel": "今日进度",
-    "complete": "训练完成！好好休息。",
+    "complete": "训练完成。好好休息。",
     "restDayTitle": "休息与恢复",
-    "restDayDescription": "这一天还没有训练安排。睡够觉，多喝水！"
+    "restDayDescription": "这一天还没有训练安排。睡够觉，多喝水。"
   },
   "dayTabs": {
     "exerciseCount": "{count, plural, other {# 个动作}}",
@@ -111,7 +111,7 @@
     "saving": "正在保存…",
     "save": "保存",
     "nothingToSave": "请至少输入一组",
-    "personalBest": "新纪录！🏆",
+    "personalBest": "新纪录 🏆",
     "saved": "已保存各组"
   },
   "setInputRow": {

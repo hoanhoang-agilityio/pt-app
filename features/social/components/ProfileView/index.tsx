@@ -57,9 +57,7 @@ export const ProfileView = ({
 
   return (
     <div className="space-y-5">
-      <section
-        className={`${CARD} flex flex-col gap-3 bg-linear-to-br from-surface from-55% to-accent/10 p-4.5`}
-      >
+      <section className={`${CARD} flex flex-col gap-3 p-4`}>
         <div className="flex items-center gap-4">
           <ProfileAvatar
             name={profile.name}

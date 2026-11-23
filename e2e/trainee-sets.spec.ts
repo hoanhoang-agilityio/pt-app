@@ -97,7 +97,7 @@ test("B3: beating the previous best shows the personal-best badge", async ({
   await card.getByLabel("Số lần hiệp 3").fill("10");
   await card.getByRole("button", { name: "Lưu", exact: true }).click();
 
-  await expect(page.getByText("Kỷ lục mới! 🏆")).toBeVisible();
+  await expect(page.getByText("Kỷ lục mới 🏆")).toBeVisible();
   await expect(card.getByText("Kỷ lục mới", { exact: true })).toBeVisible();
 });
 

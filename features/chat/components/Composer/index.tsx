@@ -400,7 +400,7 @@ export const Composer = ({
           tabIndex={canSend ? 0 : -1}
           aria-hidden={!canSend}
           className={clsx(
-            "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg transition-[transform,opacity] duration-150 active:scale-90",
+            "inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-fg transition-[scale,opacity,width] duration-150 active:scale-90",
             canSend
               ? "scale-100 opacity-100"
               : "pointer-events-none w-0 scale-50 opacity-0",

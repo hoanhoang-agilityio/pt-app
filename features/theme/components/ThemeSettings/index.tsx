@@ -147,7 +147,7 @@ export const ThemeSettings = ({
                     {t(`scope.${value}`)}
                   </span>
                   <span className="block truncate text-xs text-muted">
-                    {color ?? t("scope.default")}
+                    {color ? color.toUpperCase() : t("scope.default")}
                   </span>
                 </span>
               </label>

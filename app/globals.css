@@ -220,7 +220,8 @@ html[data-embed] [data-app-chrome] {
   transform: translateY(30px) scale(0.8);
   transition:
     opacity 0.2s,
-    transform 0.2s;
+    transform 0.2s,
+    background-color 0.2s;
   pointer-events: none;
 }
 .cb-zone[data-open="true"] {

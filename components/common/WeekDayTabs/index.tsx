@@ -70,7 +70,7 @@ export const WeekDayTabs = ({
               !isSelected && !isFuture && "border-line bg-surface text-fg",
             )}
           >
-            <span className="text-[11px] font-semibold opacity-75">
+            <span className="text-caption font-semibold opacity-75">
               {getWeekdayShortLabel(item.date, locale)}
             </span>
             <span className="mt-1 text-lg leading-none font-bold">

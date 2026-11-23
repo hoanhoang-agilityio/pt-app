@@ -106,7 +106,7 @@ export const CopyWorkoutDaySheet = ({
           aria-label={t("confirmLabel")}
           className="space-y-4"
         >
-          <p className="text-[15px] font-medium text-fg">
+          <p className="text-body font-medium text-fg">
             {t("overwriteQuestion", { dates: overwriteList })}
           </p>
           <p className="text-sm text-muted">
@@ -178,8 +178,8 @@ export const CopyWorkoutDaySheet = ({
                     day.isToday && isSelected && "border-2",
                   )}
                 >
-                  <span className="text-[15px] font-bold">{day.day}</span>
-                  <span className="h-2.5 text-[9px] leading-none font-medium tracking-tight whitespace-nowrap">
+                  <span className="text-body font-bold">{day.day}</span>
+                  <span className="h-2.5 text-nano leading-none font-medium tracking-tight whitespace-nowrap">
                     {getTag(day)}
                   </span>
                   {day.hasSets ? (

@@ -63,7 +63,7 @@ export const DmPostQuote = ({
               <span
                 role="img"
                 aria-label={t("morePhotos", { count: post.photoCount - 1 })}
-                className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 text-xs font-semibold text-white"
+                className="absolute inset-0 flex items-center justify-center rounded-lg bg-scrim/50 text-xs font-semibold text-white"
               >
                 +{post.photoCount - 1}
               </span>
@@ -126,7 +126,7 @@ export const DmPostQuote = ({
             <span
               role="img"
               aria-label={t("morePhotos", { count: post.photoCount - 1 })}
-              className="absolute right-2 bottom-2 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white"
+              className="absolute right-2 bottom-2 rounded-full bg-scrim/60 px-2.5 py-1 text-xs font-semibold text-white"
             >
               +{post.photoCount - 1}
             </span>

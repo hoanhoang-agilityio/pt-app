@@ -143,10 +143,10 @@ export const CopyWeekButton = ({
                           : "border-2 border-accent text-accent"),
                     )}
                   >
-                    <span className="text-[15px] font-bold">
+                    <span className="text-body font-bold">
                       {Number(date.slice(8, 10))}
                     </span>
-                    <span className="h-2.5 text-[9px] leading-none font-medium tracking-tight whitespace-nowrap">
+                    <span className="h-2.5 text-nano leading-none font-medium tracking-tight whitespace-nowrap">
                       {isSource ? t("sourceBadge") : ""}
                     </span>
                   </button>

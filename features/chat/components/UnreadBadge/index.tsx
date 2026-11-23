@@ -25,7 +25,7 @@ export const UnreadBadge = ({ count, className }: UnreadBadgeProps) => {
       role="status"
       aria-label={t("label", { count })}
       className={clsx(
-        "inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] leading-none font-bold text-white",
+        "inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-micro leading-none font-bold text-white",
         className,
       )}
     >

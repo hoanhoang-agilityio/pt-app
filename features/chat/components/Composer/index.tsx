@@ -294,7 +294,7 @@ export const Composer = ({
           submit();
         }}
         className={clsx(
-          "mx-3 flex items-end gap-1 rounded-[1.5rem] border border-line bg-surface py-1.5 pr-1.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30",
+          "mx-3 flex items-end gap-1 rounded-sheet border border-line bg-surface py-1.5 pr-1.5 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/30",
           showPhotoButton ? "pl-1.5" : "pl-4",
         )}
       >

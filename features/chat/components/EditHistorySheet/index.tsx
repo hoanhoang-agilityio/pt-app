@@ -93,7 +93,7 @@ export const EditHistorySheet = ({
         <ul className="flex flex-col gap-2">
           <li className="rounded-2xl border border-accent bg-surface px-3.5 py-2.5">
             <p className="text-xs font-semibold text-accent">{t("current")}</p>
-            <p className="mt-0.5 text-[15px] break-words whitespace-pre-wrap text-fg">
+            <p className="mt-0.5 text-body break-words whitespace-pre-wrap text-fg">
               {currentBody}
             </p>
           </li>
@@ -105,7 +105,7 @@ export const EditHistorySheet = ({
               <p className="text-xs text-muted">
                 {t("previous", { time: formatSentAt(edit.editedAt, locale) })}
               </p>
-              <p className="mt-0.5 text-[15px] break-words whitespace-pre-wrap text-fg">
+              <p className="mt-0.5 text-body break-words whitespace-pre-wrap text-fg">
                 {edit.previousBody}
               </p>
             </li>

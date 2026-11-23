@@ -52,7 +52,7 @@ export const EnergyPlanSummary = ({ plan }: EnergyPlanSummaryProps) => {
             >
               {formatCalories(item.value, locale)}
             </dd>
-            <dd className="text-[11px] text-muted">{item.hint}</dd>
+            <dd className="text-caption text-muted">{item.hint}</dd>
           </div>
         ))}
       </dl>

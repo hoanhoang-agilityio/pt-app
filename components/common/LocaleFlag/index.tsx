@@ -38,7 +38,7 @@ export const LocaleFlag = ({ locale, className }: LocaleFlagProps) => (
     aria-hidden="true"
     focusable="false"
     className={clsx(
-      "h-[19px] w-7 shrink-0 rounded-[4px] shadow-sm ring-1 ring-line",
+      "h-[19px] w-7 shrink-0 rounded-sm shadow-sm ring-1 ring-line",
       className,
     )}
   >

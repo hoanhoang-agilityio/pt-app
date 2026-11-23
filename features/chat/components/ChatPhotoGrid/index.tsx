@@ -65,7 +65,7 @@ export const ChatPhotoGrid = ({
           t("photoN", { index: index + 1, total: photos.length })
         }
         moreLabelFor={(hidden) => t("morePhotos", { count: hidden })}
-        className="rounded-[1rem]"
+        className="rounded-card"
       />
     </div>
   );

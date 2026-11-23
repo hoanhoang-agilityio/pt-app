@@ -70,7 +70,7 @@ export const WeekJumpSheet = ({
         aria-label={t("openCalendar", {
           week: formatWeekTitle(weekStart, locale),
         })}
-        className="flex min-w-0 items-center gap-2 text-[15px] font-bold text-fg transition active:opacity-70"
+        className="flex min-w-0 items-center gap-2 text-body font-bold text-fg transition active:opacity-70"
       >
         {children}
         <ChevronDown className="size-4 shrink-0 text-muted" aria-hidden />
@@ -120,10 +120,10 @@ export const WeekJumpSheet = ({
                       : "border-2 border-accent text-accent"),
                 )}
               >
-                <span className="text-[15px] font-bold">
+                <span className="text-body font-bold">
                   {Number(date.slice(8, 10))}
                 </span>
-                <span className="h-2.5 text-[9px] leading-none font-medium tracking-tight whitespace-nowrap">
+                <span className="h-2.5 text-nano leading-none font-medium tracking-tight whitespace-nowrap">
                   {tag}
                 </span>
               </button>

@@ -67,7 +67,7 @@ export const FoodLog = ({
                   >
                     <div className="min-w-0 flex-1 space-y-1.5">
                       {entry.description && (
-                        <p className="text-[15px] leading-snug whitespace-pre-line text-fg">
+                        <p className="text-body leading-snug whitespace-pre-line text-fg">
                           {entry.description}
                         </p>
                       )}

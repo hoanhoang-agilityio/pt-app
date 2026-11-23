@@ -112,7 +112,7 @@ export const TraineeMealCard = ({
               {meal.items.map((item) => (
                 <li
                   key={item.id}
-                  className="flex justify-between gap-3 py-2 text-[15px]"
+                  className="flex justify-between gap-3 py-2 text-body"
                 >
                   <span className="min-w-0 text-fg">{item.food.name}</span>
                   <span className="shrink-0 text-muted tabular-nums">

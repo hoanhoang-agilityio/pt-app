@@ -36,7 +36,7 @@ export const BottomSheet = ({
     repositionInputs={false}
   >
     <Drawer.Portal>
-      <Drawer.Overlay className="fixed inset-0 z-40 bg-black/50" />
+      <Drawer.Overlay className="fixed inset-0 z-40 bg-scrim/50" />
       <Drawer.Content
         {...(description ? {} : { "aria-describedby": undefined })}
         {...(role ? { role } : {})}

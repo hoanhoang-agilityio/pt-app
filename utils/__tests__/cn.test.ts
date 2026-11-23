@@ -16,6 +16,13 @@ describe("cn", () => {
     expect(cn("text-base text-fg", "text-sm")).toBe("text-fg text-sm");
   });
 
+  it("treats design-token sizes, radii and shadows as their own groups", () => {
+    expect(cn("text-body text-fg")).toBe("text-body text-fg");
+    expect(cn("text-body", "text-caption")).toBe("text-caption");
+    expect(cn("rounded-card", "rounded-control")).toBe("rounded-control");
+    expect(cn("shadow-pop", "shadow-dock")).toBe("shadow-dock");
+  });
+
   it("drops falsy values like clsx", () => {
     expect(cn("a", false, undefined, "b")).toBe("a b");
   });

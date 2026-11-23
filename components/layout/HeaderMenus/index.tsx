@@ -104,7 +104,7 @@ interface HeaderMenusProps {
 }
 
 const ITEM =
-  "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] text-fg transition active:bg-line";
+  "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-body text-fg transition active:bg-line";
 
 const THEME_VALUES: Theme[] = ["light", "dark", "system"];
 
@@ -334,7 +334,7 @@ export const HeaderMenus = ({
           role="menu"
           aria-label={openMenu === "gear" ? t("settings") : t("account")}
           onKeyDown={onPanelKeyDown}
-          className="absolute top-full right-3 z-40 mt-1 w-[17rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-line bg-surface p-1.5 shadow-[0_16px_40px_-12px_rgb(0_0_0/0.35)]"
+          className="absolute top-full right-3 z-40 mt-1 w-[17rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-line bg-surface p-1.5 shadow-pop"
         >
           {openMenu === "gear" ? (
             <>
@@ -359,7 +359,7 @@ export const HeaderMenus = ({
                         aria-checked={theme === value}
                         onClick={() => chooseTheme(value)}
                         className={clsx(
-                          "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-1 text-[13px] font-medium transition",
+                          "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-1 text-small font-medium transition",
                           theme === value
                             ? "bg-accent/10 text-accent ring-1 ring-accent"
                             : "text-muted",
@@ -405,7 +405,7 @@ export const HeaderMenus = ({
                       >
                         <LocaleFlag locale={value} />
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="text-[14px] font-semibold text-fg">
+                          <span className="text-compact font-semibold text-fg">
                             {LOCALE_NAMES[value]}
                           </span>
                           <span className="text-xs text-muted" lang={locale}>

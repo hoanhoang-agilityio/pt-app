@@ -200,7 +200,7 @@ export const PostComposer = ({
                   className="size-full object-cover"
                 />
                 {item.status === "uploading" && (
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-white">
+                  <span className="absolute inset-0 flex items-center justify-center bg-scrim/40 text-white">
                     <Spinner label={t("photoUploading")} />
                   </span>
                 )}
@@ -208,7 +208,7 @@ export const PostComposer = ({
                   <span
                     role="alert"
                     title={item.error ?? t("photoFailed")}
-                    className="absolute inset-0 flex items-center justify-center bg-black/60 text-white"
+                    className="absolute inset-0 flex items-center justify-center bg-scrim/60 text-white"
                   >
                     {item.canRetry ? (
                       <button
@@ -233,7 +233,7 @@ export const PostComposer = ({
                   aria-label={t("removePhoto")}
                   className="absolute top-0 right-0 flex size-11 items-start justify-end p-1"
                 >
-                  <span className="inline-flex size-6 items-center justify-center rounded-full bg-black/60 text-white">
+                  <span className="inline-flex size-6 items-center justify-center rounded-full bg-scrim/60 text-white">
                     <X className="size-4" aria-hidden />
                   </span>
                 </button>

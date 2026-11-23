@@ -385,7 +385,7 @@ export const BubbleHostInner = ({ role }: { role: BubbleRole }) => {
             aria-hidden
             data-open={expanded}
             onClick={() => dispatch({ type: "collapse" })}
-            className="cb-scrim absolute inset-0 z-20 bg-black/40"
+            className="cb-scrim absolute inset-0 z-20 bg-scrim/40"
           />
           <BubblePanel
             box={box}
@@ -422,7 +422,7 @@ export const BubbleHostInner = ({ role }: { role: BubbleRole }) => {
             aria-hidden
             data-open={isMoving}
             data-hot={isMoving && drag?.hot}
-            className="cb-zone absolute left-1/2 z-[35] -ml-8 grid size-16 place-items-center rounded-full bg-black/70 text-white"
+            className="cb-zone absolute left-1/2 z-[35] -ml-8 grid size-16 place-items-center rounded-full bg-scrim/70 text-white"
             style={{ bottom: ZONE_BOTTOM }}
           >
             <X className="size-7" strokeWidth={2.6} />

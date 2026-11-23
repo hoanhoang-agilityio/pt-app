@@ -181,7 +181,7 @@ export const StickerSuggestions = ({
             />
             <span
               aria-hidden
-              className="absolute right-0.5 bottom-0.5 rounded bg-fg/70 px-1 text-[10px] leading-4 font-bold text-bg"
+              className="absolute right-0.5 bottom-0.5 rounded bg-fg/70 px-1 text-micro leading-4 font-bold text-bg"
             >
               GIF
             </span>

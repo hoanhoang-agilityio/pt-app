@@ -50,7 +50,7 @@ export const NutritionTargetCard = ({
               })}
               <span
                 className={clsx(
-                  "ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                  "ml-1.5 rounded-full px-1.5 py-0.5 text-micro font-semibold",
                   target.source === "tdee"
                     ? "bg-success/15 text-success"
                     : "bg-line text-muted",

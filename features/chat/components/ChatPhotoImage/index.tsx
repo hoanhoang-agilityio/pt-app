@@ -26,7 +26,7 @@ export const ChatPhotoImage = ({
   return (
     <span
       className={clsx(
-        "relative block overflow-hidden rounded-[1rem] bg-line",
+        "relative block overflow-hidden rounded-card bg-line",
         !isLoaded && "animate-pulse",
         isDimmed && "opacity-70",
       )}

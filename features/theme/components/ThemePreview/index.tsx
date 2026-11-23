@@ -88,7 +88,7 @@ const Panel = ({ mode, accent }: { mode: Mode; accent: string }) => {
           <span
             key={key}
             className={clsx(
-              "flex flex-col items-center gap-0.5 text-[11px] font-medium",
+              "flex flex-col items-center gap-0.5 text-caption font-medium",
               index === 0 ? "text-accent" : "text-muted",
             )}
           >

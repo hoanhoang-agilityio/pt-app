@@ -47,7 +47,7 @@ export const MemberSectionTabs = ({
               href={`${section.getPath(userId)}${query}`}
               aria-current={active === section.key ? "page" : undefined}
               className={clsx(
-                "flex min-h-11 items-center justify-center rounded-xl px-0.5 text-xs font-semibold min-[360px]:text-[13px] sm:text-sm transition-colors duration-200",
+                "flex min-h-11 items-center justify-center rounded-xl px-0.5 text-xs font-semibold min-[360px]:text-small sm:text-sm transition-colors duration-200",
                 active === section.key
                   ? "bg-accent text-accent-fg shadow-md shadow-accent/25"
                   : "text-muted active:bg-line",

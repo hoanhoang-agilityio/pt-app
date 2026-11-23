@@ -81,7 +81,7 @@ export const WeightChartView = ({
                 y={y}
                 textAnchor="end"
                 dominantBaseline="middle"
-                className="fill-muted text-[10px] tabular-nums"
+                className="fill-muted text-micro tabular-nums"
               >
                 {formatDecimal(tick, locale)}
               </text>
@@ -98,8 +98,8 @@ export const WeightChartView = ({
               textAnchor="middle"
               className={
                 week.weekStart === selectedWeekStart
-                  ? "fill-fg text-[10px] font-semibold"
-                  : "fill-muted text-[10px]"
+                  ? "fill-fg text-micro font-semibold"
+                  : "fill-muted text-micro"
               }
             >
               {formatDayMonth(week.weekStart, locale)}
@@ -151,7 +151,7 @@ export const WeightChartView = ({
             x={lastPoint.x}
             y={isLineFalling ? lastPoint.y + 18 : lastPoint.y - 10}
             textAnchor="end"
-            className="fill-fg text-[11px] font-semibold tabular-nums"
+            className="fill-fg text-caption font-semibold tabular-nums"
           >
             {formatDecimal(lastPoint.value, locale)} kg
           </text>
@@ -167,7 +167,7 @@ export const WeightChartView = ({
           <p className="text-base leading-tight font-bold text-fg tabular-nums">
             {formatDecimal(activePoint.value, locale)} kg
           </p>
-          <p className="text-[11px] whitespace-nowrap text-muted">
+          <p className="text-caption whitespace-nowrap text-muted">
             {t("weekTooltip", {
               range: formatWeekRange(activeWeek.weekStart, locale),
               count: activeWeek.count,

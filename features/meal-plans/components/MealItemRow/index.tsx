@@ -45,7 +45,7 @@ export const MealItemRow = ({
     <li className="space-y-2 py-3">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] leading-snug font-medium text-fg">
+          <p className="text-body leading-snug font-medium text-fg">
             {food.name}
             {food.state && (
               <span className="font-normal text-muted">

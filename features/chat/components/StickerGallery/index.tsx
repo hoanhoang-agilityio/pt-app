@@ -88,7 +88,7 @@ export const StickerGallery = ({
               <Avatar
                 name={item.senderName}
                 src={avatars[item.senderKey] ?? null}
-                className="size-6 text-[10px]"
+                className="size-6 text-micro"
               />
             </span>
           </li>

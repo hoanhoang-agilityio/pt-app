@@ -206,7 +206,7 @@ export const BubblePanel = ({
     aria-hidden={!isOpen}
     data-open={isOpen}
     data-chat-bubble-panel
-    className="cb-panel pointer-events-auto absolute z-[25] flex flex-col overflow-hidden rounded-[20px] border border-line bg-bg shadow-2xl"
+    className="cb-panel pointer-events-auto absolute z-[25] flex flex-col overflow-hidden rounded-panel border border-line bg-bg shadow-2xl"
     style={
       {
         left: box.left,

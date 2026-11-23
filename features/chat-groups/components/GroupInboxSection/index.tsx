@@ -139,7 +139,7 @@ export const GroupInboxSection = ({
                           aria-label={t("inbox.unreadLabel", {
                             count: group.unread,
                           })}
-                          className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] leading-none font-bold text-accent-fg"
+                          className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-caption leading-none font-bold text-accent-fg"
                         >
                           {group.unread > MAX_SHOWN
                             ? `${MAX_SHOWN}+`

@@ -36,7 +36,7 @@ export const PhotoTray = ({ photos, onAdd }: PhotoTrayProps) => {
               className="size-full rounded-xl border border-line object-cover"
             />
             {item.status === "uploading" && (
-              <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 text-white">
+              <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-scrim/40 text-white">
                 <Spinner label={t("uploading")} />
               </span>
             )}
@@ -44,7 +44,7 @@ export const PhotoTray = ({ photos, onAdd }: PhotoTrayProps) => {
               <span
                 role="alert"
                 title={item.error ?? t("failed")}
-                className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/60 text-white"
+                className="absolute inset-0 flex items-center justify-center rounded-xl bg-scrim/60 text-white"
               >
                 {item.canRetry ? (
                   <button
@@ -56,7 +56,7 @@ export const PhotoTray = ({ photos, onAdd }: PhotoTrayProps) => {
                     <RotateCw className="size-5" aria-hidden />
                   </button>
                 ) : (
-                  <span className="px-1 text-center text-[10px] font-semibold">
+                  <span className="px-1 text-center text-micro font-semibold">
                     {t("failed")}
                   </span>
                 )}

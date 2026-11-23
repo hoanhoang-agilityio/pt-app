@@ -55,7 +55,7 @@ export const RecentActivityList = ({
             />
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] leading-snug text-fg">
+            <p className="text-body leading-snug text-fg">
               {isUserShown && (
                 <>
                   <Link

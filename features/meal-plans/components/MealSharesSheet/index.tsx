@@ -46,7 +46,7 @@ const SharesForm = ({
           <li key={meal.id} className="flex items-center gap-3">
             <label
               htmlFor={`share-${meal.id}`}
-              className="min-w-0 flex-1 truncate text-[15px] text-fg"
+              className="min-w-0 flex-1 truncate text-body text-fg"
             >
               {mealName(meal.name)}
             </label>

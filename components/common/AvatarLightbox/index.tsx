@@ -62,7 +62,7 @@ export const AvatarLightbox = ({
       aria-label={t("avatarLightbox.label", { name })}
       data-avatar-lightbox
       onClick={onClose}
-      className="pointer-events-auto fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+      className="pointer-events-auto fixed inset-0 z-[100] flex items-center justify-center bg-scrim/90 p-4"
     >
       <button
         ref={closeRef}

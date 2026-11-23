@@ -59,7 +59,7 @@ export const InstallPrompt = () => {
         <section
           role="region"
           aria-label={t("regionLabel")}
-          className="pointer-events-auto mx-auto flex max-w-md flex-col gap-3 rounded-2xl border border-line bg-surface p-4 text-sm shadow-[0_10px_30px_-8px_rgb(0_0_0/0.35)]"
+          className="pointer-events-auto mx-auto flex max-w-md flex-col gap-3 rounded-2xl border border-line bg-surface p-4 text-sm shadow-dock"
         >
           {platform === "ios" ? (
             <p>

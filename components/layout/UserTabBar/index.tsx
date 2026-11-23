@@ -72,7 +72,7 @@ export const UserTabBar = () => {
     >
       <ul
         className={clsx(
-          "pointer-events-auto mx-auto grid max-w-md gap-1 rounded-[1.75rem] border border-line bg-surface p-1.5 shadow-[0_10px_30px_-8px_rgb(0_0_0/0.35)]",
+          "pointer-events-auto mx-auto grid max-w-md gap-1 rounded-dock border border-line bg-surface p-1.5 shadow-dock",
           "grid-cols-5",
         )}
       >
@@ -87,7 +87,7 @@ export const UserTabBar = () => {
                 href={href}
                 aria-current={isActive ? "page" : undefined}
                 className={clsx(
-                  "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[1.375rem] text-[10px] min-[360px]:text-[11px] font-semibold transition-colors duration-200",
+                  "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-dock-item text-micro min-[360px]:text-caption font-semibold transition-colors duration-200",
                   isActive
                     ? "bg-accent text-accent-fg shadow-md shadow-accent/30"
                     : "text-muted active:bg-line/70",

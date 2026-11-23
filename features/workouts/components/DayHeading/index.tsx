@@ -36,7 +36,7 @@ export const DayHeading = ({
           {day.title || fallbackTitle}
         </h2>
         {day.note && (
-          <p className="mt-2 text-[15px] leading-relaxed whitespace-pre-line text-muted">
+          <p className="mt-2 text-body leading-relaxed whitespace-pre-line text-muted">
             {day.note}
           </p>
         )}

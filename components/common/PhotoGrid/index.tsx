@@ -106,7 +106,7 @@ export const PhotoGrid = ({
             {isMore && (
               <span
                 aria-hidden
-                className="absolute inset-0 flex items-center justify-center bg-black/55 text-2xl font-semibold text-white"
+                className="absolute inset-0 flex items-center justify-center bg-scrim/55 text-2xl font-semibold text-white"
               >
                 +{hidden}
               </span>

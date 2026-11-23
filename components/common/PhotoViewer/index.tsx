@@ -185,7 +185,7 @@ export const PhotoViewer = ({
       onPointerCancel={() => {
         start.current = null;
       }}
-      className="pointer-events-auto fixed inset-0 z-[100] flex touch-pan-y items-center justify-center bg-black select-none"
+      className="pointer-events-auto fixed inset-0 z-[100] flex touch-pan-y items-center justify-center bg-scrim select-none"
     >
       <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
         <p

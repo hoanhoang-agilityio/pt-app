@@ -37,7 +37,7 @@ export const ProfileStats = ({ stats }: ProfileStatsProps) => {
           <Icon className="size-5 shrink-0 text-accent" aria-hidden />
           <div className="min-w-0">
             <b className="block text-xl leading-tight tabular-nums">{value}</b>
-            <span className="block truncate text-[11px] text-muted">
+            <span className="block truncate text-caption text-muted">
               {label}
             </span>
           </div>

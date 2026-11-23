@@ -90,7 +90,7 @@ const MealLogSheetBody = ({
                     className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left transition active:bg-line"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[15px] leading-snug text-fg">
+                      <span className="block text-body leading-snug text-fg">
                         {food.name}
                       </span>
                       <span className="block text-xs text-muted">
@@ -135,7 +135,7 @@ const MealLogSheetBody = ({
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <p className="text-[15px] font-medium text-fg">{name}</p>
+        <p className="text-body font-medium text-fg">{name}</p>
         <div>
           <label htmlFor="log-grams" className={LABEL}>
             {t("grams")}

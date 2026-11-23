@@ -46,7 +46,7 @@ export const ExerciseCard = ({
         exercise.completedAt !== null && "border-success/50",
       )}
     >
-      <div className="relative aspect-video bg-black">
+      <div className="relative aspect-video bg-scrim">
         {isPlaying ? (
           <YoutubePlayer
             videoId={exercise.youtubeId}
@@ -71,7 +71,7 @@ export const ExerciseCard = ({
             <span className="absolute top-1/2 left-1/2 flex size-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/95 text-black shadow-lg transition group-active:scale-95">
               <Play className="ml-1 size-7 fill-current" aria-hidden />
             </span>
-            <span className="absolute top-3 left-3 flex size-8 items-center justify-center rounded-full bg-black/70 text-sm font-bold text-white">
+            <span className="absolute top-3 left-3 flex size-8 items-center justify-center rounded-full bg-scrim/70 text-sm font-bold text-white">
               {index + 1}
             </span>
           </button>
@@ -87,7 +87,7 @@ export const ExerciseCard = ({
         )}
       </div>
       <div className="space-y-2.5 p-4">
-        <h3 className="text-[17px] leading-snug font-semibold text-fg">
+        <h3 className="text-lead leading-snug font-semibold text-fg">
           {exercise.title}
         </h3>
         {(volume || isPersonalBest) && (
@@ -107,7 +107,7 @@ export const ExerciseCard = ({
           </div>
         )}
         {exercise.description && (
-          <p className="text-[15px] leading-relaxed whitespace-pre-line text-muted">
+          <p className="text-body leading-relaxed whitespace-pre-line text-muted">
             {exercise.description}
           </p>
         )}

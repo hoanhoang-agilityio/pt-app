@@ -200,7 +200,7 @@ export const MessageBubble = ({
         >
           {shownName}
           {senderTag && (
-            <span className="ml-1.5 rounded bg-accent/15 px-1.5 py-px align-middle text-[10px] font-semibold text-accent">
+            <span className="ml-1.5 rounded bg-accent/15 px-1.5 py-px align-middle text-micro font-semibold text-accent">
               {tGroup(
                 senderTag === "manager" ? "thread.managerTag" : "thread.ptTag",
               )}
@@ -221,7 +221,7 @@ export const MessageBubble = ({
               name={avatarName}
               src={avatarSrc}
               tone="soft"
-              className="size-7 text-[11px]"
+              className="size-7 text-caption"
             />
           </span>
         )}
@@ -240,7 +240,7 @@ export const MessageBubble = ({
               : undefined
           }
           className={clsx(
-            "flex max-w-[75%] touch-manipulation flex-col rounded-[1.25rem] text-[15px] leading-snug select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none",
+            "flex max-w-[75%] touch-manipulation flex-col rounded-panel text-body leading-snug select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none",
             isUnsent || isHidden
               ? "border border-line px-3.5 py-2 text-muted italic"
               : isSticker
@@ -415,7 +415,7 @@ export const MessageBubble = ({
           type="button"
           onClick={() => onOpenHistory(message)}
           className={clsx(
-            "mt-0.5 rounded px-0.5 text-[11px] text-muted underline-offset-2 active:underline",
+            "mt-0.5 rounded px-0.5 text-caption text-muted underline-offset-2 active:underline",
             sideMargin,
           )}
         >

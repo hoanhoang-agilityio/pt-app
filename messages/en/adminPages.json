@@ -13,8 +13,15 @@
       "messages": "Messages",
       "notes": "Training notes"
     },
-    "usersCount": "Users · {count}",
-    "recentActivity": "Recent activity"
+    "usersCard": {
+      "label": "Trainees",
+      "hint": "{planned} with a schedule this week"
+    }
+  },
+  "users": {
+    "metaTitle": "Trainees",
+    "eyebrow": "Admin",
+    "title": "Trainees ({count})"
   },
   "pts": {
     "metaTitle": "PTs & trainees",

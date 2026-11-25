@@ -8,55 +8,30 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 
 import { ScrollToTopButton } from "@/components/common/ScrollToTopButton";
-import { WeekNavigator } from "@/components/common/WeekNavigator";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { HeaderMenus } from "@/components/layout/HeaderMenus";
 import { ROUTES } from "@/constants/routes";
-import {
-  CARD,
-  ICON_BUTTON,
-  PAGE_CONTAINER,
-  SECTION_TITLE,
-} from "@/constants/styles";
+import { ICON_BUTTON, PAGE_CONTAINER, SECTION_TITLE } from "@/constants/styles";
 import { TIME_ZONE } from "@/constants/time";
 import { getAvatarUrl } from "@/features/avatar/services/avatar";
 import { AdminUnreadBadge } from "@/features/chat/components/UnreadBadge";
 import { loadAdminAccountColor } from "@/features/chat/services/chat-profile";
-import {
-  countUnreadForAdmin,
-  listUnreadByTraineeForAdmin,
-} from "@/features/chat/services/chat-queries";
+import { countUnreadForAdmin } from "@/features/chat/services/chat-queries";
 import { sessionOfAdmin } from "@/features/chat-groups/services/group-access";
 import { countGroupUnread } from "@/features/chat-groups/services/group-queries";
-import { MemberProgressList } from "@/features/dashboard/components/MemberProgressList";
-import { PtFilterSelect } from "@/features/dashboard/components/PtFilterSelect";
-import { RecentActivityList } from "@/features/dashboard/components/RecentActivityList";
-import { WeekSummaryTiles } from "@/features/dashboard/components/WeekSummaryTiles";
-import { RECENT_ACTIVITY_LIMIT } from "@/features/dashboard/constants/dashboard";
-import {
-  getMemberProgress,
-  getRecentActivity,
-} from "@/features/dashboard/services/dashboard-queries";
-import { parsePtFilter } from "@/features/dashboard/utils/pt-filter";
-import {
-  summarizeWeek,
-  toMemberRows,
-} from "@/features/dashboard/utils/summary";
+import { UsersOverviewCard } from "@/features/dashboard/components/UsersOverviewCard";
+import { getMemberProgress } from "@/features/dashboard/services/dashboard-queries";
+import { summarizeWeek } from "@/features/dashboard/utils/summary";
 import { AddMemberButton } from "@/features/members/components/AddMemberButton";
-import { listPtOptions } from "@/features/pts/services/pt-queries";
-import { listActiveRestrictions } from "@/features/restrictions/services/restriction-queries";
 import { countOpenReports } from "@/features/social/services/report-queries";
 import { adminProfilePath } from "@/features/social/utils/post-rules";
 import { canPickPersonalColor } from "@/features/theme/services/theme-queries";
 import { isSuperAdmin } from "@/services/admin-scope";
 import { requireAdmin } from "@/services/auth-guard";
-import { getAdminUserPath } from "@/utils/routes";
-import { readSearchParam } from "@/utils/search-params";
-import { getRequestTime } from "@/utils/time";
-import { getTodayDate, resolveSchedule } from "@/utils/week";
+import { getTodayDate, getWeekStart } from "@/utils/week";
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const t = await getTranslations("adminPages.home");
@@ -67,72 +42,24 @@ export const generateMetadata = async (): Promise<Metadata> => {
 const TILE =
   "flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-surface px-2 py-3 text-center text-sm font-semibold text-fg transition active:bg-line/60";
 
-const getMemberHref = (memberId: number, weekStart: string) =>
-  `${getAdminUserPath(memberId)}?${new URLSearchParams({ week: weekStart })}`;
-
-const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
+const AdminDashboardPage = async () => {
   const admin = await requireAdmin();
   const t = await getTranslations("adminPages.home");
-  const locale = await getLocale();
-  const query = await searchParams;
-  const today = getTodayDate(TIME_ZONE);
-  const now = getRequestTime();
-  const schedule = resolveSchedule(
-    { week: readSearchParam(query.week) },
-    today,
-  );
+  const weekStart = getWeekStart(getTodayDate(TIME_ZONE));
   const isSuper = isSuperAdmin(admin);
-  // Only a super admin can filter by PT; a PT is already scoped to their own.
-  const ptFilter = isSuper ? parsePtFilter(readSearchParam(query.pt)) : "all";
-  const [
-    ptOptions,
-    members,
-    activity,
-    unreadMessages,
-    unreadByTrainee,
-    avatarUrl,
-    accountColor,
-    openReports,
-  ] = await Promise.all([
-    isSuper ? listPtOptions() : Promise.resolve([]),
-    getMemberProgress(schedule.weekStart, admin.id, ptFilter),
-    getRecentActivity({ limit: RECENT_ACTIVITY_LIMIT, adminId: admin.id }),
-    // Trainee chats plus group chats: the badge counts both.
-    Promise.all([
-      countUnreadForAdmin(admin.id),
-      countGroupUnread(sessionOfAdmin(admin)),
-    ]).then(([chats, groups]) => chats + groups.total),
-    listUnreadByTraineeForAdmin(admin.id),
-    getAvatarUrl("admin", admin.id),
-    loadAdminAccountColor(admin.id),
-    isSuperAdmin(admin) ? countOpenReports() : 0,
-  ]);
-  const restrictions = await listActiveRestrictions(
-    members.map((member) => member.id),
-  );
-  const displayNames = new Map(
-    members.map((member) => [member.id, member.displayName]),
-  );
-  const namedActivity = activity.map((item) => ({
-    ...item,
-    displayName: displayNames.get(item.userId) ?? item.userName,
-  }));
-  const rows = toMemberRows(members, {
-    weekStart: schedule.weekStart,
-    timeZone: TIME_ZONE,
-    now,
-    getHref: getMemberHref,
-    locale,
-    unreadByUserId: new Map(
-      unreadByTrainee.map((row) => [row.userId, row.unread]),
-    ),
-    restrictionByUserId: new Map(
-      [...restrictions].map(([userId, restriction]) => [
-        userId,
-        restriction.level,
-      ]),
-    ),
-  });
+  const [members, unreadMessages, avatarUrl, accountColor, openReports] =
+    await Promise.all([
+      getMemberProgress(weekStart, admin.id, "all"),
+      // Trainee chats plus group chats: the badge counts both.
+      Promise.all([
+        countUnreadForAdmin(admin.id),
+        countGroupUnread(sessionOfAdmin(admin)),
+      ]).then(([chats, groups]) => chats + groups.total),
+      getAvatarUrl("admin", admin.id),
+      loadAdminAccountColor(admin.id),
+      isSuperAdmin(admin) ? countOpenReports() : 0,
+    ]);
+  const summary = summarizeWeek(members);
 
   return (
     <>
@@ -224,34 +151,10 @@ const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
             </Link>
           </div>
         </section>
-        <div className="space-y-3">
-          <div className={`${CARD} p-4`}>
-            <WeekNavigator
-              basePath={ROUTES.ADMIN}
-              weekStart={schedule.weekStart}
-              selectedDate={schedule.selectedDate}
-              today={today}
-            />
-          </div>
-          <WeekSummaryTiles summary={summarizeWeek(members)} />
-        </div>
-        <section className="space-y-2">
-          <h2 className={SECTION_TITLE}>
-            {t("usersCount", { count: members.length })}
-          </h2>
-          {isSuper && (
-            <PtFilterSelect value={String(ptFilter)} options={ptOptions} />
-          )}
-          <MemberProgressList
-            members={rows}
-            hasPasscode={admin.hasPasscode}
-            isPtShown={isSuper}
-          />
-        </section>
-        <section className="space-y-2">
-          <h2 className={SECTION_TITLE}>{t("recentActivity")}</h2>
-          <RecentActivityList items={namedActivity} isUserShown now={now} />
-        </section>
+        <UsersOverviewCard
+          count={summary.memberCount}
+          plannedCount={summary.plannedCount}
+        />
       </main>
       <ScrollToTopButton />
     </>

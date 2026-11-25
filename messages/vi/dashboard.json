@@ -28,15 +28,5 @@
     "completed": "đã tập",
     "bestPrefix": "Kỷ lục mới: {best} (trước đó {previous}) · ",
     "schedule": "Lịch {date} · lúc {time}"
-  },
-  "weekSummary": {
-    "users": "User",
-    "usersHint": "{planned} người có lịch tuần này",
-    "active": "Đang tập",
-    "activeHint": "đã tập ít nhất 1 bài",
-    "done": "Hoàn thành",
-    "doneHint": "số bài đã tập / đã giao",
-    "exercises": "Bài đã tập",
-    "exercisesHint": "trên {assigned} bài đã giao"
   }
 }

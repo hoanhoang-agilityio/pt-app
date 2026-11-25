@@ -3,6 +3,8 @@ import type {
   TrainingNoteGroup,
   TrainingNoteItem,
 } from "@/features/training-notes/types/training-note";
+import type { Locale } from "@/utils/locale";
+import { formatDayMonth, formatFullDay, getWeekdayLabel } from "@/utils/week";
 
 type ItemFormatKey =
   | "item.setsReps"
@@ -68,4 +70,27 @@ export const groupNotesByDate = (
     }
   }
   return groups;
+};
+
+// "Thứ Tư, 25/11" for this year; other years carry the year too: "Thứ Tư,
+// 25/11/2024", "Wednesday, Nov 25, 2024", "周三，2024年11月25日".
+export const formatNoteDayLabel = (
+  date: string,
+  locale: Locale,
+  currentYear: string,
+) => {
+  const year = date.slice(0, 4);
+
+  if (year === currentYear) {
+    return formatFullDay(date, locale);
+  }
+  const weekday = getWeekdayLabel(date, locale);
+  const dayMonth = formatDayMonth(date, locale);
+
+  if (locale === "zh") {
+    return `${weekday}，${year}年${dayMonth}`;
+  }
+  return locale === "vi"
+    ? `${weekday}, ${dayMonth}/${year}`
+    : `${weekday}, ${dayMonth}, ${year}`;
 };

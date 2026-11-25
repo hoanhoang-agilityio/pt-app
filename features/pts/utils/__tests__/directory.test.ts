@@ -136,4 +136,14 @@ describe("buildDirectory", () => {
 
     expect(view.groups.at(-1)?.trainees.map((t) => t.name)).toEqual(["Orphan"]);
   });
+
+  it("finds a trainee under all that a narrower chip hides", () => {
+    // Lê B has a PT, so the unassigned chip is empty while "all" matches.
+    expect(
+      buildDirectory(admins, trainees, options("unassigned", "Lê B")).isEmpty,
+    ).toBe(true);
+    expect(
+      buildDirectory(admins, trainees, options("all", "Lê B")).isEmpty,
+    ).toBe(false);
+  });
 });

@@ -56,15 +56,13 @@ export const createMemberAction = withFormErrorHandling(
 
     const rawName = String(formData.get("name") ?? "");
     const rawEmail = String(formData.get("email") ?? "");
-    const pt = await resolveTraineePt(
-      admin,
-      String(formData.get("ptAdminId") ?? ""),
-    );
+    const rawPtId = String(formData.get("ptAdminId") ?? "");
+    const pt = await resolveTraineePt(admin, rawPtId);
 
     if (pt.status === "error") {
       return createErrorState(pt.message, {
         fieldErrors: { ptAdminId: pt.message },
-        values: { name: rawName, email: rawEmail },
+        values: { name: rawName, email: rawEmail, ptAdminId: rawPtId },
       });
     }
 
@@ -73,7 +71,7 @@ export const createMemberAction = withFormErrorHandling(
     if (result.status === "error") {
       return createErrorState(result.message, {
         fieldErrors: { [result.field]: result.message },
-        values: { name: rawName, email: rawEmail },
+        values: { name: rawName, email: rawEmail, ptAdminId: rawPtId },
       });
     }
 

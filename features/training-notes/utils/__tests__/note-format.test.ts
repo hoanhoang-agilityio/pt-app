@@ -6,11 +6,11 @@ import type {
 } from "@/features/training-notes/types/training-note";
 import {
   getRangeBounds,
-  matchesNoteQuery,
   parseTrainingNoteRange,
 } from "@/features/training-notes/utils/note-filters";
 import {
   formatItemLine,
+  formatNoteDayLabel,
   groupNotesByDate,
   type ItemFormatter,
 } from "@/features/training-notes/utils/note-format";
@@ -123,21 +123,22 @@ describe("parseTrainingNoteRange", () => {
   });
 });
 
-describe("matchesNoteQuery", () => {
-  const target = note(1, "2026-11-25", {
-    title: "Ngày chân",
-    note: "Đau gối nhẹ",
-    items: [item({ exerciseName: "Squat" })],
+describe("formatNoteDayLabel", () => {
+  it("omits the year for the current year", () => {
+    expect(formatNoteDayLabel("2026-11-25", "vi", "2026")).toBe(
+      "Thứ Tư, 25/11",
+    );
   });
 
-  it("matches title, note and exercise names without accents or case", () => {
-    expect(matchesNoteQuery(target, "ngay chan")).toBe(true);
-    expect(matchesNoteQuery(target, "GOI")).toBe(true);
-    expect(matchesNoteQuery(target, "squ")).toBe(true);
-    expect(matchesNoteQuery(target, "deadlift")).toBe(false);
-  });
-
-  it("matches everything for an empty query", () => {
-    expect(matchesNoteQuery(target, "  ")).toBe(true);
+  it("adds the year for other years in every locale", () => {
+    expect(formatNoteDayLabel("2025-11-26", "vi", "2026")).toBe(
+      "Thứ Tư, 26/11/2025",
+    );
+    expect(formatNoteDayLabel("2025-11-26", "en", "2026")).toBe(
+      "Wednesday, Nov 26, 2025",
+    );
+    expect(formatNoteDayLabel("2025-11-26", "zh", "2026")).toContain(
+      "2025年11月26日",
+    );
   });
 });

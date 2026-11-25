@@ -1,8 +1,4 @@
-import type {
-  TrainingNote,
-  TrainingNoteRange,
-} from "@/features/training-notes/types/training-note";
-import { toNameKey } from "@/utils/name";
+import type { TrainingNoteRange } from "@/features/training-notes/types/training-note";
 import { addDays, getWeekStart } from "@/utils/week";
 
 export const TRAINING_NOTE_RANGES: TrainingNoteRange[] = [
@@ -33,18 +29,4 @@ export const getRangeBounds = (
     return { from: `${month}-01`, to: `${month}-31` };
   }
   return null;
-};
-
-// Title, free note and exercise names, accents and case ignored.
-export const matchesNoteQuery = (note: TrainingNote, query: string) => {
-  const needle = toNameKey(query);
-
-  if (needle === "") {
-    return true;
-  }
-  return [
-    note.title ?? "",
-    note.note ?? "",
-    ...note.items.map((item) => item.exerciseName),
-  ].some((text) => toNameKey(text).includes(needle));
 };

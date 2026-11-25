@@ -35,6 +35,7 @@ export const CreateMemberForm = ({
     ptError,
     defaultName: typedName,
     defaultEmail,
+    submittedPtId,
     credentials,
     dismissPassword,
   } = useCreateMember(onDone);
@@ -105,7 +106,8 @@ export const CreateMemberForm = ({
           <select
             id="member-pt"
             name="ptAdminId"
-            defaultValue={defaultPtId ?? ""}
+            key={submittedPtId ?? defaultPtId ?? ""}
+            defaultValue={submittedPtId ?? defaultPtId ?? ""}
             aria-invalid={Boolean(ptError)}
             className={INPUT}
           >

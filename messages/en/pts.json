@@ -55,6 +55,7 @@
     "unassignedEmpty": "Every trainee has a PT.",
     "filterEmpty": "No accounts in this view.",
     "noResult": "No results for “{query}”",
-    "addAsTrainee": "Add “{query}” as a trainee"
+    "addAsTrainee": "Add “{query}” as a trainee",
+    "noResultInFilter": "No “{query}” in this view. Switch to All to search everything."
   }
 }

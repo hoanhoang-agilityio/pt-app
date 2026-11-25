@@ -27,7 +27,7 @@ vi.mock("@/services/auth-guard", () => ({
 
 const { deleteTrainingNoteAction, saveTrainingNoteAction } =
   await import("@/features/training-notes/services/training-note-actions");
-const { listExerciseNames, listTrainingNotes } =
+const { listExerciseNames, listTrainingNotes, toLikePattern } =
   await import("@/features/training-notes/services/training-note-queries");
 
 let db: TestDb;
@@ -259,6 +259,34 @@ describe("listTrainingNotes", () => {
         (n) => n.title,
       ),
     ).toEqual(["Back"]);
+  });
+
+  it("searches title, note and exercise names, ignoring case", async () => {
+    await saveTrainingNoteAction(
+      input({ title: "Leg Day", note: "heavy", items: [] }),
+    );
+    await saveTrainingNoteAction(
+      input({ title: "B", note: "knee ache", items: [] }),
+    );
+    await saveTrainingNoteAction(input({ title: "C", note: "" }));
+    const titles = async (q: string) =>
+      (await listTrainingNotes(alice, { q })).map((n) => n.title).sort();
+
+    expect(await titles("leg")).toEqual(["Leg Day"]);
+    expect(await titles("KNEE")).toEqual(["B"]);
+    expect(await titles("squat")).toEqual(["C"]);
+    expect(await titles("nothing")).toEqual([]);
+  });
+
+  it("treats % and _ in the search as plain characters", async () => {
+    await saveTrainingNoteAction(input({ title: "50% effort", note: "" }));
+    await saveTrainingNoteAction(input({ title: "Easy", note: "" }));
+
+    expect(toLikePattern("50%")).toBe("%50\\%%");
+    expect(
+      (await listTrainingNotes(alice, { q: "%" })).map((n) => n.title),
+    ).toEqual(["50% effort"]);
+    expect(await listTrainingNotes(alice, { q: "_" })).toEqual([]);
   });
 
   it("lists exercise names of the caller only", async () => {

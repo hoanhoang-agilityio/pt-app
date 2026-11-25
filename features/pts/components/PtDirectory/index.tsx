@@ -63,6 +63,15 @@ export const PtDirectory = ({
     unassignedTitle: t("unassignedGroup"),
   });
   const trimmedQuery = query.trim();
+  // Whether the search finds nothing even under Tất cả.
+  const isEmptyInAll =
+    filter === "all"
+      ? view.isEmpty
+      : buildDirectory(admins, trainees, {
+          filter: "all",
+          query,
+          unassignedTitle: t("unassignedGroup"),
+        }).isEmpty;
   const hasNoOtherAccounts =
     admins.every((admin) => admin.role !== "pt") && trainees.length === 0;
 
@@ -78,6 +87,14 @@ export const PtDirectory = ({
     }));
 
   const renderEmpty = () => {
+    if (trimmedQuery && filter !== "all" && !isEmptyInAll) {
+      // Matches exist under Tất cả: do not offer to add a duplicate.
+      return (
+        <p className={`${CARD} p-4 text-center text-sm text-muted`}>
+          {t("noResultInFilter", { query: trimmedQuery })}
+        </p>
+      );
+    }
     if (trimmedQuery) {
       return (
         <div className={`${CARD} space-y-3 p-4 text-center`}>

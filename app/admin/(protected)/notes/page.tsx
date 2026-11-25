@@ -10,11 +10,14 @@ import {
   listTrainingNotes,
 } from "@/features/training-notes/services/training-note-queries";
 import { parseTrainingNoteRange } from "@/features/training-notes/utils/note-filters";
-import { groupNotesByDate } from "@/features/training-notes/utils/note-format";
+import {
+  formatNoteDayLabel,
+  groupNotesByDate,
+} from "@/features/training-notes/utils/note-format";
 import { requireAdmin } from "@/services/auth-guard";
 import { parseLocale } from "@/utils/locale";
 import { readSearchParam } from "@/utils/search-params";
-import { formatFullDay, getTodayDate } from "@/utils/week";
+import { getTodayDate } from "@/utils/week";
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const t = await getTranslations("trainingNotes");
@@ -39,7 +42,9 @@ const AdminNotesPage = async ({ searchParams }: PageProps<"/admin/notes">) => {
   return (
     <>
       <TrainingNotesView
-        groups={groupNotesByDate(notes, (date) => formatFullDay(date, locale))}
+        groups={groupNotesByDate(notes, (date) =>
+          formatNoteDayLabel(date, locale, today.slice(0, 4)),
+        )}
         range={range}
         query={query}
         hasNoNotes={notes.length === 0 && range === "all" && query === ""}

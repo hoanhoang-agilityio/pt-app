@@ -55,6 +55,7 @@
     "unassignedEmpty": "Mọi học viên đều đã có PT.",
     "filterEmpty": "Chưa có tài khoản nào ở mục này.",
     "noResult": "Không tìm thấy “{query}”",
-    "addAsTrainee": "Thêm “{query}” làm học viên"
+    "addAsTrainee": "Thêm “{query}” làm học viên",
+    "noResultInFilter": "Không có “{query}” trong mục này. Hãy chọn Tất cả để tìm rộng hơn."
   }
 }

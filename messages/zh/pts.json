@@ -55,6 +55,7 @@
     "unassignedEmpty": "所有学员都已有教练。",
     "filterEmpty": "此视图下没有账号。",
     "noResult": "未找到“{query}”",
-    "addAsTrainee": "将“{query}”添加为学员"
+    "addAsTrainee": "将“{query}”添加为学员",
+    "noResultInFilter": "此视图中没有“{query}”。切换到“全部”可搜索所有账号。"
   }
 }

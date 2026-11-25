@@ -11,7 +11,6 @@ import {
   EXERCISE_NAME_MAX,
   REPS_MAX,
   SETS_MAX,
-  WEIGHT_MAX_KG,
 } from "@/features/training-notes/constants/limits";
 import {
   type AmountUnit,
@@ -127,7 +126,6 @@ export const NoteItemFields = ({
           value={item.weight}
           onChange={(event) => onChange({ weight: event.target.value })}
           placeholder={t("optional")}
-          maxLength={String(WEIGHT_MAX_KG).length + 2}
           autoComplete="off"
         />
       </div>

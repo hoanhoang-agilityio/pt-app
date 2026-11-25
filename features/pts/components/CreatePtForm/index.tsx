@@ -2,7 +2,7 @@
 
 import { Eye, EyeOff, RefreshCw, UserPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 
 import { Input } from "@/components/common/Input";
 import { SubmitButton } from "@/components/common/SubmitButton";
@@ -27,13 +27,8 @@ export const CreatePtForm = ({ onDone }: CreatePtFormProps) => {
   const passwordRef = useRef<HTMLInputElement>(null);
   const [isPasswordShown, setIsPasswordShown] = useState(false);
 
-  useFormFeedback(state);
-
-  useEffect(() => {
-    if (state.status === "success") {
-      onDone?.();
-    }
-  }, [state.status, state.submittedAt, onDone]);
+  // Closes the sheet once per successful submit.
+  useFormFeedback(state, onDone);
 
   const fillRandomPassword = () => {
     if (passwordRef.current) {

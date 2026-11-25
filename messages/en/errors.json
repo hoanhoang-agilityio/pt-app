@@ -304,5 +304,21 @@
     "INVALID_COLOR": "Invalid color",
     "INVALID_SCOPE": "Invalid scope",
     "LOCKED": "The administrator has locked changing the app color"
+  },
+  "trainingNotes": {
+    "DATE_INVALID": "Pick a valid training date",
+    "TITLE_TOO_LONG": "The session name can have at most 60 characters",
+    "NOTE_TOO_LONG": "The note can have at most 1000 characters",
+    "TOO_MANY_ITEMS": "At most 20 exercises per note",
+    "EXERCISE_NAME_TOO_LONG": "The exercise name can have at most 60 characters",
+    "EXERCISE_NAME_REQUIRED": "Enter the exercise name",
+    "REPS_OR_DURATION": "Choose reps or seconds, not both",
+    "EMPTY": "Add at least one exercise or a line of notes",
+    "SETS_REPS_RANGE": "Sets and reps are numbers from 1 to 99",
+    "DURATION_RANGE": "Seconds must be from 1 to 3600",
+    "WEIGHT_RANGE": "Kg must be from 0 to 500",
+    "NOT_FOUND": "This note was not found",
+    "SAVED": "Note saved",
+    "DELETED": "Note deleted"
   }
 }

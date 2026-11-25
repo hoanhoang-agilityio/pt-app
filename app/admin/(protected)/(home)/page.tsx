@@ -2,6 +2,7 @@ import {
   Flag,
   MessageCircle,
   Newspaper,
+  NotebookPen,
   UserCog,
   Utensils,
 } from "lucide-react";
@@ -179,10 +180,8 @@ const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
             {t("actions")}
           </h2>
           <div className="grid grid-cols-3 gap-2">
-            <AddMemberButton
-              className={TILE}
-              ptOptions={isSuper ? ptOptions : undefined}
-            />
+            {/* A super admin adds accounts on the "PT & học viên" page. */}
+            {!isSuper && <AddMemberButton className={TILE} />}
             {isSuper && (
               <>
                 <Link href={ROUTES.ADMIN_FOODS} className={TILE}>
@@ -207,6 +206,10 @@ const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
                 </Link>
               </>
             )}
+            <Link href={ROUTES.ADMIN_NOTES} className={TILE}>
+              <NotebookPen className="size-6 text-accent" aria-hidden />
+              <span>{t("tiles.notes")}</span>
+            </Link>
             <Link href={ROUTES.ADMIN_SOCIAL} className={TILE}>
               <Newspaper className="size-6 text-accent" aria-hidden />
               <span>{t("tiles.social")}</span>

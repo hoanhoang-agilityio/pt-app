@@ -7,26 +7,19 @@
     "actions": "Actions",
     "tiles": {
       "foods": "Food library",
-      "pts": "Manage PTs",
+      "pts": "PTs & trainees",
       "reports": "Reports",
       "social": "Community",
-      "messages": "Messages"
+      "messages": "Messages",
+      "notes": "Training notes"
     },
     "usersCount": "Users · {count}",
     "recentActivity": "Recent activity"
   },
   "pts": {
-    "metaTitle": "Manage PTs",
+    "metaTitle": "PTs & trainees",
     "eyebrow": "Admin",
-    "title": "Manage PTs",
-    "adminAccounts": "Admin accounts · {count}",
-    "superAdmin": "Super admin",
-    "ptRole": "PT · {count, plural, one {# trainee} other {# trainees}}",
-    "traineesByPt": "Trainees by PT",
-    "unassignedGroup": "No PT",
-    "groupTitle": "{title} · {count, plural, one {# trainee} other {# trainees}}",
-    "noTrainees": "No trainees yet",
-    "addPt": "Add PT"
+    "title": "PTs & trainees"
   },
   "reports": {
     "metaTitle": "Reports",

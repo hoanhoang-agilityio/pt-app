@@ -15,7 +15,7 @@ export interface AdminAccount {
   traineeCount: number;
 }
 
-// Every admin account (super admins and PTs) for the "Quản lý PT" page.
+// Every admin account (super admins and PTs) for the "PT & học viên" page.
 export const listAdminAccounts = async (): Promise<AdminAccount[]> => {
   const [rows, counts] = await Promise.all([
     db
@@ -46,13 +46,20 @@ export const listAdminAccounts = async (): Promise<AdminAccount[]> => {
 export interface WorkspaceTrainee {
   id: number;
   name: string;
+  // Null for trainees created before email login.
+  email: string | null;
   ptAdminId: number | null;
 }
 
 // Every trainee with their PT, for the move-between-PTs lists.
 export const listWorkspaceTrainees = async (): Promise<WorkspaceTrainee[]> =>
   db
-    .select({ id: users.id, name: users.name, ptAdminId: users.ptAdminId })
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      ptAdminId: users.ptAdminId,
+    })
     .from(users)
     .orderBy(asc(users.nameKey));
 

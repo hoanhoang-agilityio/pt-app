@@ -1,0 +1,61 @@
+{
+  "metaTitle": "训练笔记",
+  "eyebrow": "管理员",
+  "title": "训练笔记",
+  "add": "添加笔记",
+  "private": "只有你能看到这些笔记",
+  "searchLabel": "搜索笔记",
+  "searchPlaceholder": "搜索动作或笔记",
+  "rangeLabel": "时间范围",
+  "ranges": {
+    "all": "全部",
+    "week": "本周",
+    "month": "本月"
+  },
+  "empty": {
+    "title": "还没有笔记",
+    "hint": "每次训练后记录动作、组数、次数和感受。",
+    "action": "添加第一条笔记"
+  },
+  "noResult": "没有匹配的笔记。",
+  "untitled": "训练",
+  "item": {
+    "setsReps": "{sets} × {reps}",
+    "setsSeconds": "{sets} × {seconds} 秒",
+    "repsOnly": "{reps} 次",
+    "secondsOnly": "{seconds} 秒",
+    "setsOnly": "{sets} 组",
+    "weight": "{kg} 公斤"
+  },
+  "edit": "编辑笔记：{title}",
+  "delete": "删除笔记",
+  "deleteTitle": "删除这条笔记？",
+  "deleteDescription": "笔记及其中的动作将被永久删除。",
+  "deleteConfirm": "删除笔记",
+  "deleted": "已删除笔记",
+  "form": {
+    "addTitle": "添加笔记",
+    "editTitle": "编辑笔记",
+    "date": "训练日期",
+    "title": "训练名称",
+    "titlePlaceholder": "例如：腿部训练日",
+    "optional": "选填",
+    "exercise": "动作",
+    "exercisePlaceholder": "例如：深蹲",
+    "sets": "组",
+    "unitLabel": "单位",
+    "units": {
+      "reps": "次",
+      "seconds": "秒"
+    },
+    "amount": "次数或秒数",
+    "weight": "公斤",
+    "removeItem": "删除动作",
+    "addItem": "添加动作",
+    "note": "备注",
+    "notePlaceholder": "感受、酸痛、下次计划……",
+    "noteCount": "{count}/{max}",
+    "submit": "保存笔记",
+    "saved": "已保存笔记"
+  }
+}

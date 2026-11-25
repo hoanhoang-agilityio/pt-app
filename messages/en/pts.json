@@ -2,17 +2,60 @@
   "createPt": {
     "usernameLabel": "PT username",
     "passwordLabel": "Password (at least 8 characters)",
-    "submit": "Create PT"
+    "submit": "Create PT",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "generate": "Generate a random password"
   },
   "ptAssign": {
     "label": "Assigned PT",
     "unassigned": "Unassigned (super admin only)",
-    "assigned": "Assigned PT updated"
+    "assigned": "Assigned PT updated",
+    "unassignedShort": "No PT"
   },
   "verifiedToggle": {
     "grant": "Verify",
     "revoke": "Unverify",
     "granted": "Verified badge granted",
     "revoked": "Verified badge removed"
+  },
+  "addAccount": {
+    "title": "Add account",
+    "roleLabel": "Role",
+    "roles": {
+      "trainee": "Trainee",
+      "pt": "PT"
+    },
+    "hints": {
+      "trainee": "A password is generated automatically and shown only once.",
+      "pt": "A PT signs in with the username and password you set."
+    }
+  },
+  "directory": {
+    "summary": "{count, plural, one {# account} other {# accounts}}",
+    "add": "Add",
+    "searchLabel": "Search accounts",
+    "searchPlaceholder": "Search by name, email or username",
+    "filterLabel": "Filter the list",
+    "filters": {
+      "all": "All",
+      "pt": "PTs",
+      "trainee": "Trainees",
+      "unassigned": "No PT"
+    },
+    "superAdmin": "Super admin",
+    "ptRole": "PT · {count, plural, one {# trainee} other {# trainees}}",
+    "unassignedGroup": "No PT",
+    "groupTitle": "{title} · {count, plural, one {# trainee} other {# trainees}}",
+    "addToGroup": "Add a trainee to {title}",
+    "noTrainees": "No trainees yet",
+    "pickerLabel": "PT of {name}",
+    "emptyTitle": "No PTs or trainees yet",
+    "emptyAction": "Create a PT",
+    "unassignedEmpty": "Every trainee has a PT.",
+    "filterEmpty": "No accounts in this view.",
+    "noResult": "No results for “{query}”",
+    "addAsTrainee": "Add “{query}” as a trainee",
+    "noResultInFilter": "No “{query}” in this view. Switch to All to search everything."
   }
 }

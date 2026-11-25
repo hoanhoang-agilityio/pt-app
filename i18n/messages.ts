@@ -19,6 +19,7 @@ import enPwa from "@/messages/en/pwa.json";
 import enRestrictions from "@/messages/en/restrictions.json";
 import enSocial from "@/messages/en/social.json";
 import enTheme from "@/messages/en/theme.json";
+import enTrainingNotes from "@/messages/en/trainingNotes.json";
 import enWorkouts from "@/messages/en/workouts.json";
 import viAdminPages from "@/messages/vi/adminPages.json";
 import viAuth from "@/messages/vi/auth.json";
@@ -41,6 +42,7 @@ import viPwa from "@/messages/vi/pwa.json";
 import viRestrictions from "@/messages/vi/restrictions.json";
 import viSocial from "@/messages/vi/social.json";
 import viTheme from "@/messages/vi/theme.json";
+import viTrainingNotes from "@/messages/vi/trainingNotes.json";
 import viWorkouts from "@/messages/vi/workouts.json";
 import zhAdminPages from "@/messages/zh/adminPages.json";
 import zhAuth from "@/messages/zh/auth.json";
@@ -63,6 +65,7 @@ import zhPwa from "@/messages/zh/pwa.json";
 import zhRestrictions from "@/messages/zh/restrictions.json";
 import zhSocial from "@/messages/zh/social.json";
 import zhTheme from "@/messages/zh/theme.json";
+import zhTrainingNotes from "@/messages/zh/trainingNotes.json";
 import zhWorkouts from "@/messages/zh/workouts.json";
 import type { Locale } from "@/utils/locale";
 
@@ -92,6 +95,7 @@ export const MESSAGES = {
     restrictions: viRestrictions,
     social: viSocial,
     theme: viTheme,
+    trainingNotes: viTrainingNotes,
     workouts: viWorkouts,
   },
   en: {
@@ -116,6 +120,7 @@ export const MESSAGES = {
     restrictions: enRestrictions,
     social: enSocial,
     theme: enTheme,
+    trainingNotes: enTrainingNotes,
     workouts: enWorkouts,
   },
   zh: {
@@ -140,6 +145,7 @@ export const MESSAGES = {
     restrictions: zhRestrictions,
     social: zhSocial,
     theme: zhTheme,
+    trainingNotes: zhTrainingNotes,
     workouts: zhWorkouts,
   },
 } as const satisfies Record<Locale, Record<string, object>>;

@@ -33,6 +33,9 @@ export const useCreateMember = (onDone?: () => void) => {
     // Keep what was typed after an error; a success resets the form to empty.
     defaultName: state.status === "error" ? state.values?.name : "",
     defaultEmail: state.status === "error" ? state.values?.email : "",
+    // The PT picked before an error, so a retry keeps it.
+    submittedPtId:
+      state.status === "error" ? state.values?.ptAdminId : undefined,
     credentials: isPasswordShown ? state.credentials : undefined,
     dismissPassword,
   };

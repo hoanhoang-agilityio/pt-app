@@ -1204,3 +1204,47 @@ export const themeLocks = sqliteTable("theme_locks", {
     onDelete: "set null",
   }),
 });
+
+// "Ghi chú tập": a private training log per admin (super admin and PT). Never
+// shown to trainees and not part of any statistic; every read and write is
+// scoped by admin_id.
+export const adminTrainingNotes = sqliteTable(
+  "admin_training_notes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    adminId: integer("admin_id")
+      .notNull()
+      .references(() => admins.id, { onDelete: "cascade" }),
+    // "YYYY-MM-DD" in the app time zone.
+    date: text("date").notNull(),
+    title: text("title"),
+    // Free text, up to 1000 characters (Zod).
+    note: text("note"),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    index("admin_training_notes_admin_date_idx").on(table.adminId, table.date),
+  ],
+);
+
+export const adminTrainingNoteItems = sqliteTable(
+  "admin_training_note_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    noteId: integer("note_id")
+      .notNull()
+      .references(() => adminTrainingNotes.id, { onDelete: "cascade" }),
+    // 0-based order of the exercise within the note.
+    position: integer("position").notNull(),
+    exerciseName: text("exercise_name").notNull(),
+    sets: integer("sets"),
+    reps: integer("reps"),
+    // Timed exercises (plank): seconds instead of reps.
+    durationSec: integer("duration_sec"),
+    weightKg: real("weight_kg"),
+  },
+  (table) => [index("admin_training_note_items_note_idx").on(table.noteId)],
+);

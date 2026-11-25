@@ -28,6 +28,7 @@ export const ROUTES = {
   ADMIN_MESSAGES: "/admin/messages",
   ADMIN_GROUP_NEW: "/admin/messages/groups/new",
   ADMIN_PTS: "/admin/pts",
+  ADMIN_NOTES: "/admin/notes",
   ADMIN_THEME: "/admin/settings/theme",
   ADMIN_SOCIAL: "/admin/social",
   ADMIN_SOCIAL_CHATS: "/admin/social/chats",

@@ -1,0 +1,61 @@
+{
+  "metaTitle": "Training notes",
+  "eyebrow": "Admin",
+  "title": "Training notes",
+  "add": "Add note",
+  "private": "Only you can see these notes",
+  "searchLabel": "Search notes",
+  "searchPlaceholder": "Search exercises or notes",
+  "rangeLabel": "Time range",
+  "ranges": {
+    "all": "All",
+    "week": "This week",
+    "month": "This month"
+  },
+  "empty": {
+    "title": "No notes yet",
+    "hint": "Log the exercises, sets, reps and how it felt after each workout.",
+    "action": "Add your first note"
+  },
+  "noResult": "No matching notes.",
+  "untitled": "Workout",
+  "item": {
+    "setsReps": "{sets} × {reps}",
+    "setsSeconds": "{sets} × {seconds} sec",
+    "repsOnly": "{reps} reps",
+    "secondsOnly": "{seconds} sec",
+    "setsOnly": "{sets} sets",
+    "weight": "{kg} kg"
+  },
+  "edit": "Edit note: {title}",
+  "delete": "Delete note",
+  "deleteTitle": "Delete this note?",
+  "deleteDescription": "The note and its exercises will be deleted for good.",
+  "deleteConfirm": "Delete note",
+  "deleted": "Note deleted",
+  "form": {
+    "addTitle": "Add note",
+    "editTitle": "Edit note",
+    "date": "Workout date",
+    "title": "Workout name",
+    "titlePlaceholder": "E.g. Leg day",
+    "optional": "Optional",
+    "exercise": "Exercise",
+    "exercisePlaceholder": "E.g. Squat",
+    "sets": "Sets",
+    "unitLabel": "Unit",
+    "units": {
+      "reps": "Reps",
+      "seconds": "Sec"
+    },
+    "amount": "Reps or seconds",
+    "weight": "Kg",
+    "removeItem": "Remove exercise",
+    "addItem": "Add exercise",
+    "note": "Notes",
+    "notePlaceholder": "How it felt, aches, plan for next time...",
+    "noteCount": "{count}/{max}",
+    "submit": "Save note",
+    "saved": "Note saved"
+  }
+}

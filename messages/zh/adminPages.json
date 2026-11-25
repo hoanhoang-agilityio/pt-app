@@ -10,7 +10,8 @@
       "pts": "教练与学员",
       "reports": "举报",
       "social": "社交",
-      "messages": "私信"
+      "messages": "私信",
+      "notes": "训练笔记"
     },
     "usersCount": "用户 · {count}",
     "recentActivity": "最近动态"

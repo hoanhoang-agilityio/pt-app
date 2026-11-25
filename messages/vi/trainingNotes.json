@@ -1,0 +1,61 @@
+{
+  "metaTitle": "Ghi chú tập",
+  "eyebrow": "Admin",
+  "title": "Ghi chú tập",
+  "add": "Thêm ghi chú",
+  "private": "Chỉ bạn thấy các ghi chú này",
+  "searchLabel": "Tìm ghi chú",
+  "searchPlaceholder": "Tìm bài tập hoặc ghi chú",
+  "rangeLabel": "Khoảng thời gian",
+  "ranges": {
+    "all": "Tất cả",
+    "week": "Tuần này",
+    "month": "Tháng này"
+  },
+  "empty": {
+    "title": "Chưa có ghi chú nào",
+    "hint": "Ghi lại bài, số set, số rep và cảm nhận sau mỗi buổi tập.",
+    "action": "Thêm ghi chú đầu tiên"
+  },
+  "noResult": "Không có ghi chú phù hợp.",
+  "untitled": "Buổi tập",
+  "item": {
+    "setsReps": "{sets} × {reps}",
+    "setsSeconds": "{sets} × {seconds} giây",
+    "repsOnly": "{reps} rep",
+    "secondsOnly": "{seconds} giây",
+    "setsOnly": "{sets} set",
+    "weight": "{kg} kg"
+  },
+  "edit": "Sửa ghi chú: {title}",
+  "delete": "Xóa ghi chú",
+  "deleteTitle": "Xóa ghi chú này?",
+  "deleteDescription": "Ghi chú và các bài tập trong đó sẽ bị xóa, không khôi phục được.",
+  "deleteConfirm": "Xóa ghi chú",
+  "deleted": "Đã xóa ghi chú",
+  "form": {
+    "addTitle": "Thêm ghi chú",
+    "editTitle": "Sửa ghi chú",
+    "date": "Ngày tập",
+    "title": "Tên buổi tập",
+    "titlePlaceholder": "Ví dụ: Ngày chân",
+    "optional": "Tùy chọn",
+    "exercise": "Bài tập",
+    "exercisePlaceholder": "Ví dụ: Squat",
+    "sets": "Set",
+    "unitLabel": "Đơn vị",
+    "units": {
+      "reps": "Rep",
+      "seconds": "Giây"
+    },
+    "amount": "Số rep hoặc giây",
+    "weight": "Kg",
+    "removeItem": "Xóa bài tập",
+    "addItem": "Thêm bài tập",
+    "note": "Ghi chú",
+    "notePlaceholder": "Cảm nhận, đau mỏi, kế hoạch buổi sau...",
+    "noteCount": "{count}/{max}",
+    "submit": "Lưu ghi chú",
+    "saved": "Đã lưu ghi chú"
+  }
+}

@@ -2,6 +2,7 @@ import {
   Flag,
   MessageCircle,
   Newspaper,
+  NotebookPen,
   UserCog,
   Utensils,
 } from "lucide-react";
@@ -205,6 +206,10 @@ const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
                 </Link>
               </>
             )}
+            <Link href={ROUTES.ADMIN_NOTES} className={TILE}>
+              <NotebookPen className="size-6 text-accent" aria-hidden />
+              <span>{t("tiles.notes")}</span>
+            </Link>
             <Link href={ROUTES.ADMIN_SOCIAL} className={TILE}>
               <Newspaper className="size-6 text-accent" aria-hidden />
               <span>{t("tiles.social")}</span>

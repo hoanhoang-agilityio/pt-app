@@ -10,7 +10,8 @@
       "pts": "PT & học viên",
       "reports": "Báo cáo",
       "social": "Mạng xã hội",
-      "messages": "Tin nhắn"
+      "messages": "Tin nhắn",
+      "notes": "Ghi chú tập"
     },
     "usersCount": "User · {count}",
     "recentActivity": "Hoạt động gần đây"

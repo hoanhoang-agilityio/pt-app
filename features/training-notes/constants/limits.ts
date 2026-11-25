@@ -1,0 +1,12 @@
+export const NOTE_TITLE_MAX = 60;
+export const NOTE_TEXT_MAX = 1000;
+export const NOTE_MAX_ITEMS = 20;
+export const EXERCISE_NAME_MAX = 60;
+export const SETS_MIN = 1;
+export const SETS_MAX = 99;
+export const REPS_MIN = 1;
+export const REPS_MAX = 99;
+export const DURATION_MIN_SEC = 1;
+export const DURATION_MAX_SEC = 3600;
+export const WEIGHT_MIN_KG = 0;
+export const WEIGHT_MAX_KG = 500;

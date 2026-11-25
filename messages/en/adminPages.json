@@ -10,7 +10,8 @@
       "pts": "PTs & trainees",
       "reports": "Reports",
       "social": "Community",
-      "messages": "Messages"
+      "messages": "Messages",
+      "notes": "Training notes"
     },
     "usersCount": "Users · {count}",
     "recentActivity": "Recent activity"

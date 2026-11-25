@@ -78,6 +78,8 @@ export const createMemberAction = withFormErrorHandling(
     }
 
     revalidatePath(ROUTES.ADMIN);
+    // The "PT & học viên" list shows the new trainee too.
+    revalidatePath(ROUTES.ADMIN_PTS);
 
     const t = await getErrorsTranslator();
 

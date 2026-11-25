@@ -80,6 +80,7 @@ test("copy week asks in the app dialog: Hủy copies nothing, Sao chép replaces
   await page.getByLabel("Mật khẩu").fill(E2E_ADMIN.password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
   await expect(page).toHaveURL(/\/admin(\?.*)?$/);
+  await page.goto("/admin/users");
   await page
     .getByRole("link", { name: new RegExp(E2E_LIFTER_NAME) })
     .first()

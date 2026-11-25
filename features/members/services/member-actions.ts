@@ -76,6 +76,8 @@ export const createMemberAction = withFormErrorHandling(
     }
 
     revalidatePath(ROUTES.ADMIN);
+
+    revalidatePath(ROUTES.ADMIN_USERS);
     // The "PT & học viên" list shows the new trainee too.
     revalidatePath(ROUTES.ADMIN_PTS);
 
@@ -196,6 +198,8 @@ export const deleteMemberAction = withResultErrorHandling(
     });
 
     revalidatePath(ROUTES.ADMIN);
-    redirect(ROUTES.ADMIN);
+
+    revalidatePath(ROUTES.ADMIN_USERS);
+    redirect(ROUTES.ADMIN_USERS);
   },
 );

@@ -3,19 +3,15 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import { PageSkeleton } from "@/components/common/PageSkeleton";
-import {
-  InlineSkeleton,
-  Skeleton,
-  SkeletonList,
-} from "@/components/common/Skeleton";
-import { WeekStripSkeleton } from "@/components/common/WeekStripSkeleton";
+import { InlineSkeleton, Skeleton } from "@/components/common/Skeleton";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { HeaderActionsSkeleton } from "@/components/layout/HeaderActionsSkeleton";
 import { ROUTES } from "@/constants/routes";
 import { ICON_BUTTON, SECTION_TITLE } from "@/constants/styles";
 
 // Dashboard. Real: title, messages link, section titles. Placeholders: the
-// admin name, account menus, tiles (they depend on the role), week and lists.
+// admin name, account menus, tiles (they depend on the role) and the users
+// card (same footprint as UsersOverviewCard: p-4, label, number, hint).
 // Lives in the (home) route group so it covers the dashboard only, never a
 // page opened from it (a chat would otherwise flash this dashboard skeleton).
 export default async function Loading() {
@@ -53,22 +49,7 @@ export default async function Loading() {
           ))}
         </div>
       </section>
-      <div className="space-y-3">
-        <WeekStripSkeleton variant="navigator" />
-        <div className="grid grid-cols-2 gap-3">
-          <Skeleton className="h-20" />
-          <Skeleton className="h-20" />
-        </div>
-      </div>
-      <section className="space-y-2">
-        {/* The title carries the member count. */}
-        <Skeleton className="h-4 w-24" />
-        <SkeletonList rows={4} />
-      </section>
-      <section className="space-y-2">
-        <h2 className={SECTION_TITLE}>{t("recentActivity")}</h2>
-        <SkeletonList rows={3} />
-      </section>
+      <Skeleton className="h-[6.5rem] rounded-2xl" />
     </PageSkeleton>
   );
 }

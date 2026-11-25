@@ -23,9 +23,9 @@ const logInAsAdmin = async (page: Page) => {
   await expect(page).toHaveURL(/\/admin(\?.*)?$/);
 };
 
-// Opens a trainee from the dashboard list and returns the member page path.
+// Opens a trainee from the users list and returns the member page path.
 const openMember = async (page: Page, name: string) => {
-  await page.goto("/admin");
+  await page.goto("/admin/users");
   await page
     .getByRole("link", { name: new RegExp(name) })
     .first()
@@ -123,7 +123,7 @@ test("C4: Summary shows the Vietnamese empty state without logged sets", async (
   await expect(page.getByText("Lần đầu")).toHaveCount(0);
 });
 
-test("C8: a personal best shows in member activity and on the dashboard", async ({
+test("C8: a personal best shows in the trainee's recent activity", async ({
   page,
 }) => {
   await openMember(page, E2E_LIFTER_NAME);
@@ -137,20 +137,11 @@ test("C8: a personal best shows in member activity and on the dashboard", async 
   await expect(memberRecord).toContainText("55 kg × 8");
   await expect(memberRecord).toContainText("trước đó 50 kg × 10");
 
-  await page.goto("/admin");
-
-  const dashboardRecord = page
-    .getByRole("listitem")
-    .filter({ hasText: `${E2E_LIFTER_NAME} lập kỷ lục` })
-    .filter({ hasText: E2E_PT_EXERCISES.SQUAT });
-
-  await expect(dashboardRecord).toHaveCount(1);
-  await expect(dashboardRecord).toContainText("Kỷ lục mới: 55 kg × 8");
   // First-ever weighted set is not a record (D11).
   await expect(
     page
       .getByRole("listitem")
-      .filter({ hasText: "lập kỷ lục" })
+      .filter({ hasText: "Kỷ lục mới:" })
       .filter({ hasText: E2E_PT_EXERCISES.PRESS }),
   ).toHaveCount(0);
 });

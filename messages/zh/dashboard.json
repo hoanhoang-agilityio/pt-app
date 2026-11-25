@@ -28,15 +28,5 @@
     "completed": "完成了训练",
     "bestPrefix": "新纪录：{best}（之前 {previous}）· ",
     "schedule": "安排于 {date} · {time}"
-  },
-  "weekSummary": {
-    "users": "用户",
-    "usersHint": "本周有 {planned} 人有安排",
-    "active": "训练中",
-    "activeHint": "至少完成 1 项训练",
-    "done": "完成度",
-    "doneHint": "已完成 / 已分配的训练项",
-    "exercises": "已完成训练项",
-    "exercisesHint": "共分配 {assigned} 项"
   }
 }

@@ -62,6 +62,7 @@ export const changeMemberEmailAction = withResultErrorHandling(
 
     await setUserEmail(checked.id, checked.email);
     revalidatePath(ROUTES.ADMIN);
+    revalidatePath(ROUTES.ADMIN_USERS);
     return { status: "success" as const };
   },
 );
@@ -88,6 +89,7 @@ export const resetMemberPasswordAction = withResultErrorHandling(
 
     await setUserPassword(id, await hashPassword(password));
     revalidatePath(ROUTES.ADMIN);
+    revalidatePath(ROUTES.ADMIN_USERS);
     return { status: "success" as const, password };
   },
 );

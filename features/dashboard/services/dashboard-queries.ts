@@ -58,6 +58,15 @@ export const ptFilterCondition = (filter: PtFilter) => {
     : eq(users.ptAdminId, filter);
 };
 
+// Who `adminId` sees on the dashboard: not hidden by them, inside their scope,
+// and matching the PT filter. Shared by the list and the home card counts.
+const memberScopeCondition = (adminId: number, ptFilter: PtFilter) =>
+  and(
+    notInArray(users.id, hiddenUserIdsOf(adminId)),
+    notInArray(users.id, outOfScopeUserIdsOf(adminId)),
+    ptFilterCondition(ptFilter),
+  );
+
 // Trainees `adminId` hid are left out (KAN-163), so the list and the totals
 // built from it never count them.
 export const getMemberProgress = async (
@@ -80,13 +89,7 @@ export const getMemberProgress = async (
         })
         .from(users)
         .leftJoin(admins, eq(admins.id, users.ptAdminId))
-        .where(
-          and(
-            notInArray(users.id, hiddenUserIdsOf(adminId)),
-            notInArray(users.id, outOfScopeUserIdsOf(adminId)),
-            ptFilterCondition(ptFilter),
-          ),
-        )
+        .where(memberScopeCondition(adminId, ptFilter))
         .orderBy(asc(users.nameKey)),
       db
         .select({
@@ -149,6 +152,36 @@ export const getMemberProgress = async (
       nutritionDays: nutrition?.nutritionDays ?? 0,
     };
   });
+};
+
+// The two home-card numbers without building every row: same scope as
+// getMemberProgress(weekStart, adminId, "all"); plannedCount is the trainees
+// with at least one exercise assigned in the week (see summarizeWeek).
+export const countMembersInScope = async (
+  weekStart: string,
+  adminId: number,
+): Promise<{ memberCount: number; plannedCount: number }> => {
+  const dates = getWeekDates(weekStart);
+  const scope = memberScopeCondition(adminId, "all");
+  const [[members], [planned]] = await Promise.all([
+    db
+      .select({ value: count(users.id) })
+      .from(users)
+      .where(scope),
+    db
+      .select({ value: countDistinct(users.id) })
+      .from(users)
+      .innerJoin(workoutDays, eq(workoutDays.userId, users.id))
+      .innerJoin(exercises, eq(exercises.dayId, workoutDays.id))
+      .where(
+        and(
+          scope,
+          between(workoutDays.date, dates[0], dates[dates.length - 1]),
+        ),
+      ),
+  ]);
+
+  return { memberCount: members.value, plannedCount: planned.value };
 };
 
 interface RecentActivityOptions {

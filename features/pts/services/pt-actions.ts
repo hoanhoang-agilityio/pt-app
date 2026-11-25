@@ -172,6 +172,7 @@ export const assignTraineePtAction = withResultErrorHandling(
       });
     }
     revalidatePath(ROUTES.ADMIN);
+    revalidatePath(ROUTES.ADMIN_USERS);
     return { status: "success" as const };
   },
 );

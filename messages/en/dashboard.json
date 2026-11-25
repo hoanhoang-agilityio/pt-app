@@ -28,15 +28,5 @@
     "completed": "trained",
     "bestPrefix": "New record: {best} (previously {previous}) · ",
     "schedule": "Scheduled {date} · at {time}"
-  },
-  "weekSummary": {
-    "users": "Users",
-    "usersHint": "{planned} people with a schedule this week",
-    "active": "Active",
-    "activeHint": "trained at least 1 exercise",
-    "done": "Completed",
-    "doneHint": "exercises done / assigned",
-    "exercises": "Exercises done",
-    "exercisesHint": "out of {assigned} assigned exercises"
   }
 }

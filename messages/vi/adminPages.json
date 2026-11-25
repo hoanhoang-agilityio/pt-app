@@ -13,8 +13,15 @@
       "messages": "Tin nhắn",
       "notes": "Ghi chú tập"
     },
-    "usersCount": "User · {count}",
-    "recentActivity": "Hoạt động gần đây"
+    "usersCard": {
+      "label": "Học viên",
+      "hint": "{planned} có lịch tuần này"
+    }
+  },
+  "users": {
+    "metaTitle": "Học viên",
+    "eyebrow": "Admin",
+    "title": "Học viên ({count})"
   },
   "pts": {
     "metaTitle": "PT & học viên",

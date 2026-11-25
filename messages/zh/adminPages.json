@@ -13,8 +13,15 @@
       "messages": "私信",
       "notes": "训练笔记"
     },
-    "usersCount": "用户 · {count}",
-    "recentActivity": "最近动态"
+    "usersCard": {
+      "label": "学员",
+      "hint": "本周有 {planned} 人有计划"
+    }
+  },
+  "users": {
+    "metaTitle": "学员",
+    "eyebrow": "Admin",
+    "title": "学员（{count}）"
   },
   "pts": {
     "metaTitle": "教练与学员",

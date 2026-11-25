@@ -23,8 +23,7 @@ import { countUnreadForAdmin } from "@/features/chat/services/chat-queries";
 import { sessionOfAdmin } from "@/features/chat-groups/services/group-access";
 import { countGroupUnread } from "@/features/chat-groups/services/group-queries";
 import { UsersOverviewCard } from "@/features/dashboard/components/UsersOverviewCard";
-import { getMemberProgress } from "@/features/dashboard/services/dashboard-queries";
-import { summarizeWeek } from "@/features/dashboard/utils/summary";
+import { countMembersInScope } from "@/features/dashboard/services/dashboard-queries";
 import { AddMemberButton } from "@/features/members/components/AddMemberButton";
 import { countOpenReports } from "@/features/social/services/report-queries";
 import { adminProfilePath } from "@/features/social/utils/post-rules";
@@ -47,9 +46,9 @@ const AdminDashboardPage = async () => {
   const t = await getTranslations("adminPages.home");
   const weekStart = getWeekStart(getTodayDate(TIME_ZONE));
   const isSuper = isSuperAdmin(admin);
-  const [members, unreadMessages, avatarUrl, accountColor, openReports] =
+  const [memberCounts, unreadMessages, avatarUrl, accountColor, openReports] =
     await Promise.all([
-      getMemberProgress(weekStart, admin.id, "all"),
+      countMembersInScope(weekStart, admin.id),
       // Trainee chats plus group chats: the badge counts both.
       Promise.all([
         countUnreadForAdmin(admin.id),
@@ -59,7 +58,6 @@ const AdminDashboardPage = async () => {
       loadAdminAccountColor(admin.id),
       isSuperAdmin(admin) ? countOpenReports() : 0,
     ]);
-  const summary = summarizeWeek(members);
 
   return (
     <>
@@ -152,8 +150,8 @@ const AdminDashboardPage = async () => {
           </div>
         </section>
         <UsersOverviewCard
-          count={summary.memberCount}
-          plannedCount={summary.plannedCount}
+          count={memberCounts.memberCount}
+          plannedCount={memberCounts.plannedCount}
         />
       </main>
       <ScrollToTopButton />

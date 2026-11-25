@@ -25,6 +25,7 @@ const fail = (message: string): ActionErrorResult => ({
 // The trainee page, the list badge and the trainee's own screens change.
 const refresh = (userId: number) => {
   revalidatePath(ROUTES.ADMIN);
+  revalidatePath(ROUTES.ADMIN_USERS);
   revalidatePath(getAdminUserPath(userId), "layout");
   revalidatePath("/feed");
 };

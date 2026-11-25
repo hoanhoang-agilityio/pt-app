@@ -327,8 +327,7 @@ test("enable, message, reply, unread badges and the PT name work end to end", as
     await expect(row.getByRole("status")).toHaveText("1");
     await shot(admin, "chat-03-admin-inbox-unread");
 
-    // Admin dashboard: header badge, "Tin nhắn" tile badge and the trainee's
-    // own card badge.
+    // Admin dashboard: header badge and "Tin nhắn" tile badge.
     await admin.goto("/admin");
     await expect(
       admin
@@ -342,6 +341,8 @@ test("enable, message, reply, unread badges and the PT name work end to end", as
         .getByRole("link", { name: /^Tin nhắn/ })
         .getByRole("status"),
     ).toHaveText("1");
+    // The trainee's own row badge lives on the users list.
+    await admin.goto("/admin/users");
     await expect(
       admin
         .getByRole("main")

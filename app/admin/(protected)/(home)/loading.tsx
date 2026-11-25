@@ -10,7 +10,8 @@ import { ROUTES } from "@/constants/routes";
 import { ICON_BUTTON, SECTION_TITLE } from "@/constants/styles";
 
 // Dashboard. Real: title, messages link, section titles. Placeholders: the
-// admin name, account menus, tiles (they depend on the role) and the users card.
+// admin name, account menus, tiles (they depend on the role) and the users
+// card (same footprint as UsersOverviewCard: p-4, label, number, hint).
 // Lives in the (home) route group so it covers the dashboard only, never a
 // page opened from it (a chat would otherwise flash this dashboard skeleton).
 export default async function Loading() {
@@ -48,7 +49,7 @@ export default async function Loading() {
           ))}
         </div>
       </section>
-      <Skeleton className="h-28" />
+      <Skeleton className="h-[6.5rem] rounded-2xl" />
     </PageSkeleton>
   );
 }

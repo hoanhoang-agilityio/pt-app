@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
-import { admins, contactAliases, users } from "@/db/schema";
+import {
+  adminHiddenUsers,
+  admins,
+  contactAliases,
+  exercises,
+  users,
+  workoutDays,
+} from "@/db/schema";
 
 const state = vi.hoisted(() => ({ db: null as unknown }));
 
@@ -13,8 +20,9 @@ vi.mock("@/db", () => ({
   ),
 }));
 
-const { getMemberProgress } =
+const { countMembersInScope, getMemberProgress } =
   await import("@/features/dashboard/services/dashboard-queries");
+const { summarizeWeek } = await import("@/features/dashboard/utils/summary");
 
 let db: TestDb;
 
@@ -101,5 +109,74 @@ describe("getMemberProgress PT filter", () => {
     const asPt = await getMemberProgress("2026-10-05", ids.pt, "none");
 
     expect(asPt).toEqual([]);
+  });
+});
+
+describe("countMembersInScope", () => {
+  const WEEK = "2026-10-05";
+
+  const plan = async (userId: number, date: string) => {
+    const [day] = await db
+      .insert(workoutDays)
+      .values({ userId, date })
+      .returning({ id: workoutDays.id });
+
+    await db
+      .insert(exercises)
+      .values({ dayId: day.id, title: "Squat", youtubeId: "abc" });
+  };
+
+  it("matches summarizeWeek(getMemberProgress) for a super admin and a PT", async () => {
+    const [pt] = await db
+      .insert(admins)
+      .values({
+        username: "coach",
+        usernameKey: "coach",
+        passwordHash: "x",
+        role: "pt",
+      })
+      .returning({ id: admins.id });
+    const [planned, twoDays, , hidden, other, lastWeek] = await db
+      .insert(users)
+      .values([
+        { name: "Planned", nameKey: "planned", ptAdminId: pt.id },
+        { name: "TwoDays", nameKey: "twodays", ptAdminId: pt.id },
+        { name: "Idle", nameKey: "idle", ptAdminId: pt.id },
+        { name: "Hidden", nameKey: "hidden", ptAdminId: pt.id },
+        { name: "Other", nameKey: "other" },
+        { name: "LastWeek", nameKey: "lastweek", ptAdminId: pt.id },
+      ])
+      .returning({ id: users.id });
+
+    await plan(planned.id, "2026-10-06");
+    await plan(twoDays.id, "2026-10-05");
+    await plan(twoDays.id, "2026-10-07");
+    await plan(hidden.id, "2026-10-06");
+    await plan(other.id, "2026-10-06");
+    await plan(lastWeek.id, "2026-09-29");
+    await db.insert(adminHiddenUsers).values([
+      { adminId: 1, userId: hidden.id },
+      { adminId: pt.id, userId: hidden.id },
+    ]);
+
+    for (const adminId of [1, pt.id]) {
+      const summary = summarizeWeek(
+        await getMemberProgress(WEEK, adminId, "all"),
+      );
+
+      expect(await countMembersInScope(WEEK, adminId)).toEqual({
+        memberCount: summary.memberCount,
+        plannedCount: summary.plannedCount,
+      });
+    }
+    // Spot-check the fixture so equal-but-wrong (e.g. both 0) cannot pass.
+    expect(await countMembersInScope(WEEK, 1)).toEqual({
+      memberCount: 5,
+      plannedCount: 3,
+    });
+    expect(await countMembersInScope(WEEK, pt.id)).toEqual({
+      memberCount: 4,
+      plannedCount: 2,
+    });
   });
 });

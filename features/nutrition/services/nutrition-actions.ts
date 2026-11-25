@@ -42,6 +42,7 @@ const revalidateNutrition = (userId: number) => {
   revalidatePath(ROUTES.SUMMARY);
   revalidatePath(getAdminNutritionPath(userId));
   revalidatePath(ROUTES.ADMIN);
+  revalidatePath(ROUTES.ADMIN_USERS);
 };
 
 // Admin: sets the daily target from today on; earlier days keep theirs.

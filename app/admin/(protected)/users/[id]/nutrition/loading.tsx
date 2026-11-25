@@ -24,7 +24,7 @@ export default async function Loading() {
             // The member name is data.
             title={<InlineSkeleton className="h-6 w-40" />}
             // The real link keeps the selected week, which is not known here.
-            backHref={ROUTES.ADMIN}
+            backHref={ROUTES.ADMIN_USERS}
           />
           <MemberSectionTabsSkeleton />
         </>

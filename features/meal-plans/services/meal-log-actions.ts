@@ -39,6 +39,7 @@ const refresh = (userId: number) => {
   revalidatePath(ROUTES.SUMMARY);
   revalidatePath(getAdminNutritionPath(userId));
   revalidatePath(ROUTES.ADMIN);
+  revalidatePath(ROUTES.ADMIN_USERS);
 };
 
 // The trainee logs what they ate today or earlier, never ahead of time.

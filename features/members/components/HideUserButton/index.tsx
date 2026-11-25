@@ -55,7 +55,7 @@ export const HideUserButton = ({
           return;
         }
         toast.success(t("hidden"));
-        router.push(ROUTES.ADMIN);
+        router.push(ROUTES.ADMIN_USERS);
       } catch {
         toast.error(t("failed"));
       }

@@ -80,7 +80,7 @@ const AdminUserPage = async ({
       <AppHeader
         eyebrow={t("eyebrow")}
         title={displayName}
-        backHref={`${ROUTES.ADMIN}?${new URLSearchParams({ week: schedule.weekStart })}`}
+        backHref={`${ROUTES.ADMIN_USERS}?${new URLSearchParams({ week: schedule.weekStart })}`}
         actions={
           <Link
             href={buildScheduleHref(getAdminPreviewPath(user.id), schedule)}

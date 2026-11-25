@@ -264,6 +264,7 @@ test("the admin week tabs use the same colours for the trainee", async ({
   await page.getByLabel("Mật khẩu").fill(E2E_ADMIN.password);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
   await expect(page).toHaveURL(/\/admin(\?.*)?$/);
+  await page.goto("/admin/users");
   await page
     .getByRole("link", { name: new RegExp(E2E_RINGS_NAME) })
     .first()

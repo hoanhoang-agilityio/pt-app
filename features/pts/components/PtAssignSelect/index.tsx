@@ -6,8 +6,9 @@ import { useTransition } from "react";
 import { toast } from "sonner";
 
 import { Spinner } from "@/components/common/Spinner";
-import { INPUT, LABEL } from "@/constants/styles";
+import { INPUT, INPUT_BASE, LABEL } from "@/constants/styles";
 import { assignTraineePtAction } from "@/features/pts/services/pt-actions";
+import { cn } from "@/utils/cn";
 
 interface PtAssignSelectProps {
   userId: number;
@@ -15,6 +16,8 @@ interface PtAssignSelectProps {
   options: { id: number; username: string }[];
   // Visible label; defaults to "PT phụ trách" (translated).
   label?: string;
+  // A small picker for list rows: the label is read by screen readers only.
+  isCompact?: boolean;
 }
 
 // "PT phụ trách" on the trainee page (super admin only).
@@ -23,6 +26,7 @@ export const PtAssignSelect = ({
   currentPtId,
   options,
   label,
+  isCompact = false,
 }: PtAssignSelectProps) => {
   const t = useTranslations("pts.ptAssign");
   const router = useRouter();
@@ -46,8 +50,8 @@ export const PtAssignSelect = ({
   };
 
   return (
-    <div>
-      <div className="flex items-center gap-2">
+    <div className="relative">
+      <div className={cn("flex items-center gap-2", isCompact && "sr-only")}>
         <label htmlFor={`pt-assign-${userId}`} className={LABEL}>
           {label ?? t("label")}
         </label>
@@ -59,15 +63,25 @@ export const PtAssignSelect = ({
         disabled={isPending}
         aria-busy={isPending}
         onChange={(event) => handleChange(event.target.value)}
-        className={INPUT}
+        className={
+          isCompact ? cn(INPUT_BASE, "min-h-9 py-1 pr-8 pl-3 text-sm") : INPUT
+        }
       >
-        <option value="">{t("unassigned")}</option>
+        <option value="">
+          {isCompact ? t("unassignedShort") : t("unassigned")}
+        </option>
         {options.map((option) => (
           <option key={option.id} value={option.id}>
             {option.username}
           </option>
         ))}
       </select>
+      {isCompact && isPending && (
+        <Spinner
+          size="sm"
+          className="absolute top-1/2 right-7 -translate-y-1/2"
+        />
+      )}
     </div>
   );
 };

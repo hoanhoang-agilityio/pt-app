@@ -7,7 +7,7 @@
     "actions": "操作",
     "tiles": {
       "foods": "食物库",
-      "pts": "教练管理",
+      "pts": "教练与学员",
       "reports": "举报",
       "social": "社交",
       "messages": "私信"
@@ -16,17 +16,9 @@
     "recentActivity": "最近动态"
   },
   "pts": {
-    "metaTitle": "教练管理",
+    "metaTitle": "教练与学员",
     "eyebrow": "管理员",
-    "title": "教练管理",
-    "adminAccounts": "管理员账号 · {count}",
-    "superAdmin": "超级管理员",
-    "ptRole": "教练 · {count, plural, other {# 名学员}}",
-    "traineesByPt": "按教练分组的学员",
-    "unassignedGroup": "未分配教练",
-    "groupTitle": "{title} · {count, plural, other {# 名学员}}",
-    "noTrainees": "暂无学员",
-    "addPt": "添加教练"
+    "title": "教练与学员"
   },
   "reports": {
     "metaTitle": "举报",

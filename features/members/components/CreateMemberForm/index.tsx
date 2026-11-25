@@ -15,11 +15,17 @@ interface CreateMemberFormProps {
   ptOptions?: { id: number; username: string }[];
   // Called when the admin dismisses the one-time password panel.
   onDone?: () => void;
+  // Preselected "PT phụ trách" (the + button of a PT group).
+  defaultPtId?: number | null;
+  // Prefilled name (from a search with no result).
+  defaultName?: string;
 }
 
 export const CreateMemberForm = ({
   ptOptions,
   onDone,
+  defaultPtId = null,
+  defaultName: initialName = "",
 }: CreateMemberFormProps) => {
   const t = useTranslations("members.createMember");
   const {
@@ -27,11 +33,14 @@ export const CreateMemberForm = ({
     nameError,
     emailError,
     ptError,
-    defaultName,
+    defaultName: typedName,
     defaultEmail,
     credentials,
     dismissPassword,
   } = useCreateMember(onDone);
+
+  // What the admin typed wins over the prefill once a submit came back.
+  const defaultName = typedName || initialName;
 
   if (credentials) {
     return <OneTimePassword {...credentials} onDone={dismissPassword} />;
@@ -96,7 +105,7 @@ export const CreateMemberForm = ({
           <select
             id="member-pt"
             name="ptAdminId"
-            defaultValue=""
+            defaultValue={defaultPtId ?? ""}
             aria-invalid={Boolean(ptError)}
             className={INPUT}
           >

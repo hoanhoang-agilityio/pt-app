@@ -2,17 +2,59 @@
   "createPt": {
     "usernameLabel": "教练用户名",
     "passwordLabel": "密码（至少 8 个字符）",
-    "submit": "创建教练"
+    "submit": "创建教练",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码",
+    "generate": "生成随机密码"
   },
   "ptAssign": {
     "label": "负责教练",
     "unassigned": "未分配（仅超级管理员）",
-    "assigned": "已更新负责教练"
+    "assigned": "已更新负责教练",
+    "unassignedShort": "未分配教练"
   },
   "verifiedToggle": {
     "grant": "授予认证",
     "revoke": "取消认证",
     "granted": "已授予认证标识",
     "revoked": "已移除认证标识"
+  },
+  "addAccount": {
+    "title": "添加账号",
+    "roleLabel": "角色",
+    "roles": {
+      "trainee": "学员",
+      "pt": "教练"
+    },
+    "hints": {
+      "trainee": "密码自动生成，只显示一次。",
+      "pt": "教练使用你设置的用户名和密码登录。"
+    }
+  },
+  "directory": {
+    "summary": "{count, plural, other {# 个账号}}",
+    "add": "添加",
+    "searchLabel": "搜索账号",
+    "searchPlaceholder": "按姓名、邮箱或用户名搜索",
+    "filterLabel": "筛选列表",
+    "filters": {
+      "all": "全部",
+      "pt": "教练",
+      "trainee": "学员",
+      "unassigned": "未分配教练"
+    },
+    "superAdmin": "超级管理员",
+    "ptRole": "教练 · {count, plural, other {# 名学员}}",
+    "unassignedGroup": "未分配教练",
+    "groupTitle": "{title} · {count, plural, other {# 名学员}}",
+    "addToGroup": "为 {title} 添加学员",
+    "noTrainees": "暂无学员",
+    "pickerLabel": "{name} 的教练",
+    "emptyTitle": "还没有教练或学员",
+    "emptyAction": "创建教练",
+    "unassignedEmpty": "所有学员都已有教练。",
+    "filterEmpty": "此视图下没有账号。",
+    "noResult": "未找到“{query}”",
+    "addAsTrainee": "将“{query}”添加为学员"
   }
 }

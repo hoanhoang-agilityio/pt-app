@@ -35,7 +35,7 @@ describe("PT trainee counts", () => {
       .returning({ id: admins.id });
 
     await db.insert(users).values([
-      { name: "U1", nameKey: "u1", ptAdminId: a.id },
+      { name: "U1", nameKey: "u1", email: "u1@x.com", ptAdminId: a.id },
       { name: "U2", nameKey: "u2", ptAdminId: a.id },
       { name: "U3", nameKey: "u3" },
     ]);
@@ -48,10 +48,10 @@ describe("PT trainee counts", () => {
       [a.id, 2],
       [b.id, 0],
     ]);
-    expect(trainees.map((t) => [t.name, t.ptAdminId])).toEqual([
-      ["U1", a.id],
-      ["U2", a.id],
-      ["U3", null],
+    expect(trainees.map((t) => [t.name, t.ptAdminId, t.email])).toEqual([
+      ["U1", a.id, "u1@x.com"],
+      ["U2", a.id, null],
+      ["U3", null, null],
     ]);
   });
 });

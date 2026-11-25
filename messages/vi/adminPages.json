@@ -7,7 +7,7 @@
     "actions": "Thao tác",
     "tiles": {
       "foods": "Thư viện món",
-      "pts": "Quản lý PT",
+      "pts": "PT & học viên",
       "reports": "Báo cáo",
       "social": "Mạng xã hội",
       "messages": "Tin nhắn"
@@ -16,17 +16,9 @@
     "recentActivity": "Hoạt động gần đây"
   },
   "pts": {
-    "metaTitle": "Quản lý PT",
+    "metaTitle": "PT & học viên",
     "eyebrow": "Admin",
-    "title": "Quản lý PT",
-    "adminAccounts": "Tài khoản admin · {count}",
-    "superAdmin": "Super admin",
-    "ptRole": "PT · {count, plural, other {# học viên}}",
-    "traineesByPt": "Học viên theo PT",
-    "unassignedGroup": "Chưa có PT",
-    "groupTitle": "{title} · {count, plural, other {# học viên}}",
-    "noTrainees": "Chưa có học viên",
-    "addPt": "Thêm PT"
+    "title": "PT & học viên"
   },
   "reports": {
     "metaTitle": "Báo cáo",

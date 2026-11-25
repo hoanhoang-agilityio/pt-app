@@ -179,10 +179,8 @@ const AdminDashboardPage = async ({ searchParams }: PageProps<"/admin">) => {
             {t("actions")}
           </h2>
           <div className="grid grid-cols-3 gap-2">
-            <AddMemberButton
-              className={TILE}
-              ptOptions={isSuper ? ptOptions : undefined}
-            />
+            {/* A super admin adds accounts on the "PT & học viên" page. */}
+            {!isSuper && <AddMemberButton className={TILE} />}
             {isSuper && (
               <>
                 <Link href={ROUTES.ADMIN_FOODS} className={TILE}>

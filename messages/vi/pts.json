@@ -2,17 +2,59 @@
   "createPt": {
     "usernameLabel": "Tên đăng nhập PT",
     "passwordLabel": "Mật khẩu (ít nhất 8 ký tự)",
-    "submit": "Tạo PT"
+    "submit": "Tạo PT",
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu",
+    "generate": "Tạo mật khẩu ngẫu nhiên"
   },
   "ptAssign": {
     "label": "PT phụ trách",
     "unassigned": "Chưa giao (chỉ super admin)",
-    "assigned": "Đã cập nhật PT phụ trách"
+    "assigned": "Đã cập nhật PT phụ trách",
+    "unassignedShort": "Chưa có PT"
   },
   "verifiedToggle": {
     "grant": "Cấp tick",
     "revoke": "Gỡ tick",
     "granted": "Đã cấp tick xanh",
     "revoked": "Đã gỡ tick xanh"
+  },
+  "addAccount": {
+    "title": "Thêm tài khoản",
+    "roleLabel": "Vai trò",
+    "roles": {
+      "trainee": "Học viên",
+      "pt": "PT"
+    },
+    "hints": {
+      "trainee": "Mật khẩu được tạo tự động và chỉ hiện một lần.",
+      "pt": "PT đăng nhập bằng tên đăng nhập và mật khẩu bạn đặt."
+    }
+  },
+  "directory": {
+    "summary": "{count, plural, other {# tài khoản}}",
+    "add": "Thêm",
+    "searchLabel": "Tìm tài khoản",
+    "searchPlaceholder": "Tìm theo tên, email hoặc tên đăng nhập",
+    "filterLabel": "Lọc danh sách",
+    "filters": {
+      "all": "Tất cả",
+      "pt": "PT",
+      "trainee": "Học viên",
+      "unassigned": "Chưa có PT"
+    },
+    "superAdmin": "Super admin",
+    "ptRole": "PT · {count, plural, other {# học viên}}",
+    "unassignedGroup": "Chưa có PT",
+    "groupTitle": "{title} · {count, plural, other {# học viên}}",
+    "addToGroup": "Thêm học viên cho {title}",
+    "noTrainees": "Chưa có học viên",
+    "pickerLabel": "PT phụ trách của {name}",
+    "emptyTitle": "Chưa có PT hoặc học viên nào",
+    "emptyAction": "Tạo PT",
+    "unassignedEmpty": "Mọi học viên đều đã có PT.",
+    "filterEmpty": "Chưa có tài khoản nào ở mục này.",
+    "noResult": "Không tìm thấy “{query}”",
+    "addAsTrainee": "Thêm “{query}” làm học viên"
   }
 }

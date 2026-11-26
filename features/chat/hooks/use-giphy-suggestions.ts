@@ -1,3 +1,4 @@
+// Disabled for now (no longer called by StickerSuggestions) to save function CPU; re-enable there later.
 "use client";
 
 import { useEffect, useState } from "react";

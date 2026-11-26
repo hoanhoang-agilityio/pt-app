@@ -9,8 +9,8 @@ import {
   NOTE_TITLE_MAX,
   REPS_MAX,
   REPS_MIN,
-  SETS_MAX,
-  SETS_MIN,
+  SET_NOTE_MAX,
+  SETS_PER_ITEM_MAX,
   WEIGHT_MAX_KG,
   WEIGHT_MIN_KG,
 } from "@/features/training-notes/constants/limits";
@@ -27,14 +27,19 @@ const optionalInt = (min: number, max: number, message: string) =>
     .nullish()
     .transform((value) => value ?? null);
 
-const itemSchema = z
+// Blank text is stored as null.
+const optionalText = (max: number, message: string) =>
+  z
+    .string()
+    .trim()
+    .max(max, message)
+    .nullish()
+    .transform((value) => (value ? value : null));
+
+const setSchema = z
   .object({
-    exerciseName: z
-      .string()
-      .trim()
-      .max(EXERCISE_NAME_MAX, MESSAGES.EXERCISE_NAME_TOO_LONG),
-    sets: optionalInt(SETS_MIN, SETS_MAX, MESSAGES.SETS_REPS_RANGE),
-    reps: optionalInt(REPS_MIN, REPS_MAX, MESSAGES.SETS_REPS_RANGE),
+    unit: z.enum(["reps", "seconds"]),
+    reps: optionalInt(REPS_MIN, REPS_MAX, MESSAGES.REPS_RANGE),
     durationSec: optionalInt(
       DURATION_MIN_SEC,
       DURATION_MAX_SEC,
@@ -46,27 +51,35 @@ const itemSchema = z
       .max(WEIGHT_MAX_KG, MESSAGES.WEIGHT_RANGE)
       .nullish()
       .transform((value) => value ?? null),
+    note: optionalText(SET_NOTE_MAX, MESSAGES.SET_NOTE_TOO_LONG),
   })
-  .refine((item) => item.reps === null || item.durationSec === null, {
-    message: MESSAGES.REPS_OR_DURATION,
-    path: ["durationSec"],
-  });
+  // A set is counted in one unit: the value of the other must be empty.
+  .refine(
+    (set) => (set.unit === "reps" ? set.durationSec : set.reps) === null,
+    { message: MESSAGES.REPS_OR_DURATION, path: ["durationSec"] },
+  );
 
-// Blank text is stored as null.
-const optionalText = (max: number, message: string) =>
-  z
+type ParsedSet = z.infer<typeof setSchema>;
+
+const itemSchema = z.object({
+  exerciseName: z
     .string()
     .trim()
-    .max(max, message)
-    .nullish()
-    .transform((value) => (value ? value : null));
+    .max(EXERCISE_NAME_MAX, MESSAGES.EXERCISE_NAME_TOO_LONG),
+  sets: z.array(setSchema).max(SETS_PER_ITEM_MAX, MESSAGES.TOO_MANY_SETS),
+});
 
-const isBlankItem = (item: z.infer<typeof itemSchema>) =>
-  item.exerciseName === "" &&
-  item.sets === null &&
-  item.reps === null &&
-  item.durationSec === null &&
-  item.weightKg === null;
+const getSetValue = (set: ParsedSet) =>
+  set.unit === "reps" ? set.reps : set.durationSec;
+
+// The form keeps spare set rows: one with nothing in it (no value, no kg, no
+// note) is dropped. A set with only kg or only a note is kept. Legacy
+// count-only rows (sets = N, no values) read as N blank sets, so re-saving
+// such a note drops them.
+const isBlankSet = (set: ParsedSet) =>
+  getSetValue(set) === null && set.weightKg === null && set.note === null;
+
+type ParsedItem = z.infer<typeof itemSchema>;
 
 export const trainingNoteSchema = z
   .object({
@@ -78,18 +91,25 @@ export const trainingNoteSchema = z
   })
   .transform((input, context) => {
     // The form always keeps one empty row: rows with nothing in them are
-    // dropped, but a row with numbers and no name is a mistake to report.
-    const items = input.items.filter((item) => !isBlankItem(item));
+    // dropped, but a row with sets and no name is a mistake to report. A named
+    // exercise without sets is allowed (just the name).
+    const items: ParsedItem[] = [];
 
-    items.forEach((item, index) => {
+    input.items.forEach((item, itemIndex) => {
+      const filled = item.sets.filter((set) => !isBlankSet(set));
+
+      if (item.exerciseName === "" && filled.length === 0) {
+        return;
+      }
       if (item.exerciseName === "") {
         context.issues.push({
           code: "custom",
           message: MESSAGES.EXERCISE_NAME_REQUIRED,
           input: item,
-          path: ["items", index, "exerciseName"],
+          path: ["items", itemIndex, "exerciseName"],
         });
       }
+      items.push({ exerciseName: item.exerciseName, sets: filled });
     });
 
     if (items.length === 0 && input.note === null) {

@@ -6,14 +6,21 @@ import {
   trainingNoteSchema,
 } from "@/features/training-notes/utils/note-schema";
 
-const item = (
-  overrides: Partial<TrainingNoteInput["items"][number]> = {},
-): TrainingNoteInput["items"][number] => ({
-  exerciseName: "Squat",
-  sets: 4,
+type ItemInput = TrainingNoteInput["items"][number];
+type SetInput = ItemInput["sets"][number];
+
+const set = (overrides: Partial<SetInput> = {}): SetInput => ({
+  unit: "reps",
   reps: 8,
   durationSec: null,
   weightKg: 80,
+  note: null,
+  ...overrides,
+});
+
+const item = (overrides: Partial<ItemInput> = {}): ItemInput => ({
+  exerciseName: "Squat",
+  sets: [set()],
   ...overrides,
 });
 
@@ -26,6 +33,8 @@ const note = (
   items: [item()],
   ...overrides,
 });
+
+const withSets = (...sets: SetInput[]) => note({ items: [item({ sets })] });
 
 const firstError = (input: TrainingNoteInput) => {
   const result = trainingNoteSchema.safeParse(input);
@@ -66,9 +75,7 @@ describe("trainingNoteSchema", () => {
             items: [
               item({
                 exerciseName: "",
-                sets: null,
-                reps: null,
-                weightKg: null,
+                sets: [set({ reps: null, weightKg: null })],
               }),
             ],
           }),
@@ -85,56 +92,137 @@ describe("trainingNoteSchema", () => {
       expect(result.note).toBe("Felt strong");
     });
 
-    it("accepts an exercise alone", () => {
-      expect(
-        trainingNoteSchema.safeParse(
-          note({ items: [item({ sets: null, reps: null, weightKg: null })] }),
-        ).success,
-      ).toBe(true);
+    it("accepts an exercise with a name and no sets", () => {
+      const result = trainingNoteSchema.parse(
+        note({ items: [item({ sets: [] })] }),
+      );
+
+      expect(result.items).toEqual([{ exerciseName: "Squat", sets: [] }]);
     });
 
-    it("rejects numbers without an exercise name", () => {
+    it("rejects sets without an exercise name", () => {
       expect(firstError(note({ items: [item({ exerciseName: " " })] }))).toBe(
         MESSAGES.EXERCISE_NAME_REQUIRED,
       );
     });
   });
 
-  describe("sets and reps", () => {
-    it.each([1, 99])("accepts %i", (value) => {
-      expect(
-        trainingNoteSchema.safeParse(
-          note({ items: [item({ sets: value, reps: value })] }),
-        ).success,
-      ).toBe(true);
+  describe("sets", () => {
+    it("drops a fully blank set row and keeps the others in order", () => {
+      const result = trainingNoteSchema.parse(
+        withSets(
+          set({ reps: 10, weightKg: 60 }),
+          set({ reps: null, weightKg: null, note: "  " }),
+          set({ reps: 5, weightKg: 90 }),
+        ),
+      );
+
+      expect(result.items[0].sets.map((s) => [s.reps, s.weightKg])).toEqual([
+        [10, 60],
+        [5, 90],
+      ]);
     });
 
-    it.each([0, 100, -1, 1.5, Number.NaN])("rejects sets %s", (value) => {
-      expect(firstError(note({ items: [item({ sets: value })] }))).toBe(
-        MESSAGES.SETS_REPS_RANGE,
+    it("keeps a weight-only set", () => {
+      const result = trainingNoteSchema.parse(
+        withSets(set({ reps: null, weightKg: 80 })),
+      );
+
+      expect(
+        result.items[0].sets.map((s) => [s.reps, s.durationSec, s.weightKg]),
+      ).toEqual([[null, null, 80]]);
+    });
+
+    it("keeps a note-only set", () => {
+      const result = trainingNoteSchema.parse(
+        withSets(
+          set({ reps: null, weightKg: null, note: "Hơi đau vai" }),
+          set({ unit: "seconds", reps: null, durationSec: null, note: "Ok" }),
+        ),
+      );
+
+      expect(result.items[0].sets.map((s) => [s.unit, s.note])).toEqual([
+        ["reps", "Hơi đau vai"],
+        ["seconds", "Ok"],
+      ]);
+    });
+
+    it("rejects the value of the other unit", () => {
+      expect(firstError(withSets(set({ unit: "reps", durationSec: 45 })))).toBe(
+        MESSAGES.REPS_OR_DURATION,
+      );
+      expect(
+        firstError(
+          withSets(set({ unit: "seconds", reps: 8, durationSec: null })),
+        ),
+      ).toBe(MESSAGES.REPS_OR_DURATION);
+    });
+
+    it("accepts reps and timed sets in one exercise", () => {
+      const result = trainingNoteSchema.parse(
+        withSets(
+          set({ reps: 8 }),
+          set({ unit: "seconds", reps: null, durationSec: 45, weightKg: null }),
+        ),
+      );
+
+      expect(result.items[0].sets.map((s) => s.unit)).toEqual([
+        "reps",
+        "seconds",
+      ]);
+    });
+
+    it("trims the note and stores a blank one as null", () => {
+      const result = trainingNoteSchema.parse(
+        withSets(set({ note: "  Giảm tạ  " }), set({ note: "   " })),
+      );
+
+      expect(result.items[0].sets.map((s) => s.note)).toEqual([
+        "Giảm tạ",
+        null,
+      ]);
+    });
+
+    it("accepts a 120-character note and rejects 121", () => {
+      expect(
+        trainingNoteSchema.safeParse(withSets(set({ note: "n".repeat(120) })))
+          .success,
+      ).toBe(true);
+      expect(firstError(withSets(set({ note: "n".repeat(121) })))).toBe(
+        MESSAGES.SET_NOTE_TOO_LONG,
       );
     });
 
-    it.each([0, 100, 2.5])("rejects reps %s", (value) => {
-      expect(firstError(note({ items: [item({ reps: value })] }))).toBe(
-        MESSAGES.SETS_REPS_RANGE,
+    it("accepts 20 sets and rejects 21", () => {
+      const sets = (count: number) =>
+        Array.from({ length: count }, () => set());
+
+      expect(trainingNoteSchema.safeParse(withSets(...sets(20))).success).toBe(
+        true,
+      );
+      expect(firstError(withSets(...sets(21)))).toBe(MESSAGES.TOO_MANY_SETS);
+    });
+  });
+
+  describe("reps", () => {
+    it.each([1, 99])("accepts %i", (value) => {
+      expect(
+        trainingNoteSchema.safeParse(withSets(set({ reps: value }))).success,
+      ).toBe(true);
+    });
+
+    it.each([0, 100, 2.5, Number.NaN])("rejects reps %s", (value) => {
+      expect(firstError(withSets(set({ reps: value })))).toBe(
+        MESSAGES.REPS_RANGE,
       );
     });
   });
 
-  describe("timed exercises", () => {
-    const timed = (durationSec: number | null) =>
-      note({
-        items: [
-          item({
-            exerciseName: "Plank",
-            sets: 3,
-            reps: null,
-            durationSec,
-            weightKg: null,
-          }),
-        ],
-      });
+  describe("timed sets", () => {
+    const timed = (durationSec: number) =>
+      withSets(
+        set({ unit: "seconds", reps: null, durationSec, weightKg: null }),
+      );
 
     it.each([1, 3600])("accepts %i seconds", (seconds) => {
       expect(trainingNoteSchema.safeParse(timed(seconds)).success).toBe(true);
@@ -143,26 +231,19 @@ describe("trainingNoteSchema", () => {
     it.each([0, 3601, 1.5])("rejects %s seconds", (seconds) => {
       expect(firstError(timed(seconds))).toBe(MESSAGES.DURATION_RANGE);
     });
-
-    it("rejects reps and seconds on the same exercise", () => {
-      expect(
-        firstError(note({ items: [item({ reps: 8, durationSec: 45 })] })),
-      ).toBe(MESSAGES.REPS_OR_DURATION);
-    });
   });
 
   describe("weight", () => {
     it.each([0, 0.5, 500])("accepts %s kg", (kg) => {
       expect(
-        trainingNoteSchema.safeParse(note({ items: [item({ weightKg: kg })] }))
-          .success,
+        trainingNoteSchema.safeParse(withSets(set({ weightKg: kg }))).success,
       ).toBe(true);
     });
 
     it.each([-0.5, 500.5, Number.NaN, Number.POSITIVE_INFINITY])(
       "rejects %s kg",
       (kg) => {
-        expect(firstError(note({ items: [item({ weightKg: kg })] }))).toBe(
+        expect(firstError(withSets(set({ weightKg: kg })))).toBe(
           MESSAGES.WEIGHT_RANGE,
         );
       },
@@ -170,10 +251,10 @@ describe("trainingNoteSchema", () => {
 
     it("treats a missing weight as bodyweight (null)", () => {
       const result = trainingNoteSchema.parse(
-        note({ items: [item({ weightKg: undefined })] }),
+        withSets(set({ weightKg: undefined })),
       );
 
-      expect(result.items[0].weightKg).toBeNull();
+      expect(result.items[0].sets[0].weightKg).toBeNull();
     });
   });
 

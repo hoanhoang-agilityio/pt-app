@@ -3,41 +3,62 @@ import { describe, expect, it } from "vitest";
 import type {
   TrainingNote,
   TrainingNoteItem,
+  TrainingNoteSet,
 } from "@/features/training-notes/types/training-note";
 import {
   getRangeBounds,
   parseTrainingNoteRange,
 } from "@/features/training-notes/utils/note-filters";
 import {
-  formatItemLine,
   formatNoteDayLabel,
+  formatSetChip,
+  getSetNotes,
   groupNotesByDate,
   type ItemFormatter,
 } from "@/features/training-notes/utils/note-format";
 
 const TEMPLATES: Record<string, string> = {
-  "item.setsReps": "{sets} × {reps}",
-  "item.setsSeconds": "{sets} × {seconds} giây",
   "item.repsOnly": "{reps} rep",
   "item.secondsOnly": "{seconds} giây",
-  "item.setsOnly": "{sets} set",
-  "item.weight": "{kg} kg",
+  "item.chipKgReps": "{kg} kg × {reps}",
+  "item.chipKgSeconds": "{kg} kg × {seconds} giây",
+  "item.chipKgOnly": "{kg} kg",
+  "item.chipSet": "Set {n}",
 };
+
+// Numbers are rendered like next-intl does for Vietnamese: 82,5.
+const viNumber = new Intl.NumberFormat("vi");
 
 const format: ItemFormatter = (key, values) =>
   TEMPLATES[key].replace(/\{(\w+)\}/g, (_, name: string) =>
-    String(values[name]),
+    viNumber.format(values[name]),
   );
 
-const item = (overrides: Partial<TrainingNoteItem>): TrainingNoteItem => ({
+const rep = (reps: number | null, weightKg: number | null = null) => ({
+  unit: "reps" as const,
+  reps,
+  durationSec: null,
+  weightKg,
+  note: null,
+});
+const sec = (durationSec: number, weightKg: number | null = null) => ({
+  unit: "seconds" as const,
+  reps: null,
+  durationSec,
+  weightKg,
+  note: null,
+});
+const withPositions = (sets: Omit<TrainingNoteSet, "position">[]) =>
+  sets.map((entry, position) => ({ ...entry, position }));
+
+const item = (
+  sets: Omit<TrainingNoteSet, "position">[],
+  exerciseName = "Squat",
+): TrainingNoteItem => ({
   id: 1,
   position: 0,
-  exerciseName: "Squat",
-  sets: null,
-  reps: null,
-  durationSec: null,
-  weightKg: null,
-  ...overrides,
+  exerciseName,
+  sets: withPositions(sets),
 });
 
 const note = (
@@ -53,30 +74,50 @@ const note = (
   ...overrides,
 });
 
-describe("formatItemLine", () => {
-  it("formats sets x reps with weight", () => {
-    expect(
-      formatItemLine(item({ sets: 4, reps: 8, weightKg: 80 }), format),
-    ).toBe("Squat · 4 × 8 · 80 kg");
+describe("formatSetChip", () => {
+  const chip = (set: Omit<TrainingNoteSet, "position">) =>
+    formatSetChip({ ...set, position: 0 }, format);
+
+  it("formats reps with and without kg", () => {
+    expect(chip(rep(10, 60))).toBe("60 kg × 10");
+    expect(chip(rep(10))).toBe("10 rep");
   });
 
-  it("formats a timed exercise in seconds", () => {
-    expect(
-      formatItemLine(
-        item({ exerciseName: "Plank", sets: 3, durationSec: 45 }),
-        format,
-      ),
-    ).toBe("Plank · 3 × 45 giây");
+  it("formats timed sets with and without kg", () => {
+    expect(chip(sec(40, 24))).toBe("24 kg × 40 giây");
+    expect(chip(sec(45))).toBe("45 giây");
   });
 
-  it("formats partial values", () => {
-    expect(formatItemLine(item({ reps: 12 }), format)).toBe("Squat · 12 rep");
-    expect(formatItemLine(item({ durationSec: 30 }), format)).toBe(
-      "Squat · 30 giây",
-    );
-    expect(formatItemLine(item({ sets: 5 }), format)).toBe("Squat · 5 set");
-    expect(formatItemLine(item({ weightKg: 0 }), format)).toBe("Squat · 0 kg");
-    expect(formatItemLine(item({}), format)).toBe("Squat");
+  it("renders a decimal weight with a comma", () => {
+    expect(chip(rep(8, 82.5))).toBe("82,5 kg × 8");
+  });
+
+  it("keeps a zero weight", () => {
+    expect(chip(rep(8, 0))).toBe("0 kg × 8");
+  });
+
+  it("formats a weight-only set as kg", () => {
+    expect(chip(rep(null, 20))).toBe("20 kg");
+    expect(chip({ ...sec(1, 20), durationSec: null })).toBe("20 kg");
+  });
+
+  it("labels a set without value or kg by its number", () => {
+    expect(chip(rep(null))).toBe("Set 1");
+    expect(formatSetChip({ ...rep(null), position: 2 }, format)).toBe("Set 3");
+  });
+});
+
+describe("getSetNotes", () => {
+  it("lists the notes with their 1-based set number", () => {
+    const squat = item([rep(10), rep(8), rep(5)]);
+
+    squat.sets[2].note = "Hơi đau vai";
+    squat.sets[0].note = "Chậm";
+    expect(getSetNotes(squat)).toEqual([
+      { itemId: 1, setNumber: 1, note: "Chậm" },
+      { itemId: 1, setNumber: 3, note: "Hơi đau vai" },
+    ]);
+    expect(getSetNotes(item([rep(8)]))).toEqual([]);
   });
 });
 

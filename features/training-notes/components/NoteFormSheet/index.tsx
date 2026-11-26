@@ -50,6 +50,9 @@ export const NoteFormSheet = ({
     canAddItem,
     setField,
     updateItem,
+    updateSet,
+    addSet,
+    removeSet,
     addItem,
     removeItem,
     submit,
@@ -106,6 +109,11 @@ export const NoteFormSheet = ({
               item={item}
               index={index}
               onChange={(changes) => updateItem(item.key, changes)}
+              onChangeSet={(setKey, changes) =>
+                updateSet(item.key, setKey, changes)
+              }
+              onAddSet={() => addSet(item.key)}
+              onRemoveSet={(setKey) => removeSet(item.key, setKey)}
               onRemove={() => removeItem(item.key)}
             />
           ))}

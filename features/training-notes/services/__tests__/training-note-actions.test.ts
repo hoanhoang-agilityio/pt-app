@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
@@ -6,6 +6,7 @@ import {
   admins,
   adminTrainingNoteItems,
   adminTrainingNotes,
+  adminTrainingNoteSets,
 } from "@/db/schema";
 import { TRAINING_NOTE_MESSAGES as MESSAGES } from "@/features/training-notes/constants/messages";
 import type { TrainingNoteInput } from "@/features/training-notes/utils/note-schema";
@@ -43,17 +44,23 @@ const input = (
   items: [
     {
       exerciseName: "Squat",
-      sets: 4,
-      reps: 8,
-      durationSec: null,
-      weightKg: 80,
+      sets: Array.from({ length: 4 }, () => ({
+        unit: "reps",
+        reps: 8,
+        durationSec: null,
+        weightKg: 80,
+        note: null,
+      })),
     },
     {
       exerciseName: "Plank",
-      sets: 3,
-      reps: null,
-      durationSec: 45,
-      weightKg: null,
+      sets: Array.from({ length: 3 }, () => ({
+        unit: "seconds",
+        reps: null,
+        durationSec: 45,
+        weightKg: null,
+        note: null,
+      })),
     },
   ],
   ...overrides,
@@ -97,14 +104,165 @@ describe("saveTrainingNoteAction", () => {
     const items = await listTrainingNotes(alice, { today: "2026-11-25" });
 
     expect(
-      items[0].items.map((i) => [i.position, i.exerciseName, i.durationSec]),
+      items[0].items.map((i) => [i.position, i.exerciseName, i.sets.length]),
     ).toEqual([
-      [0, "Squat", null],
-      [1, "Plank", 45],
+      [0, "Squat", 4],
+      [1, "Plank", 3],
     ]);
   });
 
-  it("replaces the items when updating", async () => {
+  it("stores one row per set with exact values and null legacy columns", async () => {
+    const result = await saveTrainingNoteAction(
+      input({
+        items: [
+          {
+            exerciseName: "Squat",
+            sets: [
+              {
+                unit: "reps",
+                reps: 10,
+                durationSec: null,
+                weightKg: 60,
+                note: null,
+              },
+              {
+                unit: "reps",
+                reps: 8,
+                durationSec: null,
+                weightKg: 82.5,
+                note: "  Chậm  ",
+              },
+            ],
+          },
+          {
+            exerciseName: "Plank",
+            sets: [
+              {
+                unit: "seconds",
+                reps: null,
+                durationSec: 45,
+                weightKg: null,
+                note: null,
+              },
+              {
+                unit: "reps",
+                reps: null,
+                durationSec: null,
+                weightKg: null,
+                note: "",
+              },
+            ],
+          },
+          { exerciseName: "Stretch", sets: [] },
+        ],
+      }),
+    );
+
+    expect(result.status).toBe("success");
+    const items = await db
+      .select()
+      .from(adminTrainingNoteItems)
+      .orderBy(asc(adminTrainingNoteItems.position));
+
+    expect(
+      items.map((i) => [
+        i.exerciseName,
+        i.sets,
+        i.reps,
+        i.durationSec,
+        i.weightKg,
+      ]),
+    ).toEqual([
+      ["Squat", null, null, null, null],
+      ["Plank", null, null, null, null],
+      ["Stretch", null, null, null, null],
+    ]);
+    const rows = await db
+      .select()
+      .from(adminTrainingNoteSets)
+      .orderBy(
+        asc(adminTrainingNoteSets.itemId),
+        asc(adminTrainingNoteSets.position),
+      );
+
+    // The blank spare set of Plank is dropped; Stretch has none.
+    expect(
+      rows.map((r) => ({
+        itemId: r.itemId,
+        position: r.position,
+        reps: r.reps,
+        durationSec: r.durationSec,
+        weightKg: r.weightKg,
+        note: r.note,
+      })),
+    ).toEqual([
+      {
+        itemId: items[0].id,
+        position: 0,
+        reps: 10,
+        durationSec: null,
+        weightKg: 60,
+        note: null,
+      },
+      {
+        itemId: items[0].id,
+        position: 1,
+        reps: 8,
+        durationSec: null,
+        weightKg: 82.5,
+        note: "Chậm",
+      },
+      {
+        itemId: items[1].id,
+        position: 0,
+        reps: null,
+        durationSec: 45,
+        weightKg: null,
+        note: null,
+      },
+    ]);
+    const [listed] = await listTrainingNotes(alice);
+
+    expect(
+      listed.items[0].sets.map((s) => [s.unit, s.reps, s.weightKg, s.note]),
+    ).toEqual([
+      ["reps", 10, 60, null],
+      ["reps", 8, 82.5, "Chậm"],
+    ]);
+    expect(listed.items[1].sets.map((s) => [s.unit, s.durationSec])).toEqual([
+      ["seconds", 45],
+    ]);
+    expect(listed.items[2].sets).toEqual([]);
+  });
+
+  it("falls back to the legacy columns for an item without set rows", async () => {
+    const [created] = await db
+      .insert(adminTrainingNotes)
+      .values({ adminId: alice, date: "2026-11-20", title: "Old", note: null })
+      .returning({ id: adminTrainingNotes.id });
+
+    await db.insert(adminTrainingNoteItems).values({
+      noteId: created.id,
+      position: 0,
+      exerciseName: "Deadlift",
+      sets: 3,
+      reps: 5,
+      weightKg: 100,
+    });
+    const [legacy] = await listTrainingNotes(alice);
+
+    expect(
+      legacy.items[0].sets.map((s) => [s.position, s.unit, s.reps, s.weightKg]),
+    ).toEqual([
+      [0, "reps", 5, 100],
+      [1, "reps", 5, 100],
+      [2, "reps", 5, 100],
+    ]);
+  });
+
+  it("replaces the items when updating, leaving no orphans without cascade", async () => {
+    // Production does not enforce foreign keys (D10), so cascade never fires.
+    await db.run(sql`PRAGMA foreign_keys = OFF`);
     const created = await saveTrainingNoteAction(input());
 
     if (created.status !== "success") {
@@ -117,10 +275,13 @@ describe("saveTrainingNoteAction", () => {
         items: [
           {
             exerciseName: "Row",
-            sets: 3,
-            reps: 10,
-            durationSec: null,
-            weightKg: 60,
+            sets: Array.from({ length: 3 }, () => ({
+              unit: "reps",
+              reps: 10,
+              durationSec: null,
+              weightKg: 60,
+              note: null,
+            })),
           },
         ],
       }),
@@ -131,7 +292,14 @@ describe("saveTrainingNoteAction", () => {
 
     expect(note.title).toBe("Ngày lưng");
     expect(note.items.map((i) => i.exerciseName)).toEqual(["Row"]);
-    expect(await db.select().from(adminTrainingNoteItems)).toHaveLength(1);
+    const items = await db.select().from(adminTrainingNoteItems);
+
+    expect(items).toHaveLength(1);
+    // The old 4 + 3 sets are removed explicitly; only the 3 new ones remain.
+    const sets = await db.select().from(adminTrainingNoteSets);
+
+    expect(sets).toHaveLength(3);
+    expect(sets.every((row) => row.itemId === items[0].id)).toBe(true);
   });
 
   it("does not touch another admin's note", async () => {
@@ -172,7 +340,8 @@ describe("saveTrainingNoteAction", () => {
 });
 
 describe("deleteTrainingNoteAction", () => {
-  it("deletes the caller's note and its items", async () => {
+  it("deletes the caller's note and its items and sets without cascade", async () => {
+    await db.run(sql`PRAGMA foreign_keys = OFF`);
     const created = await saveTrainingNoteAction(input());
 
     if (created.status !== "success") {
@@ -183,6 +352,7 @@ describe("deleteTrainingNoteAction", () => {
     expect(result.status).toBe("success");
     expect(await db.select().from(adminTrainingNotes)).toHaveLength(0);
     expect(await db.select().from(adminTrainingNoteItems)).toHaveLength(0);
+    expect(await db.select().from(adminTrainingNoteSets)).toHaveLength(0);
   });
 
   it("does not delete another admin's note", async () => {
@@ -197,6 +367,9 @@ describe("deleteTrainingNoteAction", () => {
 
     expect(result).toEqual({ status: "error", message: MESSAGES.NOT_FOUND });
     expect(await db.select().from(adminTrainingNotes)).toHaveLength(1);
+    // The owner check comes first: the other admin's children are untouched.
+    expect(await db.select().from(adminTrainingNoteItems)).toHaveLength(2);
+    expect(await db.select().from(adminTrainingNoteSets)).toHaveLength(7);
   });
 
   it("returns not found for a bad id", async () => {
@@ -234,10 +407,13 @@ describe("listTrainingNotes", () => {
         items: [
           {
             exerciseName: "Deadlift",
-            sets: 3,
-            reps: 5,
-            durationSec: null,
-            weightKg: 100,
+            sets: Array.from({ length: 3 }, () => ({
+              unit: "reps",
+              reps: 5,
+              durationSec: null,
+              weightKg: 100,
+              note: null,
+            })),
           },
         ],
       }),
@@ -297,10 +473,13 @@ describe("listTrainingNotes", () => {
         items: [
           {
             exerciseName: "Curl",
-            sets: 3,
-            reps: 10,
-            durationSec: null,
-            weightKg: 10,
+            sets: Array.from({ length: 3 }, () => ({
+              unit: "reps",
+              reps: 10,
+              durationSec: null,
+              weightKg: 10,
+              note: null,
+            })),
           },
         ],
       }),

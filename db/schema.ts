@@ -1248,3 +1248,26 @@ export const adminTrainingNoteItems = sqliteTable(
   },
   (table) => [index("admin_training_note_items_note_idx").on(table.noteId)],
 );
+
+// One row per set of an exercise. The unit is not stored: duration_sec set
+// means a timed set, otherwise reps. The legacy sets/reps/duration_sec/
+// weight_kg columns on the item stay for old rows and are written as null.
+// PRAGMA foreign_keys is never enabled (D10), so onDelete cascade does NOT
+// fire: the actions delete sets, then items, then the note, explicitly.
+export const adminTrainingNoteSets = sqliteTable(
+  "admin_training_note_sets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    itemId: integer("item_id")
+      .notNull()
+      .references(() => adminTrainingNoteItems.id, { onDelete: "cascade" }),
+    // 0-based order of the set within the exercise.
+    position: integer("position").notNull(),
+    reps: integer("reps"),
+    durationSec: integer("duration_sec"),
+    weightKg: real("weight_kg"),
+    // Up to 120 characters (Zod).
+    note: text("note"),
+  },
+  (table) => [index("admin_training_note_sets_item_idx").on(table.itemId)],
+);

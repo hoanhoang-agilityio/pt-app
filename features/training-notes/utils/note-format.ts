@@ -2,52 +2,62 @@ import type {
   TrainingNote,
   TrainingNoteGroup,
   TrainingNoteItem,
+  TrainingNoteSet,
 } from "@/features/training-notes/types/training-note";
 import type { Locale } from "@/utils/locale";
 import { formatDayMonth, formatFullDay, getWeekdayLabel } from "@/utils/week";
 
 type ItemFormatKey =
-  | "item.setsReps"
-  | "item.setsSeconds"
   | "item.repsOnly"
   | "item.secondsOnly"
-  | "item.setsOnly"
-  | "item.weight";
+  | "item.chipKgReps"
+  | "item.chipKgSeconds"
+  | "item.chipKgOnly"
+  | "item.chipSet";
 
 export type ItemFormatter = (
   key: ItemFormatKey,
   values: Record<string, number>,
 ) => string;
 
-// "Squat · 4 × 8 · 80 kg" / "Plank · 3 × 45 giây": the name, then sets and
-// reps (or seconds), then the weight when there is one.
-export const formatItemLine = (
-  item: TrainingNoteItem,
-  format: ItemFormatter,
-) => {
-  const { sets, reps, durationSec, weightKg } = item;
-  const parts = [item.exerciseName];
+const getValue = (set: TrainingNoteSet) =>
+  set.unit === "reps" ? set.reps : set.durationSec;
 
-  if (durationSec !== null) {
-    parts.push(
-      sets === null
-        ? format("item.secondsOnly", { seconds: durationSec })
-        : format("item.setsSeconds", { sets, seconds: durationSec }),
-    );
-  } else if (reps !== null) {
-    parts.push(
-      sets === null
-        ? format("item.repsOnly", { reps })
-        : format("item.setsReps", { sets, reps }),
-    );
-  } else if (sets !== null) {
-    parts.push(format("item.setsOnly", { sets }));
+// One chip per set on the card: "60 kg × 10", "24 kg × 40 giây", "10 rep",
+// "45 giây", "20 kg" (weight only). A set with only a note (or a legacy count-
+// only row) gets the neutral "Set n" label so it still shows.
+export const formatSetChip = (set: TrainingNoteSet, format: ItemFormatter) => {
+  const value = getValue(set);
+
+  if (value === null) {
+    return set.weightKg === null
+      ? format("item.chipSet", { n: set.position + 1 })
+      : format("item.chipKgOnly", { kg: set.weightKg });
   }
-  if (weightKg !== null) {
-    parts.push(format("item.weight", { kg: weightKg }));
+  if (set.unit === "seconds") {
+    return set.weightKg === null
+      ? format("item.secondsOnly", { seconds: value })
+      : format("item.chipKgSeconds", { kg: set.weightKg, seconds: value });
   }
-  return parts.join(" · ");
+  return set.weightKg === null
+    ? format("item.repsOnly", { reps: value })
+    : format("item.chipKgReps", { kg: set.weightKg, reps: value });
 };
+
+export interface SetNote {
+  itemId: number;
+  // 1-based, as shown to the admin ("set 3").
+  setNumber: number;
+  note: string;
+}
+
+// The notes of an exercise's sets, in set order.
+export const getSetNotes = (item: TrainingNoteItem): SetNote[] =>
+  item.sets.flatMap((set, index) =>
+    set.note === null
+      ? []
+      : [{ itemId: item.id, setNumber: index + 1, note: set.note }],
+  );
 
 // Keeps the incoming order (newest day first) and groups by day.
 export const groupNotesByDate = (

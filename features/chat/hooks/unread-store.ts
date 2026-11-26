@@ -30,6 +30,8 @@ interface Entry {
   detach: () => void;
 }
 
+const BEAT_QUERY = "beat=1";
+
 const entries = new Map<string, Entry>();
 
 const emit = (entry: Entry) => {
@@ -49,9 +51,13 @@ const refresh = async (url: string, entry: Entry) => {
   entry.inFlight = true;
   entry.lastQuery = wantedQuery(entry);
   try {
-    const response = await fetch(withQuery(url, entry.lastQuery), {
-      cache: "no-store",
-    });
+    // `beat=1`: this poll runs in an open page, so it records presence.
+    const response = await fetch(
+      withQuery(withQuery(url, BEAT_QUERY), entry.lastQuery),
+      {
+        cache: "no-store",
+      },
+    );
 
     if (response.ok && entries.get(url) === entry) {
       entry.data = await response.json();

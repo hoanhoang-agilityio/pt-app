@@ -29,6 +29,10 @@ const NO_STORE = { "Cache-Control": "no-store" };
 // Optional peer presence riding on the badge poll. A bad value just means no
 // peer fields: it never fails the badge.
 const peerFlagSchema = z.literal("1");
+// Only an open page asks for the heartbeat (`beat=1`). The service worker
+// reads this route on every push with no page open: that must neither mark
+// the person online nor slide the admin unlock.
+const beatFlagSchema = z.literal("1");
 const peerUserIdSchema = z.coerce.number().int().positive();
 
 const unauthorized = () =>
@@ -37,8 +41,8 @@ const unauthorized = () =>
     { status: 401, headers: NO_STORE },
   );
 
-// Badge poll, which also records the caller's presence heartbeat (the same one
-// POST /api/presence writes), so one request every 30 s covers badge and
+// Badge poll, which with `beat=1` also records the caller's presence heartbeat
+// (the same one POST /api/presence writes), so one request every 30 s covers badge and
 // presence. Optional peer: trainee `?peer=1` adds { peerLastSeenAt, serverNow }
 // for the PT team; admin `?peerUserId=N` adds that trainee's, after the same
 // access checks as /api/presence/peer (omitted when they fail).
@@ -53,6 +57,9 @@ export const GET = async (request: NextRequest) => {
     if (!admin) {
       return unauthorized();
     }
+    const wantsBeat = beatFlagSchema.safeParse(
+      request.nextUrl.searchParams.get("beat"),
+    ).success;
     const peerUserId = peerUserIdSchema.safeParse(
       request.nextUrl.searchParams.get("peerUserId"),
     );
@@ -63,7 +70,7 @@ export const GET = async (request: NextRequest) => {
       peerUserId.success
         ? peerPresenceForAdmin(admin.id, peerUserId.data)
         : null,
-      beatAdmin(admin),
+      wantsBeat ? beatAdmin(admin) : null,
     ]);
     const count = perTrainee.reduce((total, row) => total + row.unread, 0);
 
@@ -90,6 +97,9 @@ export const GET = async (request: NextRequest) => {
   if (!user) {
     return unauthorized();
   }
+  const wantsBeat = beatFlagSchema.safeParse(
+    request.nextUrl.searchParams.get("beat"),
+  ).success;
   const [
     coachCount,
     conversation,
@@ -108,7 +118,7 @@ export const GET = async (request: NextRequest) => {
     peerFlagSchema.safeParse(request.nextUrl.searchParams.get("peer")).success
       ? peerPresenceForUser()
       : null,
-    beatUser(user.id),
+    wantsBeat ? beatUser(user.id) : null,
   ]);
   // The Messages tab badge covers the coach chat and the friend chats.
   const count = coachCount + dmCount;

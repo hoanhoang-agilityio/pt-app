@@ -59,8 +59,15 @@ const post = (query = "") =>
 const getPeer = (query = "") =>
   peerRoute.GET(new NextRequest(`http://localhost/api/presence/peer${query}`));
 
-const getUnread = (query = "") =>
-  unreadRoute.GET(new NextRequest(`http://localhost/api/chat/unread${query}`));
+// Page polls send beat=1; the service worker's badge fetch does not.
+const getUnread = (query = "", beat = true) => {
+  const extra = beat ? "beat=1" : "";
+  const full = query === "" ? extra && `?${extra}` : `${query}&${extra}`;
+
+  return unreadRoute.GET(
+    new NextRequest(`http://localhost/api/chat/unread${full}`),
+  );
+};
 
 const userSeen = async () =>
   (await db.select().from(users).where(eq(users.id, userId)))[0].lastSeenAt;
@@ -278,5 +285,29 @@ describe("GET /api/chat/unread presence", () => {
       expect(body.count).toBe(0);
       expect(body).not.toHaveProperty("peerLastSeenAt");
     }
+  });
+});
+
+describe("GET /api/chat/unread without beat=1", () => {
+  it("touches no presence and slides no unlock (service worker fetch)", async () => {
+    vi.mocked(issueUnlock).mockClear();
+    state.admin = { id: adminId, hasPasscode: true } as never;
+
+    expect((await getUnread("", false)).status).toBe(200);
+    expect((await getUnread("?as=admin", false)).status).toBe(200);
+    expect(await userSeen()).toBeNull();
+    expect(await adminSeen()).toBeNull();
+    expect(issueUnlock).not.toHaveBeenCalled();
+  });
+
+  it("does with beat=1", async () => {
+    vi.mocked(issueUnlock).mockClear();
+    state.admin = { id: adminId, hasPasscode: true } as never;
+
+    await getUnread("");
+    await getUnread("?as=admin");
+    expect(await userSeen()).toBeInstanceOf(Date);
+    expect(await adminSeen()).toBeInstanceOf(Date);
+    expect(issueUnlock).toHaveBeenCalledWith(adminId);
   });
 });

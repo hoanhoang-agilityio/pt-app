@@ -43,6 +43,7 @@ vi.mock("@/db", () => ({
 const { issueUnlock } = await import("@/services/admin-lock");
 const route = await import("@/app/api/presence/route");
 const peerRoute = await import("@/app/api/presence/peer/route");
+const unreadRoute = await import("@/app/api/chat/unread/route");
 const service = await import("@/features/chat/services/presence");
 
 let db: TestDb;
@@ -57,6 +58,9 @@ const post = (query = "") =>
   );
 const getPeer = (query = "") =>
   peerRoute.GET(new NextRequest(`http://localhost/api/presence/peer${query}`));
+
+const getUnread = (query = "") =>
+  unreadRoute.GET(new NextRequest(`http://localhost/api/chat/unread${query}`));
 
 const userSeen = async () =>
   (await db.select().from(users).where(eq(users.id, userId)))[0].lastSeenAt;
@@ -204,5 +208,75 @@ describe("GET /api/presence/peer", () => {
     expect((await getPeer("?as=admin&userId=abc")).status).toBe(400);
     expect((await getPeer("?as=admin&userId=-1")).status).toBe(400);
     expect((await getPeer("?as=admin&userId=9999")).status).toBe(404);
+  });
+});
+
+describe("GET /api/chat/unread presence", () => {
+  it("beats the trainee and leaves peer fields out by default", async () => {
+    const body = await (await getUnread()).json();
+
+    expect(await userSeen()).toBeInstanceOf(Date);
+    expect(await adminSeen()).toBeNull();
+    expect(body).not.toHaveProperty("peerLastSeenAt");
+    expect(body).not.toHaveProperty("serverNow");
+  });
+
+  it("beats the admin and slides the unlock only with a passcode", async () => {
+    vi.mocked(issueUnlock).mockClear();
+    await getUnread("?as=admin");
+    expect(await adminSeen()).toBeInstanceOf(Date);
+    expect(await userSeen()).toBeNull();
+    expect(issueUnlock).not.toHaveBeenCalled();
+
+    state.admin = { id: adminId, hasPasscode: true } as never;
+    await getUnread("?as=admin");
+    expect(issueUnlock).toHaveBeenCalledWith(adminId);
+  });
+
+  it("does not beat anyone without a session", async () => {
+    state.user = null;
+    state.admin = null;
+    expect((await getUnread()).status).toBe(401);
+    expect((await getUnread("?as=admin")).status).toBe(401);
+    expect(await userSeen()).toBeNull();
+    expect(await adminSeen()).toBeNull();
+  });
+
+  it("adds the PT team last-seen for a trainee with peer=1", async () => {
+    await db
+      .update(admins)
+      .set({ lastSeenAt: new Date("2026-11-05T02:00:00Z") })
+      .where(eq(admins.id, adminId));
+    const body = await (await getUnread("?peer=1")).json();
+
+    expect(body.peerLastSeenAt).toBe("2026-11-05T02:00:00.000Z");
+    expect(body.serverNow).toEqual(expect.any(String));
+    expect(await (await getUnread("?peer=2")).json()).not.toHaveProperty(
+      "peerLastSeenAt",
+    );
+  });
+
+  it("adds a trainee's last-seen for an admin with peerUserId", async () => {
+    await db
+      .update(users)
+      .set({ lastSeenAt: new Date("2026-11-05T02:30:00Z") })
+      .where(eq(users.id, userId));
+    const body = await (
+      await getUnread(`?as=admin&peerUserId=${userId}`)
+    ).json();
+
+    expect(body.peerLastSeenAt).toBe("2026-11-05T02:30:00.000Z");
+    expect(body.peerUserId).toBe(userId);
+  });
+
+  it("omits peer fields, not the badge, for a bad or unknown peerUserId", async () => {
+    for (const id of ["abc", "-1", "9999"]) {
+      const response = await getUnread(`?as=admin&peerUserId=${id}`);
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.count).toBe(0);
+      expect(body).not.toHaveProperty("peerLastSeenAt");
+    }
   });
 });

@@ -6,6 +6,7 @@ import {
   parseGroupUnread,
   parseUserUnread,
   userBadgeCount,
+  withQuery,
 } from "@/features/chat/utils/unread-payload";
 
 const groups = {
@@ -112,5 +113,17 @@ describe("userBadgeCount", () => {
   it("shows the initial number before the first poll or on a bad payload", () => {
     expect(userBadgeCount(null, 4)).toBe(4);
     expect(userBadgeCount({ count: "x", groups }, 4)).toBe(4);
+  });
+});
+
+describe("withQuery", () => {
+  it("starts a query, extends one, or leaves the url alone", () => {
+    expect(withQuery("/api/chat/unread", "peer=1")).toBe(
+      "/api/chat/unread?peer=1",
+    );
+    expect(withQuery("/api/chat/unread?as=admin", "peerUserId=7")).toBe(
+      "/api/chat/unread?as=admin&peerUserId=7",
+    );
+    expect(withQuery("/api/chat/unread", "")).toBe("/api/chat/unread");
   });
 });

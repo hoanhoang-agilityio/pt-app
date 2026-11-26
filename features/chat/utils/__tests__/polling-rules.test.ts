@@ -7,8 +7,8 @@ import {
 } from "@/features/chat/utils/polling-rules";
 
 describe("unreadPollMs", () => {
-  it("polls every 15 s without a live connection", () => {
-    expect(unreadPollMs(false)).toBe(15_000);
+  it("polls every 30 s without a live connection", () => {
+    expect(unreadPollMs(false)).toBe(30_000);
     expect(unreadPollMs(false)).toBe(UNREAD_POLL_MS);
   });
 

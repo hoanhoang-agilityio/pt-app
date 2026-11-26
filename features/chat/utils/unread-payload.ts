@@ -102,3 +102,7 @@ export const adminBadgeCount = badgeCount;
 
 // The trainee's tab-bar badge: coach chat and friend chats plus group chats.
 export const userBadgeCount = badgeCount;
+
+// Adds an extra query (`peer=1`) to a poll URL that may already have one.
+export const withQuery = (url: string, query: string): string =>
+  query === "" ? url : `${url}${url.includes("?") ? "&" : "?"}${query}`;

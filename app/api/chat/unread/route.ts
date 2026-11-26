@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 
 import { sumAppBadge } from "@/features/app-badge/utils/app-badge-rules";
 import { isChatEnabled } from "@/features/chat/services/chat-permission";
@@ -8,6 +9,12 @@ import {
   findLatestLoudIncomingForUser,
   listUnreadByTraineeForAdmin,
 } from "@/features/chat/services/chat-queries";
+import {
+  beatAdmin,
+  beatUser,
+  peerPresenceForAdmin,
+  peerPresenceForUser,
+} from "@/features/chat/services/presence-beat";
 import {
   sessionOfAdmin,
   sessionOfUser,
@@ -19,13 +26,23 @@ import { getApiAdmin, getApiUser } from "@/services/auth-guard";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
+// Optional peer presence riding on the badge poll. A bad value just means no
+// peer fields: it never fails the badge.
+const peerFlagSchema = z.literal("1");
+const peerUserIdSchema = z.coerce.number().int().positive();
+
 const unauthorized = () =>
   NextResponse.json(
     { error: "unauthorized" },
     { status: 401, headers: NO_STORE },
   );
 
-// Badge poll. Trainee: unread count plus what decides whether the tab shows
+// Badge poll, which also records the caller's presence heartbeat (the same one
+// POST /api/presence writes), so one request every 30 s covers badge and
+// presence. Optional peer: trainee `?peer=1` adds { peerLastSeenAt, serverNow }
+// for the PT team; admin `?peerUserId=N` adds that trainee's, after the same
+// access checks as /api/presence/peer (omitted when they fail).
+// Trainee: unread count plus what decides whether the tab shows
 // at all. `?as=admin` (admin cookie only, a trainee session never gets it):
 // the admin's unread total and the count per trainee. A browser may hold both
 // cookies, so the admin view is only served when asked for.
@@ -36,10 +53,17 @@ export const GET = async (request: NextRequest) => {
     if (!admin) {
       return unauthorized();
     }
-    const [perTrainee, groups, notifications] = await Promise.all([
+    const peerUserId = peerUserIdSchema.safeParse(
+      request.nextUrl.searchParams.get("peerUserId"),
+    );
+    const [perTrainee, groups, notifications, peer] = await Promise.all([
       listUnreadByTraineeForAdmin(admin.id),
       countGroupUnread(sessionOfAdmin(admin)),
       countUnreadNotifications(`admin:${admin.id}`),
+      peerUserId.success
+        ? peerPresenceForAdmin(admin.id, peerUserId.data)
+        : null,
+      beatAdmin(admin),
     ]);
     const count = perTrainee.reduce((total, row) => total + row.unread, 0);
 
@@ -54,6 +78,9 @@ export const GET = async (request: NextRequest) => {
           groups: groups.total,
           notifications,
         }),
+        // peerUserId tells the client which trainee the reading is for (the
+        // shared poll may still hold the previous thread's answer).
+        ...(peer && { ...peer, peerUserId: peerUserId.data }),
       },
       { headers: NO_STORE },
     );
@@ -70,6 +97,7 @@ export const GET = async (request: NextRequest) => {
     latestLoudIncomingId,
     groups,
     notifications,
+    peer,
   ] = await Promise.all([
     countUnreadForUser(user.id),
     findConversationByUserId(user.id),
@@ -77,6 +105,10 @@ export const GET = async (request: NextRequest) => {
     findLatestLoudIncomingForUser(user.id),
     countGroupUnread(sessionOfUser(user)),
     countUnreadNotifications(`user:${user.id}`),
+    peerFlagSchema.safeParse(request.nextUrl.searchParams.get("peer")).success
+      ? peerPresenceForUser()
+      : null,
+    beatUser(user.id),
   ]);
   // The Messages tab badge covers the coach chat and the friend chats.
   const count = coachCount + dmCount;
@@ -98,6 +130,7 @@ export const GET = async (request: NextRequest) => {
         groups: groups.total,
         notifications,
       }),
+      ...peer,
     },
     { headers: NO_STORE },
   );

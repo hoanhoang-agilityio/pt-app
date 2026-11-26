@@ -111,7 +111,6 @@ export const StickerPanel = ({
   const showRecent = recent.length > 0;
   const [suggestStickers, setSuggestStickers] =
     useStickerSuggestSetting("stickers");
-  const [suggestGifs, setSuggestGifs] = useStickerSuggestSetting("gifs");
 
   const pick = (sticker: PickedSticker) => {
     const { input } = sticker;
@@ -383,11 +382,6 @@ export const StickerPanel = ({
           label={t("suggestStickers")}
           checked={suggestStickers}
           onChange={setSuggestStickers}
-        />
-        <SuggestSwitch
-          label={t("suggestGifs")}
-          checked={suggestGifs}
-          onChange={setSuggestGifs}
         />
       </div>
     </BottomSheet>

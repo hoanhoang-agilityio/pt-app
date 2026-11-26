@@ -111,7 +111,6 @@ export const Composer = ({
   // Escape), and the per-device switches.
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
   const [suggestStickers] = useStickerSuggestSetting("stickers");
-  const [suggestGifs] = useStickerSuggestSetting("gifs");
   const trimmed = value.trim();
   const showStickerSuggestions =
     Boolean(onSendSticker) &&
@@ -280,7 +279,6 @@ export const Composer = ({
       {showStickerSuggestions && (
         <StickerSuggestions
           text={value}
-          withGifs={suggestGifs}
           onPick={pickSticker}
           onDismiss={() => {
             setDismissedFor(trimmed);

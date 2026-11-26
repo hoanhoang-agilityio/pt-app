@@ -76,7 +76,7 @@ describe("GET /api/chat/ably-token", () => {
     expect(await response.json()).toEqual({ error: "chat_locked" });
   });
 
-  it("signs a subscribe-only capability for the trainee's own conversation", async () => {
+  it("signs subscribe on the trainee's own conversation and typing publish on its own typing channel", async () => {
     const response = await get();
     const conversation = await q.findConversationByUserId(userId);
 
@@ -86,6 +86,7 @@ describe("GET /api/chat/ably-token", () => {
         clientId: `user:${userId}`,
         capability: {
           [`chat:conversation:${conversation!.id}`]: ["subscribe"],
+          [`chat:typing:${conversation!.id}`]: ["publish", "subscribe"],
           [`chat:user:${userId}`]: ["subscribe"],
         },
       },
@@ -102,6 +103,7 @@ describe("GET /api/chat/ably-token", () => {
         clientId: "admin:7",
         capability: {
           "chat:conversation:*": ["subscribe"],
+          "chat:typing:*": ["publish", "subscribe"],
           "chat:inbox": ["subscribe"],
         },
       },

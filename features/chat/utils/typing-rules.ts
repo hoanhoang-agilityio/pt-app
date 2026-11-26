@@ -1,3 +1,8 @@
+import {
+  ADMIN_CLIENT_PREFIX,
+  traineeClientId,
+} from "@/features/chat/utils/ably-capabilities";
+
 // Pure rules for the "đang nhập" indicator. Typing is best effort: nothing is
 // stored, so a lost event only means the indicator does not show.
 
@@ -19,31 +24,21 @@ export const isTypingActive = (lastReceivedAt: number | null, now: number) =>
 
 export type TypingRole = "user" | "admin";
 
-export interface TypingEventData {
-  role: TypingRole;
-  senderKey: string;
-}
-
-// Ably payloads are untrusted input: anything that is not the exact shape of
-// `typingEvent` is dropped.
-export const parseTypingEvent = (data: unknown): TypingEventData | null => {
-  if (typeof data !== "object" || data === null) {
-    return null;
-  }
-  const { role, senderKey } = data as Record<string, unknown>;
-
-  if ((role !== "user" && role !== "admin") || typeof senderKey !== "string") {
-    return null;
-  }
-  return { role, senderKey };
-};
-
-// Only the other side's typing shows. Our own echo (same Ably client id, e.g.
-// a second tab of the same person) and events from our own role are ignored.
-export const isPeerTyping = (
-  event: TypingEventData,
+// Typing is published by the browsers on `chat:typing:<id>`; Ably stamps each
+// message with the publisher's token client id, which cannot be forged. Only
+// the other side shows: a trainee accepts any PT (`admin:<id>`), a PT accepts
+// the trainee of this conversation. Our own echo and a second tab of the same
+// person are ignored whichever role they have.
+export const isTypingFromPeer = (
+  senderClientId: string | null | undefined,
   ownRole: TypingRole,
   ownClientId: string | null,
-) =>
-  event.role !== ownRole &&
-  (ownClientId === null || event.senderKey !== ownClientId);
+  traineeUserId: number,
+): boolean => {
+  if (!senderClientId || senderClientId === ownClientId) {
+    return false;
+  }
+  return ownRole === "user"
+    ? senderClientId.startsWith(ADMIN_CLIENT_PREFIX)
+    : senderClientId === traineeClientId(traineeUserId);
+};

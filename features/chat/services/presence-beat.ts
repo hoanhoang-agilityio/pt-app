@@ -59,3 +59,30 @@ export const peerPresenceForAdmin = async (
   }
   return peerPresence(await getUserLastSeen(trainee.id));
 };
+
+// Several trainees at once for an admin (one entry per accessible id; the
+// rest are left out). One serverNow for all.
+export const peersForAdmin = async (
+  adminId: number,
+  userIds: number[],
+): Promise<{
+  serverNow: string;
+  peers: Record<string, { peerLastSeenAt: string | null }>;
+}> => {
+  const readings = await Promise.all(
+    userIds.map(
+      async (id) => [id, await peerPresenceForAdmin(adminId, id)] as const,
+    ),
+  );
+
+  return {
+    serverNow: new Date().toISOString(),
+    peers: Object.fromEntries(
+      readings.flatMap(([id, reading]) =>
+        reading
+          ? [[String(id), { peerLastSeenAt: reading.peerLastSeenAt }]]
+          : [],
+      ),
+    ),
+  };
+};

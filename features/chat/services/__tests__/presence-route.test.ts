@@ -263,27 +263,71 @@ describe("GET /api/chat/unread presence", () => {
     );
   });
 
-  it("adds a trainee's last-seen for an admin with peerUserId", async () => {
+  it("adds each requested trainee's last-seen for an admin", async () => {
+    const [other] = await db
+      .insert(users)
+      .values({ name: "Binh", nameKey: "binh" })
+      .returning({ id: users.id });
+
     await db
       .update(users)
       .set({ lastSeenAt: new Date("2026-11-05T02:30:00Z") })
       .where(eq(users.id, userId));
     const body = await (
-      await getUnread(`?as=admin&peerUserId=${userId}`)
+      await getUnread(`?as=admin&peerUserIds=${userId},${other.id},${userId}`)
     ).json();
 
-    expect(body.peerLastSeenAt).toBe("2026-11-05T02:30:00.000Z");
-    expect(body.peerUserId).toBe(userId);
+    expect(body.serverNow).toEqual(expect.any(String));
+    expect(body.peers).toEqual({
+      [userId]: { peerLastSeenAt: "2026-11-05T02:30:00.000Z" },
+      [other.id]: { peerLastSeenAt: null },
+    });
   });
 
-  it("omits peer fields, not the badge, for a bad or unknown peerUserId", async () => {
-    for (const id of ["abc", "-1", "9999"]) {
-      const response = await getUnread(`?as=admin&peerUserId=${id}`);
+  it("leaves unknown trainees out of peers, and bad lists out entirely", async () => {
+    const unknown = await (
+      await getUnread(`?as=admin&peerUserIds=${userId},9999`)
+    ).json();
+
+    expect(Object.keys(unknown.peers)).toEqual([String(userId)]);
+    const tooMany = Array.from({ length: 11 }, (_, i) => i + 1).join(",");
+
+    for (const list of ["abc", "-1", "1,x", "", tooMany]) {
+      const response = await getUnread(`?as=admin&peerUserIds=${list}`);
       const body = await response.json();
 
       expect(response.status).toBe(200);
       expect(body.count).toBe(0);
-      expect(body).not.toHaveProperty("peerLastSeenAt");
+      expect(body).not.toHaveProperty("peers");
+    }
+  });
+
+  it("still answers the badge when the beat or the peer read fails", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const failing = vi
+      .spyOn(service, "touchUserPresence")
+      .mockRejectedValue(new Error("db down"));
+    const failingAdmin = vi
+      .spyOn(service, "touchAdminPresence")
+      .mockRejectedValue(new Error("db down"));
+    const failingPeer = vi
+      .spyOn(service, "getAdminTeamLastSeen")
+      .mockRejectedValue(new Error("db down"));
+
+    try {
+      const trainee = await getUnread("?peer=1");
+      const admin = await getUnread(`?as=admin&peerUserIds=${userId}`);
+
+      expect(trainee.status).toBe(200);
+      expect(await trainee.json()).not.toHaveProperty("peerLastSeenAt");
+      expect(admin.status).toBe(200);
+      expect((await admin.json()).count).toBe(0);
+      expect(error).toHaveBeenCalled();
+    } finally {
+      failing.mockRestore();
+      failingAdmin.mockRestore();
+      failingPeer.mockRestore();
+      error.mockRestore();
     }
   });
 });

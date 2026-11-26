@@ -52,7 +52,7 @@ describe("shortLastSeen", () => {
 describe("peerUnreadQuery", () => {
   it("builds the unread query per role", () => {
     expect(peerUnreadQuery("user", 7)).toBe("peer=1");
-    expect(peerUnreadQuery("admin", 7)).toBe("peerUserId=7");
+    expect(peerUnreadQuery("admin", 7)).toBe("peerUserIds=7");
   });
 });
 
@@ -82,17 +82,31 @@ describe("parsePeerReading", () => {
     });
   });
 
-  it("ignores another trainee's reading when one is expected", () => {
+  it("reads an admin's own trainee out of peers", () => {
     const payload = {
-      peerLastSeenAt: "2026-05-10T04:00:00.000Z",
       serverNow: "2026-05-10T05:00:00.000Z",
-      peerUserId: 3,
+      peers: {
+        "3": { peerLastSeenAt: "2026-05-10T04:00:00.000Z" },
+        "7": { peerLastSeenAt: "2026-05-10T04:30:00.000Z" },
+      },
     };
 
-    expect(parsePeerReading(payload, 7)).toBeNull();
+    expect(parsePeerReading(payload, 7)?.peerLastSeenAt).toBe(
+      "2026-05-10T04:30:00.000Z",
+    );
     expect(parsePeerReading(payload, 3)?.peerLastSeenAt).toBe(
       "2026-05-10T04:00:00.000Z",
     );
+  });
+
+  it("keeps the server clock when the admin's trainee is not in peers", () => {
+    expect(
+      parsePeerReading({ serverNow: "2026-05-10T05:00:00.000Z", peers: {} }, 9),
+    ).toEqual({
+      peerLastSeenAt: null,
+      serverNow: "2026-05-10T05:00:00.000Z",
+    });
+    expect(parsePeerReading({ count: 1 }, 9)).toBeNull();
   });
 
   it("is null without peer fields or without a payload", () => {

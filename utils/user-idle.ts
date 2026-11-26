@@ -1,5 +1,5 @@
 // Client-only idle tracker. Background pollers pause after USER_IDLE_MS
-// without a pointer, key, touch or scroll event, and resume (with one
+// without a pointer, mouse move, key, touch or scroll event, and resume (with one
 // immediate run) on the next one. Listeners are attached lazily, once per tab.
 export const USER_IDLE_MS = 5 * 60_000;
 
@@ -43,6 +43,10 @@ const ACTIVITY_EVENTS = [
   "scroll",
 ] as const;
 
+// Moves fire constantly: record at most one per interval.
+const MOVE_EVENTS = ["mousemove", "pointermove"] as const;
+export const MOVE_THROTTLE_MS = 5000;
+
 let tracker: ReturnType<typeof createActivityTracker> | null = null;
 
 const ensureTracker = () => {
@@ -52,11 +56,22 @@ const ensureTracker = () => {
   const created = createActivityTracker(USER_IDLE_MS, Date.now());
 
   tracker = created;
+  let lastMoveAt = 0;
   const onActivity = () => created.markActive(Date.now());
+  const onMove = () => {
+    const now = Date.now();
+
+    if (now - lastMoveAt >= MOVE_THROTTLE_MS) {
+      lastMoveAt = now;
+      created.markActive(now);
+    }
+  };
+  const options = { passive: true, capture: true };
 
   ACTIVITY_EVENTS.forEach((type) =>
-    window.addEventListener(type, onActivity, { passive: true, capture: true }),
+    window.addEventListener(type, onActivity, options),
   );
+  MOVE_EVENTS.forEach((type) => window.addEventListener(type, onMove, options));
   return created;
 };
 

@@ -12,8 +12,8 @@ describe("unreadPollMs", () => {
     expect(unreadPollMs(false)).toBe(UNREAD_POLL_MS);
   });
 
-  it("falls back to a 60 s safety net while realtime is connected", () => {
-    expect(unreadPollMs(true)).toBe(60_000);
+  it("falls back to a 55 s safety net while realtime is connected", () => {
+    expect(unreadPollMs(true)).toBe(55_000);
     expect(unreadPollMs(true)).toBe(UNREAD_SAFETY_POLL_MS);
   });
 });

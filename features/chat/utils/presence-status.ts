@@ -41,11 +41,11 @@ export const shortLastSeen = (
 
 // The query the thread adds to the shared unread poll to get the other side's
 // last seen (the message poll's 204 carries no presence). Trainee: the PT
-// team; admin: that trainee.
+// team; admin: that trainee (the poll merges the ids of every open thread).
 export const peerUnreadQuery = (
   role: "user" | "admin",
   userId: number,
-): string => (role === "admin" ? `peerUserId=${userId}` : "peer=1");
+): string => (role === "admin" ? `peerUserIds=${userId}` : "peer=1");
 
 export interface PeerReading {
   peerLastSeenAt: string | null;
@@ -54,7 +54,8 @@ export interface PeerReading {
 
 // Reads the peer fields of an unread payload. Null when the payload has none
 // (not loaded yet, or the server left them out). An admin passes the trainee
-// they expect: the shared poll may still hold another thread's answer.
+// they expect and reads that trainee's entry of `peers` (an inaccessible one
+// is absent: last-seen null, server clock still usable).
 export const parsePeerReading = (
   data: unknown,
   expectedUserId?: number,
@@ -63,17 +64,33 @@ export const parsePeerReading = (
     return null;
   }
   const record = data as Record<string, unknown>;
+  const serverNow =
+    typeof record.serverNow === "string" ? record.serverNow : null;
 
-  if (!("peerLastSeenAt" in record) && !("serverNow" in record)) {
-    return null;
+  if (expectedUserId !== undefined) {
+    const peers = record.peers;
+
+    if (typeof peers !== "object" || peers === null) {
+      return null;
+    }
+    const entry = (peers as Record<string, unknown>)[String(expectedUserId)];
+    const lastSeen =
+      typeof entry === "object" && entry !== null
+        ? (entry as Record<string, unknown>).peerLastSeenAt
+        : null;
+
+    return {
+      peerLastSeenAt: typeof lastSeen === "string" ? lastSeen : null,
+      serverNow,
+    };
   }
-  if (expectedUserId !== undefined && record.peerUserId !== expectedUserId) {
+  if (!("peerLastSeenAt" in record) && !("serverNow" in record)) {
     return null;
   }
   return {
     peerLastSeenAt:
       typeof record.peerLastSeenAt === "string" ? record.peerLastSeenAt : null,
-    serverNow: typeof record.serverNow === "string" ? record.serverNow : null,
+    serverNow,
   };
 };
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   adminBadgeCount,
+  mergeQueries,
   parseAdminUnread,
   parseGroupUnread,
   parseUserUnread,
@@ -125,5 +126,26 @@ describe("withQuery", () => {
       "/api/chat/unread?as=admin&peerUserId=7",
     );
     expect(withQuery("/api/chat/unread", "")).toBe("/api/chat/unread");
+  });
+});
+
+describe("mergeQueries", () => {
+  it("unions peer ids of every subscriber, deduped and sorted", () => {
+    expect(
+      mergeQueries(["peerUserIds=7", "", "peerUserIds=3", "peerUserIds=7"]),
+    ).toBe("peerUserIds=3,7");
+  });
+
+  it("keeps other params once and drops bad ids", () => {
+    expect(mergeQueries(["peer=1", "peer=1", "peerUserIds=x,-1,0,4"])).toBe(
+      "peer=1&peerUserIds=4",
+    );
+  });
+
+  it("is empty without queries and caps at ten ids", () => {
+    expect(mergeQueries(["", ""])).toBe("");
+    const many = Array.from({ length: 12 }, (_, i) => `peerUserIds=${i + 1}`);
+
+    expect(mergeQueries(many).split("=")[1].split(",")).toHaveLength(10);
   });
 });

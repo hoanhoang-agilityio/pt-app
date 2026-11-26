@@ -2,7 +2,8 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
-import { withQuery } from "@/features/chat/utils/unread-payload";
+import { mergeQueries, withQuery } from "@/features/chat/utils/unread-payload";
+import { isUserIdle } from "@/utils/user-idle";
 import { startVisibleInterval } from "@/utils/visible-interval";
 
 // Dispatched on window by live inbox events so badges refetch right away.
@@ -38,11 +39,15 @@ const emit = (entry: Entry) => {
   entry.subscribers.forEach(({ listener }) => listener());
 };
 
-// The extra query to send: the first one any subscriber asks for.
-const wantedQuery = (entry: Entry) =>
-  Array.from(entry.subscribers.values(), (item) => item.query).find(
-    (query) => query !== "",
-  ) ?? "";
+// The extra query to send: every subscriber's, merged (peer ids unioned).
+export const wantedQuery = (entry: Pick<Entry, "subscribers">) =>
+  mergeQueries(Array.from(entry.subscribers.values(), (item) => item.query));
+
+// `beat=1` records presence, so only a poll from an attended page sends it: an
+// idle tab (focus or refresh-event refetch) stops beating and stops sliding
+// the admin unlock.
+export const unreadFetchUrl = (url: string, query: string, idle: boolean) =>
+  withQuery(idle ? url : withQuery(url, BEAT_QUERY), query);
 
 const refresh = async (url: string, entry: Entry) => {
   if (entry.inFlight || document.visibilityState === "hidden") {
@@ -51,12 +56,9 @@ const refresh = async (url: string, entry: Entry) => {
   entry.inFlight = true;
   entry.lastQuery = wantedQuery(entry);
   try {
-    // `beat=1`: this poll runs in an open page, so it records presence.
     const response = await fetch(
-      withQuery(withQuery(url, BEAT_QUERY), entry.lastQuery),
-      {
-        cache: "no-store",
-      },
+      unreadFetchUrl(url, entry.lastQuery, isUserIdle()),
+      { cache: "no-store" },
     );
 
     if (response.ok && entries.get(url) === entry) {
@@ -69,7 +71,9 @@ const refresh = async (url: string, entry: Entry) => {
     entry.inFlight = false;
     if (entry.refetch) {
       entry.refetch = false;
-      void refresh(url, entry);
+      if (entries.get(url) === entry && entry.subscribers.size > 0) {
+        void refresh(url, entry);
+      }
     }
   }
 };

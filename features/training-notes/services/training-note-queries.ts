@@ -15,12 +15,17 @@ import {
 
 import { TIME_ZONE } from "@/constants/time";
 import { db } from "@/db";
-import { adminTrainingNoteItems, adminTrainingNotes } from "@/db/schema";
+import {
+  adminTrainingNoteItems,
+  adminTrainingNotes,
+  adminTrainingNoteSets,
+} from "@/db/schema";
 import type {
   TrainingNote,
   TrainingNoteRange,
 } from "@/features/training-notes/types/training-note";
 import { getRangeBounds } from "@/features/training-notes/utils/note-filters";
+import { toItemSets } from "@/features/training-notes/utils/note-sets";
 import { getTodayDate } from "@/utils/week";
 
 // Enough for years of sessions; the list is a log, not an archive browser.
@@ -108,6 +113,33 @@ export const listTrainingNotes = async (
       asc(adminTrainingNoteItems.id),
     );
 
+  // Sets of all listed exercises in one query; exercises without rows fall
+  // back to their legacy columns.
+  const setRows =
+    items.length === 0
+      ? []
+      : await db
+          .select({
+            itemId: adminTrainingNoteSets.itemId,
+            position: adminTrainingNoteSets.position,
+            reps: adminTrainingNoteSets.reps,
+            durationSec: adminTrainingNoteSets.durationSec,
+            weightKg: adminTrainingNoteSets.weightKg,
+            note: adminTrainingNoteSets.note,
+          })
+          .from(adminTrainingNoteSets)
+          .where(
+            inArray(
+              adminTrainingNoteSets.itemId,
+              items.map((item) => item.id),
+            ),
+          )
+          .orderBy(
+            asc(adminTrainingNoteSets.itemId),
+            asc(adminTrainingNoteSets.position),
+          );
+  const setsByItem = Map.groupBy(setRows, (row) => row.itemId);
+
   return notes.map((note) => ({
     ...note,
     items: items
@@ -116,10 +148,7 @@ export const listTrainingNotes = async (
         id: item.id,
         position: item.position,
         exerciseName: item.exerciseName,
-        sets: item.sets,
-        reps: item.reps,
-        durationSec: item.durationSec,
-        weightKg: item.weightKg,
+        sets: toItemSets(item, setsByItem.get(item.id) ?? []),
       })),
   }));
 };

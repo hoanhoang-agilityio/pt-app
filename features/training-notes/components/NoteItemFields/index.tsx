@@ -1,54 +1,105 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { ChevronDown, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { IconButton } from "@/components/common/IconButton";
 import { Input } from "@/components/common/Input";
-import { LABEL } from "@/constants/styles";
+import { SetRows } from "@/features/training-notes/components/SetRows";
+import { EXERCISE_NAME_MAX } from "@/features/training-notes/constants/limits";
 import {
-  DURATION_MAX_SEC,
-  EXERCISE_NAME_MAX,
-  REPS_MAX,
-  SETS_MAX,
-} from "@/features/training-notes/constants/limits";
-import {
-  type AmountUnit,
   type ItemDraft,
+  type ItemSummary,
+  type SetDraft,
+  summarizeItem,
 } from "@/features/training-notes/utils/note-draft";
 import { cn } from "@/utils/cn";
 
 export const EXERCISE_LIST_ID = "training-note-exercises";
 
-const UNITS: AmountUnit[] = ["reps", "seconds"];
-
-// Set, Rep | Giây and Kg share one grid: a fixed-height header row (label or
-// switch) above equal-height inputs keeps the three inputs on one baseline.
-const HEADER = "flex h-9 items-center";
-
 interface NoteItemFieldsProps {
   item: ItemDraft;
   index: number;
   onChange: (changes: Partial<ItemDraft>) => void;
+  onChangeSet: (setKey: number, changes: Partial<SetDraft>) => void;
+  onAddSet: () => void;
+  onRemoveSet: (setKey: number) => void;
   onRemove: () => void;
 }
+
+type Translate = ReturnType<typeof useTranslations<"trainingNotes.form">>;
+
+// "3 set · 60–90 kg" / "3 set · 45 giây": the weight when there is one,
+// else the reps or seconds.
+const formatSummary = (summary: ItemSummary, t: Translate) => {
+  const parts = [t("summarySets", { count: summary.sets })];
+  const { kg, value } = summary;
+
+  if (kg) {
+    parts.push(
+      kg.min === kg.max
+        ? t("summaryKg", { kg: kg.min })
+        : t("summaryKgRange", { min: kg.min, max: kg.max }),
+    );
+  } else if (value?.kind === "mixed") {
+    parts.push(t("summaryMixed"));
+  } else if (value) {
+    const same = value.min === value.max;
+    const key = `summary${value.kind === "reps" ? "Reps" : "Seconds"}` as const;
+
+    parts.push(
+      same
+        ? t(key, { value: value.min })
+        : t(`${key}Range`, { min: value.min, max: value.max }),
+    );
+  }
+  return parts.join(" · ");
+};
 
 export const NoteItemFields = ({
   item,
   index,
   onChange,
+  onChangeSet,
+  onAddSet,
+  onRemoveSet,
   onRemove,
 }: NoteItemFieldsProps) => {
   const t = useTranslations("trainingNotes.form");
   const id = `note-item-${item.key}`;
+  const bodyId = `${id}-body`;
+  const name = item.name.trim() || t("exerciseFallback", { n: index + 1 });
 
   return (
-    <fieldset className="space-y-1 rounded-2xl border border-line bg-surface p-3">
-      <legend className="sr-only">{`${t("exercise")} ${index + 1}`}</legend>
-      <div className="flex items-center justify-between">
-        <label htmlFor={`${id}-name`} className={cn(LABEL, "mb-0")}>
-          {t("exercise")}
-        </label>
+    <div
+      role="group"
+      aria-label={t("toggleItem", { n: index + 1 })}
+      className="rounded-2xl border border-line bg-surface p-3"
+    >
+      <div className="flex items-center justify-between gap-1">
+        <button
+          type="button"
+          aria-expanded={item.open}
+          aria-controls={bodyId}
+          onClick={() => onChange({ open: !item.open })}
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          <ChevronDown
+            className={cn(
+              "size-5 shrink-0 text-muted transition",
+              !item.open && "-rotate-90",
+            )}
+            aria-hidden
+          />
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-fg">{name}</span>
+            {!item.open && (
+              <span className="block truncate text-sm text-muted tabular-nums">
+                {formatSummary(summarizeItem(item), t)}
+              </span>
+            )}
+          </span>
+        </button>
         <IconButton
           label={t("removeItem")}
           size="sm"
@@ -58,77 +109,27 @@ export const NoteItemFields = ({
           <Trash2 className="size-5" aria-hidden />
         </IconButton>
       </div>
-      <Input
-        id={`${id}-name`}
-        list={EXERCISE_LIST_ID}
-        value={item.name}
-        onChange={(event) => onChange({ name: event.target.value })}
-        placeholder={t("exercisePlaceholder")}
-        maxLength={EXERCISE_NAME_MAX}
-        autoComplete="off"
-        autoCorrect="off"
-        enterKeyHint="next"
-      />
-      <div className="grid grid-cols-[1fr_1.4fr_1fr] gap-x-2">
-        <label htmlFor={`${id}-sets`} className={cn(LABEL, HEADER, "mb-0")}>
-          {t("sets")}
-        </label>
-        <div
-          role="group"
-          aria-label={t("unitLabel")}
-          className={cn(HEADER, "gap-0.5")}
-        >
-          <div className="grid h-9 w-full grid-cols-2 gap-0.5 rounded-lg border border-line bg-bg p-0.5">
-            {UNITS.map((unit) => (
-              <button
-                key={unit}
-                type="button"
-                aria-pressed={item.unit === unit}
-                onClick={() => onChange({ unit })}
-                className={cn(
-                  "rounded-md text-sm font-semibold transition",
-                  item.unit === unit
-                    ? "bg-accent text-accent-fg"
-                    : "text-muted",
-                )}
-              >
-                {t(`units.${unit}`)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <label htmlFor={`${id}-weight`} className={cn(LABEL, HEADER, "mb-0")}>
-          {t("weight")}
-        </label>
+      <div id={bodyId} hidden={!item.open} className="mt-2 space-y-3">
         <Input
-          id={`${id}-sets`}
-          inputMode="numeric"
-          value={item.sets}
-          onChange={(event) => onChange({ sets: event.target.value })}
-          placeholder="4"
-          maxLength={String(SETS_MAX).length}
+          id={`${id}-name`}
+          list={EXERCISE_LIST_ID}
+          value={item.name}
+          onChange={(event) => onChange({ name: event.target.value })}
+          placeholder={t("exercisePlaceholder")}
+          aria-label={t("exercise")}
+          maxLength={EXERCISE_NAME_MAX}
           autoComplete="off"
+          autoCorrect="off"
+          enterKeyHint="next"
         />
-        <Input
-          aria-label={t("amount")}
-          inputMode="numeric"
-          value={item.amount}
-          onChange={(event) => onChange({ amount: event.target.value })}
-          placeholder={item.unit === "reps" ? "8" : "45"}
-          maxLength={
-            String(item.unit === "reps" ? REPS_MAX : DURATION_MAX_SEC).length
-          }
-          autoComplete="off"
-        />
-        <Input
-          id={`${id}-weight`}
-          inputMode="decimal"
-          value={item.weight}
-          onChange={(event) => onChange({ weight: event.target.value })}
-          placeholder={t("optional")}
-          autoComplete="off"
+        <SetRows
+          idPrefix={id}
+          sets={item.sets}
+          onChangeSet={onChangeSet}
+          onAddSet={onAddSet}
+          onRemoveSet={onRemoveSet}
         />
       </div>
-    </fieldset>
+    </div>
   );
 };

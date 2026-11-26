@@ -1,11 +1,21 @@
+export type SetUnit = "reps" | "seconds";
+
+// One set of an exercise: reps or seconds (per `unit`), an optional weight
+// and an optional short note. The value of the other unit is always null.
+export interface TrainingNoteSet {
+  position: number;
+  unit: SetUnit;
+  reps: number | null;
+  durationSec: number | null;
+  weightKg: number | null;
+  note: string | null;
+}
+
 export interface TrainingNoteItem {
   id: number;
   position: number;
   exerciseName: string;
-  sets: number | null;
-  reps: number | null;
-  durationSec: number | null;
-  weightKg: number | null;
+  sets: TrainingNoteSet[];
 }
 
 export interface TrainingNote {

@@ -2,7 +2,6 @@
 
 import clsx from "clsx";
 import { ArrowUp, ImagePlus, X } from "lucide-react";
-import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -10,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Avatar } from "@/components/common/Avatar";
+import { BackButton } from "@/components/common/BackButton";
 import { LoadOlderControl } from "@/components/common/LoadOlderControl";
 import { ScrollJumpButton } from "@/components/common/ScrollJumpButton";
 import { ROUTES } from "@/constants/routes";
@@ -142,13 +142,7 @@ export const DmThread = ({
         <div
           className={clsx(PAGE_CONTAINER, "flex min-h-14 items-center gap-2")}
         >
-          <Link
-            href={ROUTES.MESSAGES}
-            className={clsx(ICON_BUTTON, "-ml-3")}
-            aria-label={t("back")}
-          >
-            <ChevronLeft className="size-6" aria-hidden />
-          </Link>
+          <BackButton href={ROUTES.MESSAGES} label={t("back")} />
           <Link
             href={profilePath("user", other.id)}
             className="flex min-w-0 flex-1 items-center gap-3"

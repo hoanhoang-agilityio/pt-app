@@ -73,6 +73,12 @@ describe("toDraft", () => {
     expect(draft.items.map((item) => item.open)).toEqual([true, false]);
   });
 
+  it("expands only the exercise at the given index", () => {
+    const draft = toDraft(saved, "2026-11-26", 1);
+
+    expect(draft.items.map((item) => item.open)).toEqual([false, true]);
+  });
+
   it("shows kg with a comma and keeps the unit and note", () => {
     const [squat, plank] = toDraft(saved, "2026-11-26").items;
 

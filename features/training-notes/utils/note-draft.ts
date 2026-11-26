@@ -93,11 +93,12 @@ const toDraftItem = (
   };
 };
 
-// The form of an existing note (only its first exercise expanded), or an
-// empty one for `today`.
+// The form of an existing note (only the exercise at `openIndex` expanded,
+// the first by default), or an empty one for `today`.
 export const toDraft = (
   note: TrainingNote | null,
   today: string,
+  openIndex = 0,
 ): NoteDraft => {
   if (!note) {
     return {
@@ -109,7 +110,7 @@ export const toDraft = (
   }
   const next = { key: 0 };
   const items = note.items.map((item, index) =>
-    toDraftItem(item, index === 0, next),
+    toDraftItem(item, index === openIndex, next),
   );
 
   return {

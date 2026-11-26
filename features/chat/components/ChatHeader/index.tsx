@@ -1,13 +1,14 @@
 "use client";
 
 import clsx from "clsx";
-import { ChevronLeft, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { Avatar } from "@/components/common/Avatar";
+import { BackButton } from "@/components/common/BackButton";
 import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { ROUTES } from "@/constants/routes";
 import { ICON_BUTTON, PAGE_CONTAINER } from "@/constants/styles";
@@ -78,22 +79,9 @@ export const ChatHeader = ({
     <header className="sticky top-0 z-30 shrink-0 border-b border-line bg-bg/95 pt-[env(safe-area-inset-top)]">
       <div className={clsx(PAGE_CONTAINER, "flex min-h-14 items-center gap-2")}>
         {backHref ? (
-          <Link
-            href={backHref}
-            className={clsx(ICON_BUTTON, "-ml-3")}
-            aria-label={t("back")}
-          >
-            <ChevronLeft className="size-6" aria-hidden />
-          </Link>
+          <BackButton href={backHref} label={t("back")} />
         ) : (
-          <button
-            type="button"
-            onClick={handleBack}
-            className={clsx(ICON_BUTTON, "-ml-3")}
-            aria-label={t("back")}
-          >
-            <ChevronLeft className="size-6" aria-hidden />
-          </button>
+          <BackButton onClick={handleBack} label={t("back")} />
         )}
         {/* The avatar and the name open the info page too; the gear link is
             the keyboard and screen reader entry. */}

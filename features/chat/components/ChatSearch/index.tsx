@@ -1,15 +1,16 @@
 "use client";
 
 import clsx from "clsx";
-import { ChevronLeft, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
+import { BackButton } from "@/components/common/BackButton";
 import { Input } from "@/components/common/Input";
 import { Spinner } from "@/components/common/Spinner";
-import { ICON_BUTTON, PAGE_CONTAINER } from "@/constants/styles";
+import { PAGE_CONTAINER } from "@/constants/styles";
 import { type ChatPaths, jumpHref } from "@/features/chat/utils/chat-links";
 import {
   clearSearchRestore,
@@ -276,13 +277,7 @@ export const ChatSearch = ({
         <div
           className={clsx(PAGE_CONTAINER, "flex min-h-14 items-center gap-1")}
         >
-          <Link
-            href={paths.info}
-            className={clsx(ICON_BUTTON, "-ml-3")}
-            aria-label={t("back")}
-          >
-            <ChevronLeft className="size-6" />
-          </Link>
+          <BackButton href={paths.info} label={t("back")} />
           <Input
             type="search"
             clearable

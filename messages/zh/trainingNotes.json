@@ -79,5 +79,10 @@
     "kgPlaceholder": "公斤"
   },
   "notesToggle": "{count} 条备注",
-  "setNoteLabel": "{name} · 第 {n} 组"
+  "setNoteLabel": "{name} · 第 {n} 组",
+  "typeLabel": "训练笔记",
+  "collapse": "收起笔记：{title}",
+  "expand": "展开笔记：{title}",
+  "summary": "{exercises} 个动作 · {sets} 组",
+  "editExercise": "编辑 {name}，{count} 组"
 }

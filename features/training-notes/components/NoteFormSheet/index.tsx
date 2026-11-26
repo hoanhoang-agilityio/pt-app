@@ -4,8 +4,10 @@ import {
   type Announcements,
   DndContext,
   type DragEndEvent,
+  DragOverlay,
   type DragStartEvent,
   KeyboardSensor,
+  MeasuringStrategy,
   MouseSensor,
   TouchSensor,
   useSensor,
@@ -23,6 +25,7 @@ import {
 import { Plus, Save } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { BottomSheet } from "@/components/common/BottomSheet";
 import { Input } from "@/components/common/Input";
@@ -37,6 +40,7 @@ import {
   EXERCISE_LIST_ID,
   moveButtonId,
   NoteItemFields,
+  NoteItemOverlay,
 } from "@/features/training-notes/components/NoteItemFields";
 import {
   NOTE_TEXT_MAX,
@@ -89,6 +93,7 @@ export const NoteFormSheet = ({
   // The arrow to focus once the list has re-rendered in its new order.
   const pendingFocus = useRef<{ key: number; direction: "up" | "down" }>(null);
   const keys = draft.items.map((item) => item.key);
+  const draggingItem = draft.items.find((item) => item.key === draggingKey);
   const isSortable = draft.items.length > 1;
 
   const sensors = useSensors(
@@ -125,8 +130,9 @@ export const NoteFormSheet = ({
   }, [draft.items]);
 
   const move = (key: number, direction: "up" | "down") => {
-    pendingFocus.current = { key, direction };
-    moveItemBy(key, direction === "up" ? -1 : 1);
+    const isMoved = moveItemBy(key, direction === "up" ? -1 : 1);
+
+    pendingFocus.current = isMoved ? { key, direction } : null;
   };
 
   const describe = (id: string | number) => {
@@ -174,9 +180,11 @@ export const NoteFormSheet = ({
   };
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    const to = over ? keys.indexOf(Number(over.id)) : -1;
+
     setDraggingKey(null);
-    if (over && over.id !== active.id) {
-      moveItem(Number(active.id), keys.indexOf(Number(over.id)));
+    if (to !== -1 && over?.id !== active.id) {
+      moveItem(Number(active.id), to, false);
     }
   };
 
@@ -228,6 +236,8 @@ export const NoteFormSheet = ({
           <DndContext
             id={dndId}
             sensors={sensors}
+            // Cards collapse right after the drag starts: measure again.
+            measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
             modifiers={[restrictToVerticalAxis, restrictToParentElement]}
             accessibility={{
               announcements,
@@ -261,6 +271,19 @@ export const NoteFormSheet = ({
                 />
               ))}
             </SortableContext>
+            {/* Portaled out of the sheet: its transform would break the
+                overlay's fixed positioning. Height follows the collapsed row,
+                not the card's size before it collapsed. */}
+            {draggingItem &&
+              createPortal(
+                <DragOverlay style={{ height: "auto" }}>
+                  <NoteItemOverlay
+                    item={draggingItem}
+                    index={draft.items.indexOf(draggingItem)}
+                  />
+                </DragOverlay>,
+                document.body,
+              )}
           </DndContext>
           <button
             type="button"

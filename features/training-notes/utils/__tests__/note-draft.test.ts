@@ -263,9 +263,8 @@ describe("moveItem", () => {
     expect(keys(moveItem(items, 10, 2))).toEqual([11, 12, 10]);
   });
 
-  it("moves to the very top and bottom", () => {
+  it("moves the last item to the very top", () => {
     expect(keys(moveItem(items, 12, 0))).toEqual([12, 10, 11]);
-    expect(keys(moveItem(items, 10, 2))).toEqual([11, 12, 10]);
   });
 
   it("clamps an out-of-range index", () => {

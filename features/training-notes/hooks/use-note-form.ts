@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
@@ -40,6 +40,13 @@ export const useNoteForm = (
   const [isPending, startTransition] = useTransition();
   // One counter for item and set keys.
   const nextKey = useRef(getNextKey(draft));
+
+  // The latest items, ahead of `draft` between a move and its re-render.
+  const itemsRef = useRef(draft.items);
+
+  useEffect(() => {
+    itemsRef.current = draft.items;
+  }, [draft.items]);
 
   const newItem = () => createEmptyItem(nextKey.current++, nextKey.current++);
 
@@ -105,36 +112,37 @@ export const useNoteForm = (
       return { ...current, items: items.length > 0 ? items : [newItem()] };
     });
 
-  // Moves an exercise to `toIndex` and announces it. Validation errors are
-  // computed on submit from the current order, but the one on screen names an
-  // old position, so it is cleared.
-  const moveItem = (key: number, toIndex: number) => {
-    const from = draft.items.findIndex((item) => item.key === key);
-    const moved = reorderItems(draft.items, key, toIndex);
+  // Moves an exercise to `toIndex`; false when nothing moved. The order is
+  // read from a ref that a move updates at once, so two quick taps in one
+  // render each see the result of the one before. `announce` is off for drops,
+  // which the drag-and-drop announcements already cover.
+  const moveItem = (key: number, toIndex: number, announce = true) => {
+    const items = itemsRef.current;
+    const moved = reorderItems(items, key, toIndex);
 
-    if (moved === draft.items) {
-      return;
+    if (moved === items) {
+      return false;
     }
+    const from = items.findIndex((item) => item.key === key);
     const to = moved.findIndex((item) => item.key === key);
     const name =
-      draft.items[from].name.trim() || t("exerciseFallback", { n: from + 1 });
+      items[from].name.trim() || t("exerciseFallback", { n: from + 1 });
 
-    setDraft((current) => ({
-      ...current,
-      items: reorderItems(current.items, key, toIndex),
-    }));
-    setError(undefined);
-    toast.message(t(to < from ? "movedUp" : "movedDown", { name, n: to + 1 }), {
-      id: MOVED_TOAST_ID,
-    });
+    itemsRef.current = moved;
+    setDraft((current) => ({ ...current, items: moved }));
+    if (announce) {
+      toast.message(
+        t(to < from ? "movedUp" : "movedDown", { name, n: to + 1 }),
+        { id: MOVED_TOAST_ID },
+      );
+    }
+    return true;
   };
 
   const moveItemBy = (key: number, delta: number) => {
-    const from = draft.items.findIndex((item) => item.key === key);
+    const from = itemsRef.current.findIndex((item) => item.key === key);
 
-    if (from !== -1) {
-      moveItem(key, from + delta);
-    }
+    return from === -1 ? false : moveItem(key, from + delta);
   };
 
   // Expands the exercise a validation error points at, so the field to fix is

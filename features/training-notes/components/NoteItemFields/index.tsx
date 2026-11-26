@@ -112,7 +112,7 @@ export const NoteItemFields = ({
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn(
         "relative rounded-2xl border border-line bg-surface p-3",
-        isDragging && "z-10 border-accent shadow-lg ring-2 ring-accent/40",
+        isDragging && "opacity-40",
       )}
     >
       <div className="flex items-center justify-between gap-1">
@@ -204,6 +204,38 @@ export const NoteItemFields = ({
           onRemoveSet={onRemoveSet}
         />
       </div>
+    </div>
+  );
+};
+
+interface NoteItemOverlayProps {
+  item: ItemDraft;
+  index: number;
+}
+
+// The lifted copy that follows the pointer while dragging: the collapsed row
+// (title and set summary), whatever the real card's height was.
+export const NoteItemOverlay = ({ item, index }: NoteItemOverlayProps) => {
+  const t = useTranslations("trainingNotes.form");
+  const name = item.name.trim() || t("exerciseFallback", { n: index + 1 });
+
+  return (
+    <div className="flex items-center gap-1 rounded-2xl border border-accent bg-surface p-3 shadow-lg ring-2 ring-accent/40">
+      <span className="-ml-2 flex size-11 shrink-0 items-center justify-center text-muted">
+        <GripVertical className="size-5" aria-hidden />
+      </span>
+      <span className="flex min-h-11 min-w-0 flex-1 items-center gap-2">
+        <ChevronDown
+          className="size-5 shrink-0 -rotate-90 text-muted"
+          aria-hidden
+        />
+        <span className="min-w-0">
+          <span className="block truncate font-semibold text-fg">{name}</span>
+          <span className="block truncate text-sm text-muted tabular-nums">
+            {formatSummary(summarizeItem(item), t)}
+          </span>
+        </span>
+      </span>
     </div>
   );
 };

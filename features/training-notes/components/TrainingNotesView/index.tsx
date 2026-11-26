@@ -1,6 +1,6 @@
 "use client";
 
-import { Lock, NotebookPen, Plus, Search } from "lucide-react";
+import { CalendarDays, Lock, NotebookPen, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -10,12 +10,7 @@ import { useConfirm } from "@/components/common/ConfirmDialog/use-confirm";
 import { Input } from "@/components/common/Input";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ROUTES } from "@/constants/routes";
-import {
-  BUTTON_PRIMARY,
-  CARD,
-  PAGE_CONTAINER,
-  SECTION_TITLE,
-} from "@/constants/styles";
+import { BUTTON_PRIMARY, CARD, PAGE_CONTAINER } from "@/constants/styles";
 import { NoteCard } from "@/features/training-notes/components/NoteCard";
 import { NoteFormSheet } from "@/features/training-notes/components/NoteFormSheet";
 import {
@@ -34,6 +29,8 @@ import { cn } from "@/utils/cn";
 interface SheetState {
   isOpen: boolean;
   note: TrainingNote | null;
+  // Exercise of `note` to start expanded.
+  openIndex: number;
   // Remounts the sheet so each opening starts from its own draft.
   nonce: number;
 }
@@ -62,11 +59,17 @@ export const TrainingNotesView = ({
   const [sheet, setSheet] = useState<SheetState>({
     isOpen: false,
     note: null,
+    openIndex: 0,
     nonce: 0,
   });
 
-  const openSheet = (note: TrainingNote | null) =>
-    setSheet((current) => ({ isOpen: true, note, nonce: current.nonce + 1 }));
+  const openSheet = (note: TrainingNote | null, openIndex = 0) =>
+    setSheet((current) => ({
+      isOpen: true,
+      note,
+      openIndex,
+      nonce: current.nonce + 1,
+    }));
 
   const handleDelete = async (note: TrainingNote) => {
     const isConfirmed = await confirm({
@@ -165,13 +168,19 @@ export const TrainingNotesView = ({
             ) : (
               groups.map((group) => (
                 <section key={group.date} className="space-y-2">
-                  <h2 className={SECTION_TITLE}>{group.label}</h2>
-                  <ul className="space-y-2">
+                  <h2 className="mx-1 flex items-center gap-3 text-base font-semibold text-fg">
+                    <CalendarDays
+                      className="size-5 shrink-0 text-muted"
+                      aria-hidden
+                    />
+                    {group.label}
+                  </h2>
+                  <ul className="space-y-3">
                     {group.notes.map((note) => (
                       <NoteCard
                         key={note.id}
                         note={note}
-                        onEdit={() => openSheet(note)}
+                        onEdit={(openIndex) => openSheet(note, openIndex)}
                         onDelete={() => handleDelete(note)}
                       />
                     ))}
@@ -189,6 +198,7 @@ export const TrainingNotesView = ({
           setSheet((current) => ({ ...current, isOpen }))
         }
         note={sheet.note}
+        openIndex={sheet.openIndex}
         today={today}
         suggestions={suggestions}
       />

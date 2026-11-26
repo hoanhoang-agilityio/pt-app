@@ -59,6 +59,18 @@ export const getSetNotes = (item: TrainingNoteItem): SetNote[] =>
       : [{ itemId: item.id, setNumber: index + 1, note: set.note }],
   );
 
+export interface NoteSummary {
+  exercises: number;
+  sets: number;
+}
+
+// The counts behind the collapsed card ("7 bài · 21 set"): exercises, and every
+// set, since each one renders a chip (a set without values shows "Set n").
+export const summarizeNote = (note: TrainingNote): NoteSummary => ({
+  exercises: note.items.length,
+  sets: note.items.reduce((total, item) => total + item.sets.length, 0),
+});
+
 // Keeps the incoming order (newest day first) and groups by day.
 export const groupNotesByDate = (
   notes: TrainingNote[],

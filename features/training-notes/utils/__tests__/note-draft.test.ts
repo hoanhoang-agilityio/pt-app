@@ -73,6 +73,21 @@ describe("toDraft", () => {
     expect(draft.items.map((item) => item.open)).toEqual([true, false]);
   });
 
+  it("expands only the exercise at the given index", () => {
+    const draft = toDraft(saved, "2026-11-26", 1);
+
+    expect(draft.items.map((item) => item.open)).toEqual([false, true]);
+  });
+
+  it("falls back to the first exercise for an out-of-range index", () => {
+    expect(
+      toDraft(saved, "2026-11-26", 5).items.map((item) => item.open),
+    ).toEqual([true, false]);
+    expect(
+      toDraft(saved, "2026-11-26", -1).items.map((item) => item.open),
+    ).toEqual([true, false]);
+  });
+
   it("shows kg with a comma and keeps the unit and note", () => {
     const [squat, plank] = toDraft(saved, "2026-11-26").items;
 

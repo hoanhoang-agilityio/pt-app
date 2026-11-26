@@ -26,9 +26,13 @@ export const useNoteForm = (
   note: TrainingNote | null,
   today: string,
   onDone: () => void,
+  // Which exercise of an existing note starts expanded.
+  openIndex = 0,
 ) => {
   const t = useTranslations("trainingNotes.form");
-  const [draft, setDraft] = useState<NoteDraft>(() => toDraft(note, today));
+  const [draft, setDraft] = useState<NoteDraft>(() =>
+    toDraft(note, today, openIndex),
+  );
   const [error, setError] = useState<string>();
   const [isPending, startTransition] = useTransition();
   // One counter for item and set keys.

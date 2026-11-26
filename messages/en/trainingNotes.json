@@ -79,5 +79,10 @@
     "kgPlaceholder": "Kg"
   },
   "notesToggle": "{count} notes",
-  "setNoteLabel": "{name} · set {n}"
+  "setNoteLabel": "{name} · set {n}",
+  "typeLabel": "Training note",
+  "collapse": "Collapse note: {title}",
+  "expand": "Expand note: {title}",
+  "summary": "{exercises, plural, one {# exercise} other {# exercises}} · {sets, plural, one {# set} other {# sets}}",
+  "editExercise": "Edit {name}, {count, plural, one {# set} other {# sets}}"
 }

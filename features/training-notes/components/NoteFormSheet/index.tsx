@@ -8,7 +8,6 @@ import { Input } from "@/components/common/Input";
 import { SubmitButton } from "@/components/common/SubmitButton";
 import {
   BUTTON_PRIMARY,
-  BUTTON_SECONDARY,
   FIELD_ERROR,
   LABEL,
   TEXTAREA,
@@ -33,6 +32,8 @@ interface NoteFormSheetProps {
   today: string;
   // Names offered in the exercise field.
   suggestions: string[];
+  // Exercise of `note` to start expanded; the first by default.
+  openIndex?: number;
 }
 
 export const NoteFormSheet = ({
@@ -41,6 +42,7 @@ export const NoteFormSheet = ({
   note,
   today,
   suggestions,
+  openIndex,
 }: NoteFormSheetProps) => {
   const t = useTranslations("trainingNotes.form");
   const {
@@ -56,7 +58,7 @@ export const NoteFormSheet = ({
     addItem,
     removeItem,
     submit,
-  } = useNoteForm(note, today, () => onOpenChange(false));
+  } = useNoteForm(note, today, () => onOpenChange(false), openIndex);
 
   return (
     <BottomSheet
@@ -121,7 +123,7 @@ export const NoteFormSheet = ({
             type="button"
             onClick={addItem}
             disabled={!canAddItem}
-            className={`${BUTTON_SECONDARY} w-full`}
+            className={`${BUTTON_PRIMARY} w-full`}
           >
             <Plus className="size-5" aria-hidden />
             {t("addItem")}

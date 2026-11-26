@@ -15,6 +15,7 @@ import {
   getSetNotes,
   groupNotesByDate,
   type ItemFormatter,
+  summarizeNote,
 } from "@/features/training-notes/utils/note-format";
 
 const TEMPLATES: Record<string, string> = {
@@ -104,6 +105,39 @@ describe("formatSetChip", () => {
   it("labels a set without value or kg by its number", () => {
     expect(chip(rep(null))).toBe("Set 1");
     expect(formatSetChip({ ...rep(null), position: 2 }, format)).toBe("Set 3");
+  });
+});
+
+describe("summarizeNote", () => {
+  it("counts the exercises and the sets across them", () => {
+    const summary = summarizeNote(
+      note(1, "2026-11-25", {
+        items: [
+          item([rep(10, 60), rep(10, 60), rep(8, 62.5)], "Squat"),
+          item([sec(45)], "Plank"),
+          item([rep(12), rep(12)], "Dip"),
+        ],
+      }),
+    );
+
+    expect(summary).toEqual({ exercises: 3, sets: 6 });
+  });
+
+  it("is zero for a note without exercises", () => {
+    expect(summarizeNote(note(1, "2026-11-25"))).toEqual({
+      exercises: 0,
+      sets: 0,
+    });
+  });
+
+  it("counts every set, including empty ones and ones with only a note", () => {
+    const empty = { ...rep(null), note: null };
+    const onlyNote = { ...rep(null), note: "Hơi đau vai" };
+    const summary = summarizeNote(
+      note(1, "2026-11-25", { items: [item([empty, onlyNote, rep(5)])] }),
+    );
+
+    expect(summary).toEqual({ exercises: 1, sets: 3 });
   });
 });
 

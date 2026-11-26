@@ -79,5 +79,10 @@
     "kgPlaceholder": "Kg"
   },
   "notesToggle": "{count} ghi chú",
-  "setNoteLabel": "{name} · set {n}"
+  "setNoteLabel": "{name} · set {n}",
+  "typeLabel": "Ghi chú tập",
+  "collapse": "Thu gọn ghi chú: {title}",
+  "expand": "Mở rộng ghi chú: {title}",
+  "summary": "{exercises} bài · {sets} set",
+  "editExercise": "Sửa bài {name}, {count} set"
 }

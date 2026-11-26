@@ -1,10 +1,12 @@
 import clsx from "clsx";
-import { ChevronLeft } from "lucide-react";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import {
+  BackButton,
+  BackButtonPlaceholder,
+} from "@/components/common/BackButton";
 import { InlineSkeleton, Skeleton } from "@/components/common/Skeleton";
-import { ICON_BUTTON, PAGE_CONTAINER } from "@/constants/styles";
+import { PAGE_CONTAINER } from "@/constants/styles";
 
 interface ChatThreadSkeletonProps {
   // A fixed route back (admin side) renders the real back link; without it
@@ -113,20 +115,9 @@ export const ChatThreadSkeleton = async ({
       <div className="border-b border-line pt-[env(safe-area-inset-top)]">
         <div className={`${PAGE_CONTAINER} flex min-h-14 items-center gap-2`}>
           {backHref ? (
-            <Link
-              href={backHref}
-              className={clsx(ICON_BUTTON, "-ml-3")}
-              aria-label={tHeader("back")}
-            >
-              <ChevronLeft className="size-6" aria-hidden />
-            </Link>
+            <BackButton href={backHref} label={tHeader("back")} />
           ) : (
-            <div
-              className={clsx(ICON_BUTTON, "-ml-3", "skeleton-delay")}
-              aria-hidden
-            >
-              <Skeleton className="size-6 rounded-full" />
-            </div>
+            <BackButtonPlaceholder className="skeleton-delay" />
           )}
           <div className="skeleton-delay flex min-w-0 flex-1 items-center gap-2">
             <Skeleton className="size-9 shrink-0 rounded-full" />

@@ -15,12 +15,15 @@ import {
   createSetFrom,
   getNextKey,
   type ItemDraft,
+  moveItem as reorderItems,
   type NoteDraft,
   type SetDraft,
   toDraft,
   toInput,
 } from "@/features/training-notes/utils/note-draft";
 import { trainingNoteSchema } from "@/features/training-notes/utils/note-schema";
+
+const MOVED_TOAST_ID = "training-note-moved";
 
 export const useNoteForm = (
   note: TrainingNote | null,
@@ -102,6 +105,38 @@ export const useNoteForm = (
       return { ...current, items: items.length > 0 ? items : [newItem()] };
     });
 
+  // Moves an exercise to `toIndex` and announces it. Validation errors are
+  // computed on submit from the current order, but the one on screen names an
+  // old position, so it is cleared.
+  const moveItem = (key: number, toIndex: number) => {
+    const from = draft.items.findIndex((item) => item.key === key);
+    const moved = reorderItems(draft.items, key, toIndex);
+
+    if (moved === draft.items) {
+      return;
+    }
+    const to = moved.findIndex((item) => item.key === key);
+    const name =
+      draft.items[from].name.trim() || t("exerciseFallback", { n: from + 1 });
+
+    setDraft((current) => ({
+      ...current,
+      items: reorderItems(current.items, key, toIndex),
+    }));
+    setError(undefined);
+    toast.message(t(to < from ? "movedUp" : "movedDown", { name, n: to + 1 }), {
+      id: MOVED_TOAST_ID,
+    });
+  };
+
+  const moveItemBy = (key: number, delta: number) => {
+    const from = draft.items.findIndex((item) => item.key === key);
+
+    if (from !== -1) {
+      moveItem(key, from + delta);
+    }
+  };
+
   // Expands the exercise a validation error points at, so the field to fix is
   // not hidden in a collapsed card.
   const openFailedItem = () => {
@@ -147,6 +182,8 @@ export const useNoteForm = (
     removeSet,
     addItem,
     removeItem,
+    moveItem,
+    moveItemBy,
     submit,
   };
 };

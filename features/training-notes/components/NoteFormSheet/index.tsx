@@ -1,7 +1,28 @@
 "use client";
 
+import {
+  type Announcements,
+  DndContext,
+  type DragEndEvent,
+  type DragStartEvent,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  restrictToParentElement,
+  restrictToVerticalAxis,
+} from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { Plus, Save } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { BottomSheet } from "@/components/common/BottomSheet";
 import { Input } from "@/components/common/Input";
@@ -14,6 +35,7 @@ import {
 } from "@/constants/styles";
 import {
   EXERCISE_LIST_ID,
+  moveButtonId,
   NoteItemFields,
 } from "@/features/training-notes/components/NoteItemFields";
 import {
@@ -57,8 +79,106 @@ export const NoteFormSheet = ({
     removeSet,
     addItem,
     removeItem,
+    moveItem,
+    moveItemBy,
     submit,
   } = useNoteForm(note, today, () => onOpenChange(false), openIndex);
+  const dndId = useId();
+  // The exercise being dragged: every card shows collapsed meanwhile.
+  const [draggingKey, setDraggingKey] = useState<number | null>(null);
+  // The arrow to focus once the list has re-rendered in its new order.
+  const pendingFocus = useRef<{ key: number; direction: "up" | "down" }>(null);
+  const keys = draft.items.map((item) => item.key);
+  const isSortable = draft.items.length > 1;
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  // The moved arrow keeps focus; at either end it is disabled, so focus its
+  // twin instead.
+  useEffect(() => {
+    const target = pendingFocus.current;
+
+    pendingFocus.current = null;
+    if (!target) {
+      return;
+    }
+    const other = target.direction === "up" ? "down" : "up";
+    const directions: ("up" | "down")[] = [target.direction, other];
+    const button = directions
+      .map((direction) =>
+        document.getElementById(moveButtonId(target.key, direction)),
+      )
+      .find(
+        (element): element is HTMLButtonElement =>
+          element instanceof HTMLButtonElement && !element.disabled,
+      );
+
+    button?.focus();
+  }, [draft.items]);
+
+  const move = (key: number, direction: "up" | "down") => {
+    pendingFocus.current = { key, direction };
+    moveItemBy(key, direction === "up" ? -1 : 1);
+  };
+
+  const describe = (id: string | number) => {
+    const index = draft.items.findIndex((item) => item.key === id);
+    const item = draft.items[index];
+
+    return {
+      name: item?.name.trim() || t("exerciseFallback", { n: index + 1 }),
+      n: index + 1,
+      total: draft.items.length,
+    };
+  };
+
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => t("dragStart", describe(active.id)),
+    onDragOver: ({ active, over }) => {
+      const to = over ? keys.indexOf(Number(over.id)) : -1;
+
+      return to === -1
+        ? undefined
+        : t("dragOver", { ...describe(active.id), n: to + 1 });
+    },
+    onDragEnd: ({ active, over }) => {
+      const to = over ? keys.indexOf(Number(over.id)) : -1;
+
+      return t("dragEnd", {
+        ...describe(active.id),
+        ...(to === -1 ? {} : { n: to + 1 }),
+      });
+    },
+    onDragCancel: ({ active }) => t("dragCancel", describe(active.id)),
+  };
+
+  const handleDragStart = ({ active }: DragStartEvent) => {
+    const focused = document.activeElement;
+
+    // A set field with focus would keep the keyboard up while dragging.
+    if (
+      focused instanceof HTMLInputElement ||
+      focused instanceof HTMLTextAreaElement
+    ) {
+      focused.blur();
+    }
+    setDraggingKey(Number(active.id));
+  };
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    setDraggingKey(null);
+    if (over && over.id !== active.id) {
+      moveItem(Number(active.id), keys.indexOf(Number(over.id)));
+    }
+  };
 
   return (
     <BottomSheet
@@ -105,20 +225,43 @@ export const NoteFormSheet = ({
           ))}
         </datalist>
         <div className="space-y-2">
-          {draft.items.map((item, index) => (
-            <NoteItemFields
-              key={item.key}
-              item={item}
-              index={index}
-              onChange={(changes) => updateItem(item.key, changes)}
-              onChangeSet={(setKey, changes) =>
-                updateSet(item.key, setKey, changes)
-              }
-              onAddSet={() => addSet(item.key)}
-              onRemoveSet={(setKey) => removeSet(item.key, setKey)}
-              onRemove={() => removeItem(item.key)}
-            />
-          ))}
+          <DndContext
+            id={dndId}
+            sensors={sensors}
+            modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+            accessibility={{
+              announcements,
+              screenReaderInstructions: { draggable: t("dragInstructions") },
+            }}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setDraggingKey(null)}
+          >
+            <SortableContext
+              items={keys}
+              strategy={verticalListSortingStrategy}
+            >
+              {draft.items.map((item, index) => (
+                <NoteItemFields
+                  key={item.key}
+                  item={item}
+                  index={index}
+                  onChange={(changes) => updateItem(item.key, changes)}
+                  onChangeSet={(setKey, changes) =>
+                    updateSet(item.key, setKey, changes)
+                  }
+                  onAddSet={() => addSet(item.key)}
+                  onRemoveSet={(setKey) => removeSet(item.key, setKey)}
+                  onRemove={() => removeItem(item.key)}
+                  isSortable={isSortable}
+                  isLast={index === draft.items.length - 1}
+                  isCollapsed={draggingKey !== null}
+                  onMoveUp={() => move(item.key, "up")}
+                  onMoveDown={() => move(item.key, "down")}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
           <button
             type="button"
             onClick={addItem}

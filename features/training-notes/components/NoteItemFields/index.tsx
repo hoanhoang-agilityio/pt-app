@@ -1,6 +1,14 @@
 "use client";
 
-import { ChevronDown, Trash2 } from "lucide-react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  GripVertical,
+  Trash2,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { IconButton } from "@/components/common/IconButton";
@@ -25,7 +33,18 @@ interface NoteItemFieldsProps {
   onAddSet: () => void;
   onRemoveSet: (setKey: number) => void;
   onRemove: () => void;
+  // Reordering controls show only with more than one exercise.
+  isSortable: boolean;
+  isLast: boolean;
+  // Some exercise is being dragged: every card shows as its collapsed row
+  // without touching `item.open`.
+  isCollapsed: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }
+
+export const moveButtonId = (itemKey: number, direction: "up" | "down") =>
+  `note-item-${itemKey}-${direction}`;
 
 type Translate = ReturnType<typeof useTranslations<"trainingNotes.form">>;
 
@@ -64,22 +83,55 @@ export const NoteItemFields = ({
   onAddSet,
   onRemoveSet,
   onRemove,
+  isSortable,
+  isLast,
+  isCollapsed,
+  onMoveUp,
+  onMoveDown,
 }: NoteItemFieldsProps) => {
   const t = useTranslations("trainingNotes.form");
   const id = `note-item-${item.key}`;
   const bodyId = `${id}-body`;
   const name = item.name.trim() || t("exerciseFallback", { n: index + 1 });
+  const isOpen = item.open && !isCollapsed;
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.key });
 
   return (
     <div
+      ref={setNodeRef}
       role="group"
       aria-label={t("toggleItem", { n: index + 1 })}
-      className="rounded-2xl border border-line bg-surface p-3"
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={cn(
+        "relative rounded-2xl border border-line bg-surface p-3",
+        isDragging && "z-10 border-accent shadow-lg ring-2 ring-accent/40",
+      )}
     >
       <div className="flex items-center justify-between gap-1">
+        {isSortable && (
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...attributes}
+            {...listeners}
+            aria-roledescription={t("sortableRole")}
+            aria-label={t("dragHandle", { n: index + 1 })}
+            className="-ml-2 flex size-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-xl text-muted active:cursor-grabbing active:bg-line"
+          >
+            <GripVertical className="size-5" aria-hidden />
+          </button>
+        )}
         <button
           type="button"
-          aria-expanded={item.open}
+          aria-expanded={isOpen}
           aria-controls={bodyId}
           onClick={() => onChange({ open: !item.open })}
           className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-left"
@@ -87,19 +139,41 @@ export const NoteItemFields = ({
           <ChevronDown
             className={cn(
               "size-5 shrink-0 text-muted transition",
-              !item.open && "-rotate-90",
+              !isOpen && "-rotate-90",
             )}
             aria-hidden
           />
           <span className="min-w-0">
             <span className="block truncate font-semibold text-fg">{name}</span>
-            {!item.open && (
+            {!isOpen && (
               <span className="block truncate text-sm text-muted tabular-nums">
                 {formatSummary(summarizeItem(item), t)}
               </span>
             )}
           </span>
         </button>
+        {isSortable && (
+          <>
+            <IconButton
+              id={moveButtonId(item.key, "up")}
+              label={t("moveUp", { n: index + 1 })}
+              size="sm"
+              onClick={onMoveUp}
+              disabled={index === 0}
+            >
+              <ArrowUp className="size-5" aria-hidden />
+            </IconButton>
+            <IconButton
+              id={moveButtonId(item.key, "down")}
+              label={t("moveDown", { n: index + 1 })}
+              size="sm"
+              onClick={onMoveDown}
+              disabled={isLast}
+            >
+              <ArrowDown className="size-5" aria-hidden />
+            </IconButton>
+          </>
+        )}
         <IconButton
           label={t("removeItem")}
           size="sm"
@@ -109,7 +183,7 @@ export const NoteItemFields = ({
           <Trash2 className="size-5" aria-hidden />
         </IconButton>
       </div>
-      <div id={bodyId} hidden={!item.open} className="mt-2 space-y-3">
+      <div id={bodyId} hidden={!isOpen} className="mt-2 space-y-3">
         <Input
           id={`${id}-name`}
           list={EXERCISE_LIST_ID}

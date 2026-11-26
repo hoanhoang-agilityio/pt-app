@@ -4,6 +4,8 @@ import type { TrainingNote } from "@/features/training-notes/types/training-note
 import {
   createSetFrom,
   getNextKey,
+  type ItemDraft,
+  moveItem,
   summarizeItem,
   toDraft,
   toInput,
@@ -240,5 +242,53 @@ describe("summarizeItem", () => {
     expect(summarizeItem(item).value).toEqual({ kind: "mixed" });
     // The blank third set is not counted.
     expect(summarizeItem(item).sets).toBe(2);
+  });
+});
+
+describe("moveItem", () => {
+  const make = (key: number): ItemDraft => ({
+    key,
+    name: `Bài ${key}`,
+    open: true,
+    sets: [],
+  });
+  const items = [make(10), make(11), make(12)];
+  const keys = (list: ItemDraft[]) => list.map((item) => item.key);
+
+  it("moves an item up", () => {
+    expect(keys(moveItem(items, 12, 1))).toEqual([10, 12, 11]);
+  });
+
+  it("moves an item down", () => {
+    expect(keys(moveItem(items, 10, 2))).toEqual([11, 12, 10]);
+  });
+
+  it("moves the last item to the very top", () => {
+    expect(keys(moveItem(items, 12, 0))).toEqual([12, 10, 11]);
+  });
+
+  it("clamps an out-of-range index", () => {
+    expect(keys(moveItem(items, 11, 99))).toEqual([10, 12, 11]);
+    expect(keys(moveItem(items, 11, -5))).toEqual([11, 10, 12]);
+  });
+
+  it("ignores a non-finite index", () => {
+    expect(moveItem(items, 11, Number.NaN)).toBe(items);
+  });
+
+  it("returns the same list for an unknown key", () => {
+    expect(moveItem(items, 99, 0)).toBe(items);
+  });
+
+  it("returns the same list when the item does not move", () => {
+    expect(moveItem(items, 11, 1)).toBe(items);
+    expect(moveItem(items, 10, -1)).toBe(items);
+  });
+
+  it("does not mutate the input and keeps item objects", () => {
+    const moved = moveItem(items, 10, 2);
+
+    expect(keys(items)).toEqual([10, 11, 12]);
+    expect(moved[2]).toBe(items[0]);
   });
 });

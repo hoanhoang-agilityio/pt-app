@@ -202,3 +202,28 @@ export const summarizeItem = (item: ItemDraft): ItemSummary => {
   }
   return { sets: filled.length, kg: toRange(kg), value };
 };
+
+// Moves the item with `fromKey` to `toIndex` (clamped to the list). An unknown
+// key or a move to the same place returns `items` itself, so state setters
+// can skip a re-render.
+export const moveItem = (
+  items: ItemDraft[],
+  fromKey: number,
+  toIndex: number,
+): ItemDraft[] => {
+  const from = items.findIndex((item) => item.key === fromKey);
+
+  if (from === -1 || !Number.isFinite(toIndex)) {
+    return items;
+  }
+  const to = Math.min(Math.max(Math.trunc(toIndex), 0), items.length - 1);
+
+  if (to === from) {
+    return items;
+  }
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+
+  next.splice(to, 0, moved);
+  return next;
+};

@@ -38,6 +38,8 @@ export const NoteCard = ({ note, onEdit, onDelete }: NoteCardProps) => {
   const setNotes = note.items.flatMap((item) =>
     getSetNotes(item).map((entry) => ({ ...entry, name: item.exerciseName })),
   );
+  const hasBody =
+    note.items.length > 0 || Boolean(note.note) || setNotes.length > 0;
   const listId = `note-${note.id}-set-notes`;
   const bodyId = `note-${note.id}-body`;
 
@@ -75,18 +77,20 @@ export const NoteCard = ({ note, onEdit, onDelete }: NoteCardProps) => {
             )}
           </span>
         </button>
-        <IconButton
-          label={t(isCollapsed ? "expand" : "collapse", { title })}
-          aria-expanded={!isCollapsed}
-          aria-controls={bodyId}
-          onClick={() => setIsCollapsed((collapsed) => !collapsed)}
-        >
-          {isCollapsed ? (
-            <ChevronDown className="size-5" aria-hidden />
-          ) : (
-            <ChevronUp className="size-5" aria-hidden />
-          )}
-        </IconButton>
+        {hasBody && (
+          <IconButton
+            label={t(isCollapsed ? "expand" : "collapse", { title })}
+            aria-expanded={!isCollapsed}
+            aria-controls={bodyId}
+            onClick={() => setIsCollapsed((collapsed) => !collapsed)}
+          >
+            {isCollapsed ? (
+              <ChevronDown className="size-5" aria-hidden />
+            ) : (
+              <ChevronUp className="size-5" aria-hidden />
+            )}
+          </IconButton>
+        )}
         <IconButton label={t("delete")} onClick={onDelete}>
           <Trash2 className="size-5" aria-hidden />
         </IconButton>
@@ -164,24 +168,23 @@ export const NoteCard = ({ note, onEdit, onDelete }: NoteCardProps) => {
                 aria-hidden
               />
             </button>
-            {isNotesOpen && (
-              <ul
-                id={listId}
-                className="space-y-2 px-4 pb-3 text-[13px] text-fg"
-              >
-                {setNotes.map((entry) => (
-                  <li key={`${entry.itemId}-${entry.setNumber}`}>
-                    <b className="font-semibold">
-                      {t("setNoteLabel", {
-                        name: entry.name,
-                        n: entry.setNumber,
-                      })}
-                    </b>{" "}
-                    {entry.note}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ul
+              id={listId}
+              hidden={!isNotesOpen}
+              className="space-y-2 px-4 pb-3 text-[13px] text-fg"
+            >
+              {setNotes.map((entry) => (
+                <li key={`${entry.itemId}-${entry.setNumber}`}>
+                  <b className="font-semibold">
+                    {t("setNoteLabel", {
+                      name: entry.name,
+                      n: entry.setNumber,
+                    })}
+                  </b>{" "}
+                  {entry.note}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

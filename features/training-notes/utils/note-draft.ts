@@ -109,8 +109,14 @@ export const toDraft = (
     };
   }
   const next = { key: 0 };
+  const openAt =
+    Number.isInteger(openIndex) &&
+    openIndex >= 0 &&
+    openIndex < note.items.length
+      ? openIndex
+      : 0;
   const items = note.items.map((item, index) =>
-    toDraftItem(item, index === openIndex, next),
+    toDraftItem(item, index === openAt, next),
   );
 
   return {

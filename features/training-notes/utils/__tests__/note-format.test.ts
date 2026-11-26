@@ -130,14 +130,14 @@ describe("summarizeNote", () => {
     });
   });
 
-  it("skips a set that holds nothing but keeps one with only a note", () => {
+  it("counts every set, including empty ones and ones with only a note", () => {
     const empty = { ...rep(null), note: null };
     const onlyNote = { ...rep(null), note: "Hơi đau vai" };
     const summary = summarizeNote(
       note(1, "2026-11-25", { items: [item([empty, onlyNote, rep(5)])] }),
     );
 
-    expect(summary).toEqual({ exercises: 1, sets: 2 });
+    expect(summary).toEqual({ exercises: 1, sets: 3 });
   });
 });
 

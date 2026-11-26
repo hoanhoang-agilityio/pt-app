@@ -2,6 +2,8 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 
+import { mergeQueries, withQuery } from "@/features/chat/utils/unread-payload";
+import { isUserIdle } from "@/utils/user-idle";
 import { startVisibleInterval } from "@/utils/visible-interval";
 
 // Dispatched on window by live inbox events so badges refetch right away.
@@ -11,15 +13,25 @@ export const UNREAD_REFRESH_EVENT = "chat:unread-refresh";
 // inbox badge and the chat bubbles. Ref-counted: it starts with the first
 // subscriber and stops with the last. Cadence rules as before: a timer that
 // only ticks while the tab is visible (one fetch when it comes back), plus a
-// refetch on focus and on UNREAD_REFRESH_EVENT.
+// refetch on focus and on UNREAD_REFRESH_EVENT. A subscriber may add an extra
+// query (the thread's `peer=1`): the poll then asks for it, so badge, own
+// presence and the peer's presence stay one request per tick.
 interface Entry {
   data: unknown;
-  subscribers: Map<object, { listener: () => void; pollMs: number }>;
+  subscribers: Map<
+    object,
+    { listener: () => void; pollMs: number; query: string }
+  >;
   inFlight: boolean;
+  // A subscriber changed what the poll asks for while a fetch was running.
+  refetch: boolean;
+  lastQuery: string;
   stopTimer: (() => void) | null;
   timerMs: number;
   detach: () => void;
 }
+
+const BEAT_QUERY = "beat=1";
 
 const entries = new Map<string, Entry>();
 
@@ -27,13 +39,27 @@ const emit = (entry: Entry) => {
   entry.subscribers.forEach(({ listener }) => listener());
 };
 
+// The extra query to send: every subscriber's, merged (peer ids unioned).
+export const wantedQuery = (entry: Pick<Entry, "subscribers">) =>
+  mergeQueries(Array.from(entry.subscribers.values(), (item) => item.query));
+
+// `beat=1` records presence, so only a poll from an attended page sends it: an
+// idle tab (focus or refresh-event refetch) stops beating and stops sliding
+// the admin unlock.
+export const unreadFetchUrl = (url: string, query: string, idle: boolean) =>
+  withQuery(idle ? url : withQuery(url, BEAT_QUERY), query);
+
 const refresh = async (url: string, entry: Entry) => {
   if (entry.inFlight || document.visibilityState === "hidden") {
     return;
   }
   entry.inFlight = true;
+  entry.lastQuery = wantedQuery(entry);
   try {
-    const response = await fetch(url, { cache: "no-store" });
+    const response = await fetch(
+      unreadFetchUrl(url, entry.lastQuery, isUserIdle()),
+      { cache: "no-store" },
+    );
 
     if (response.ok && entries.get(url) === entry) {
       entry.data = await response.json();
@@ -43,7 +69,26 @@ const refresh = async (url: string, entry: Entry) => {
     // Offline or server hiccup: keep the last payload.
   } finally {
     entry.inFlight = false;
+    if (entry.refetch) {
+      entry.refetch = false;
+      if (entries.get(url) === entry && entry.subscribers.size > 0) {
+        void refresh(url, entry);
+      }
+    }
   }
+};
+
+// Fetches again at once when the wanted query differs from the last one sent
+// (a thread opened or closed); a running fetch is followed by another.
+const refreshIfQueryChanged = (url: string, entry: Entry) => {
+  if (wantedQuery(entry) === entry.lastQuery) {
+    return;
+  }
+  if (entry.inFlight) {
+    entry.refetch = true;
+    return;
+  }
+  void refresh(url, entry);
 };
 
 // The fastest cadence any subscriber asks for.
@@ -75,6 +120,8 @@ const createEntry = (url: string): Entry => {
     data: null,
     subscribers: new Map(),
     inFlight: false,
+    refetch: false,
+    lastQuery: "",
     stopTimer: null,
     timerMs: 0,
     detach: () => {
@@ -92,6 +139,7 @@ export const subscribeUnread = (
   url: string,
   pollMs: number,
   listener: () => void,
+  query = "",
 ) => {
   const token = {};
   let entry = entries.get(url);
@@ -101,10 +149,12 @@ export const subscribeUnread = (
     entry = createEntry(url);
     entries.set(url, entry);
   }
-  entry.subscribers.set(token, { listener, pollMs });
+  entry.subscribers.set(token, { listener, pollMs, query });
   restartTimer(url, entry);
   if (isFirst) {
     void refresh(url, entry);
+  } else {
+    refreshIfQueryChanged(url, entry);
   }
   const current = entry;
 
@@ -129,11 +179,12 @@ export const useUnreadPayload = (
   url: string,
   enabled: boolean,
   pollMs: number,
+  query = "",
 ): unknown => {
   const subscribe = useCallback(
     (listener: () => void) =>
-      enabled ? subscribeUnread(url, pollMs, listener) : () => undefined,
-    [url, enabled, pollMs],
+      enabled ? subscribeUnread(url, pollMs, listener, query) : () => undefined,
+    [url, enabled, pollMs, query],
   );
 
   return useSyncExternalStore(

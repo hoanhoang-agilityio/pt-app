@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   clockSkewMs,
-  heartbeatUrl,
   mergeLastSeen,
-  peerPresenceUrl,
+  parsePeerReading,
+  peerUnreadQuery,
   presenceView,
   serverClockNow,
   shortLastSeen,
@@ -49,17 +49,70 @@ describe("shortLastSeen", () => {
   });
 });
 
-describe("urls", () => {
-  it("builds the peer url per role", () => {
-    expect(peerPresenceUrl("user", 7)).toBe("/api/presence/peer");
-    expect(peerPresenceUrl("admin", 7)).toBe(
-      "/api/presence/peer?as=admin&userId=7",
+describe("peerUnreadQuery", () => {
+  it("builds the unread query per role", () => {
+    expect(peerUnreadQuery("user", 7)).toBe("peer=1");
+    expect(peerUnreadQuery("admin", 7)).toBe("peerUserIds=7");
+  });
+});
+
+describe("parsePeerReading", () => {
+  it("reads both fields", () => {
+    expect(
+      parsePeerReading({
+        count: 1,
+        peerLastSeenAt: "2026-05-10T04:00:00.000Z",
+        serverNow: "2026-05-10T05:00:00.000Z",
+      }),
+    ).toEqual({
+      peerLastSeenAt: "2026-05-10T04:00:00.000Z",
+      serverNow: "2026-05-10T05:00:00.000Z",
+    });
+  });
+
+  it("keeps a null last-seen (never seen) with the server clock", () => {
+    expect(
+      parsePeerReading({
+        peerLastSeenAt: null,
+        serverNow: "2026-05-10T05:00:00.000Z",
+      }),
+    ).toEqual({
+      peerLastSeenAt: null,
+      serverNow: "2026-05-10T05:00:00.000Z",
+    });
+  });
+
+  it("reads an admin's own trainee out of peers", () => {
+    const payload = {
+      serverNow: "2026-05-10T05:00:00.000Z",
+      peers: {
+        "3": { peerLastSeenAt: "2026-05-10T04:00:00.000Z" },
+        "7": { peerLastSeenAt: "2026-05-10T04:30:00.000Z" },
+      },
+    };
+
+    expect(parsePeerReading(payload, 7)?.peerLastSeenAt).toBe(
+      "2026-05-10T04:30:00.000Z",
+    );
+    expect(parsePeerReading(payload, 3)?.peerLastSeenAt).toBe(
+      "2026-05-10T04:00:00.000Z",
     );
   });
 
-  it("builds the heartbeat url per role", () => {
-    expect(heartbeatUrl("user")).toBe("/api/presence");
-    expect(heartbeatUrl("admin")).toBe("/api/presence?as=admin");
+  it("keeps the server clock when the admin's trainee is not in peers", () => {
+    expect(
+      parsePeerReading({ serverNow: "2026-05-10T05:00:00.000Z", peers: {} }, 9),
+    ).toEqual({
+      peerLastSeenAt: null,
+      serverNow: "2026-05-10T05:00:00.000Z",
+    });
+    expect(parsePeerReading({ count: 1 }, 9)).toBeNull();
+  });
+
+  it("is null without peer fields or without a payload", () => {
+    expect(parsePeerReading({ count: 1 })).toBeNull();
+    expect(parsePeerReading(null)).toBeNull();
+    expect(parsePeerReading("x")).toBeNull();
   });
 });
 

@@ -102,3 +102,40 @@ export const adminBadgeCount = badgeCount;
 
 // The trainee's tab-bar badge: coach chat and friend chats plus group chats.
 export const userBadgeCount = badgeCount;
+
+// Adds an extra query (`peer=1`) to a poll URL that may already have one.
+export const withQuery = (url: string, query: string): string =>
+  query === "" ? url : `${url}${url.includes("?") ? "&" : "?"}${query}`;
+
+const MAX_PEER_IDS = 10;
+
+// One query out of every subscriber's: `peerUserIds` values are unioned
+// (deduped, sorted, capped), any other pair is kept once. Stable for the same
+// set of subscribers, so "did the query change" is a string compare.
+export const mergeQueries = (queries: string[]): string => {
+  const ids = new Set<number>();
+  const others = new Set<string>();
+
+  queries
+    .flatMap((query) => query.split("&"))
+    .filter((pair) => pair !== "")
+    .forEach((pair) => {
+      const [key, value = ""] = pair.split("=");
+
+      if (key !== "peerUserIds") {
+        others.add(pair);
+        return;
+      }
+      value
+        .split(",")
+        .map(Number)
+        .filter((id) => Number.isInteger(id) && id > 0)
+        .forEach((id) => ids.add(id));
+    });
+  const peerIds = [...ids].sort((a, b) => a - b).slice(0, MAX_PEER_IDS);
+
+  return [
+    ...[...others].sort(),
+    ...(peerIds.length > 0 ? [`peerUserIds=${peerIds.join(",")}`] : []),
+  ].join("&");
+};

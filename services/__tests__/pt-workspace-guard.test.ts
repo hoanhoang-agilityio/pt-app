@@ -342,6 +342,7 @@ describe("realtime token", () => {
 
     expect(signed.capability).toEqual({
       [`chat:conversation:${mineConversation}`]: ["subscribe"],
+      [`chat:typing:${mineConversation}`]: ["publish", "subscribe"],
       "chat:inbox": ["subscribe"],
     });
   });

@@ -3,15 +3,25 @@
 import { useLocale } from "next-intl";
 import { useEffect, useState } from "react";
 
-import { PRESENCE_HEARTBEAT_MS } from "@/features/chat/utils/presence";
+import { useInboxRealtimeConnected } from "@/features/chat/hooks/inbox-realtime";
+import {
+  getUnreadSnapshot,
+  subscribeUnread,
+  UNREAD_REFRESH_EVENT,
+} from "@/features/chat/hooks/unread-store";
+import {
+  ADMIN_UNREAD_URL,
+  USER_UNREAD_URL,
+} from "@/features/chat/hooks/use-chat-unread";
+import { unreadPollMs } from "@/features/chat/utils/polling-rules";
 import {
   clockSkewMs,
   mergeLastSeen,
-  peerPresenceUrl,
+  parsePeerReading,
+  peerUnreadQuery,
   type PresenceView,
   presenceView,
   serverClockNow,
-  shouldRunPresence,
 } from "@/features/chat/utils/presence-status";
 import { startVisibleInterval } from "@/utils/visible-interval";
 
@@ -25,9 +35,9 @@ interface Options {
 }
 
 // The other side's status for the thread header. Seeded from the thread,
-// kept fresh by the message polls (via `fromThread`) and a 60 s peer fetch
-// while visible (the message poll's 204 carries no presence). The label is
-// recomputed every 30 s so "N phút trước" ticks.
+// kept fresh by the message polls (via `fromThread`) and the peer fields of
+// the shared unread poll (the message poll's 204 carries no presence). The
+// label is recomputed every 30 s so "N phút trước" ticks (no request).
 export const usePeerPresence = ({
   role,
   userId,
@@ -35,7 +45,7 @@ export const usePeerPresence = ({
 }: Options): PresenceView | null => {
   const locale = useLocale();
   const [fetched, setFetched] = useState<Date | null>(null);
-  // Device clock minus server clock, measured from the peer endpoint. Null
+  // Device clock minus server clock, measured from the unread poll. Null
   // until the first answer (or its failure): without it a device clock that
   // runs behind would show an idle peer as online.
   const [skewMs, setSkewMs] = useState<number | null>(null);
@@ -50,52 +60,56 @@ export const usePeerPresence = ({
     return startVisibleInterval(tick, LABEL_TICK_MS);
   }, []);
 
+  // The peer's last seen rides on the shared unread poll (which also beats
+  // this person's own presence), so there is no request of our own here. Only
+  // a reading that arrives while mounted counts: an older one in the store has
+  // a stale `serverNow`, which would skew the clock.
+  const realtimeConnected = useInboxRealtimeConnected();
+  const pollMs = unreadPollMs(role === "admin" && realtimeConnected);
+
   useEffect(() => {
-    const url = peerPresenceUrl(role, userId);
-    let cancelled = false;
-    const refresh = async () => {
-      if (!shouldRunPresence(document.visibilityState)) {
+    const url = role === "admin" ? ADMIN_UNREAD_URL : USER_UNREAD_URL;
+    const onPayload = () => {
+      const reading = parsePeerReading(
+        getUnreadSnapshot(url),
+        role === "admin" ? userId : undefined,
+      );
+
+      if (reading === null) {
         return;
       }
-      try {
-        const response = await fetch(url, { cache: "no-store" });
-
-        if (!response.ok || cancelled) {
-          return;
-        }
-        const data: unknown = await response.json();
-        const body = data as {
-          peerLastSeenAt?: unknown;
-          serverNow?: unknown;
-        } | null;
-        const value = body?.peerLastSeenAt;
-
-        if (typeof body?.serverNow === "string") {
-          setSkewMs(clockSkewMs(body.serverNow, Date.now()));
-        }
-        if (typeof value === "string") {
-          setFetched((current) => mergeLastSeen(current, value));
-          setNow(new Date());
-        }
-      } catch {
-        // Next tick retries.
-      } finally {
-        // A failed measurement falls back to the device clock.
-        setSkewMs((current) => current ?? 0);
+      if (reading.serverNow !== null) {
+        setSkewMs(clockSkewMs(reading.serverNow, Date.now()));
       }
+      if (reading.peerLastSeenAt !== null) {
+        setFetched((current) => mergeLastSeen(current, reading.peerLastSeenAt));
+      }
+      // A payload without a server clock falls back to the device clock.
+      setSkewMs((current) => current ?? 0);
+      setNow(new Date());
     };
-    // Stops while hidden; fetches once when the tab returns.
-    const stopTimer = startVisibleInterval(
-      () => void refresh(),
-      PRESENCE_HEARTBEAT_MS,
+    const unsubscribe = subscribeUnread(
+      url,
+      pollMs,
+      onPayload,
+      peerUnreadQuery(role, userId),
     );
 
-    void refresh();
-    return () => {
-      cancelled = true;
-      stopTimer();
-    };
-  }, [role, userId]);
+    // Ask for a fresh reading right away (a no-op while one is in flight).
+    window.dispatchEvent(new Event(UNREAD_REFRESH_EVENT));
+    return unsubscribe;
+  }, [role, userId, pollMs]);
+
+  // No answer at all (offline, hidden, idle): fall back to the device clock
+  // rather than showing nothing.
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setSkewMs((current) => current ?? 0),
+      10_000,
+    );
+
+    return () => clearTimeout(timer);
+  }, []);
 
   if (now === null || skewMs === null) {
     return null;

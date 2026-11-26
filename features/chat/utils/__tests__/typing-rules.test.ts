@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  isPeerTyping,
   isTypingActive,
-  parseTypingEvent,
+  isTypingFromPeer,
   shouldSendTyping,
   TYPING_EXPIRY_MS,
   TYPING_THROTTLE_MS,
@@ -55,37 +54,27 @@ describe("isTypingActive", () => {
   });
 });
 
-describe("parseTypingEvent", () => {
-  it("accepts the typing payload shape", () => {
-    expect(parseTypingEvent({ role: "admin", senderKey: "admin:3" })).toEqual({
-      role: "admin",
-      senderKey: "admin:3",
-    });
+describe("isTypingFromPeer", () => {
+  it("lets a trainee see any PT, not another trainee or themselves", () => {
+    expect(isTypingFromPeer("admin:1", "user", "user:7", 7)).toBe(true);
+    expect(isTypingFromPeer("admin:9", "user", "user:7", 7)).toBe(true);
+    expect(isTypingFromPeer("user:8", "user", "user:7", 7)).toBe(false);
+    expect(isTypingFromPeer("user:7", "user", "user:7", 7)).toBe(false);
   });
 
-  it("drops anything else", () => {
-    expect(parseTypingEvent(null)).toBeNull();
-    expect(parseTypingEvent("typing")).toBeNull();
-    expect(parseTypingEvent({ role: "owner", senderKey: "x" })).toBeNull();
-    expect(parseTypingEvent({ role: "user", senderKey: 5 })).toBeNull();
-    expect(parseTypingEvent({ role: "user" })).toBeNull();
-  });
-});
-
-describe("isPeerTyping", () => {
-  const fromTrainee = { role: "user", senderKey: "user:7" } as const;
-
-  it("shows the other side", () => {
-    expect(isPeerTyping(fromTrainee, "admin", "admin:1")).toBe(true);
+  it("lets a PT see only the trainee of this conversation", () => {
+    expect(isTypingFromPeer("user:7", "admin", "admin:1", 7)).toBe(true);
+    expect(isTypingFromPeer("user:8", "admin", "admin:1", 7)).toBe(false);
   });
 
-  it("ignores events from our own role", () => {
-    expect(isPeerTyping(fromTrainee, "user", null)).toBe(false);
+  it("ignores another PT and our own echo on the PT side", () => {
+    expect(isTypingFromPeer("admin:2", "admin", "admin:1", 7)).toBe(false);
+    expect(isTypingFromPeer("admin:1", "admin", "admin:1", 7)).toBe(false);
   });
 
-  it("ignores our own echo by client id", () => {
-    expect(
-      isPeerTyping({ role: "admin", senderKey: "admin:1" }, "user", "admin:1"),
-    ).toBe(false);
+  it("ignores messages without a client id", () => {
+    expect(isTypingFromPeer(undefined, "user", "user:7", 7)).toBe(false);
+    expect(isTypingFromPeer(null, "admin", "admin:1", 7)).toBe(false);
+    expect(isTypingFromPeer("", "admin", null, 7)).toBe(false);
   });
 });

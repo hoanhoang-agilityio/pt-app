@@ -36,21 +36,31 @@ export const dmConversationChannel = (conversationId: number) =>
 export const groupChannel = (groupId: number) =>
   `${CHAT_CHANNEL_PREFIX}:group:${assertId(groupId, "groupId")}`;
 
+// Typing indicators: `chat:typing:<conversationId>`. The one channel browsers
+// may publish on (see traineeCapability), so it carries nothing but typing.
+export const typingChannel = (conversationId: number) =>
+  `${CHAT_CHANNEL_PREFIX}:typing:${assertId(conversationId, "conversationId")}`;
+
 export const userChannel = (userId: number) =>
   `${CHAT_CHANNEL_PREFIX}:user:${assertId(userId, "userId")}`;
 
 export type AblyCapability = Record<string, string[]>;
 
-// Subscribe only: nobody publishes from the browser (messages and typing go
-// through the server, see POST /api/chat/typing), and there is no presence or
-// history. A publish right on a channel would also allow forged "message"
-// events, because Ably capabilities are per channel, not per event name.
+// Subscribe only, except the typing channel: messages go through the server,
+// and only the typing indicator is published from the browser, on its own
+// `chat:typing:<id>` channel. There is no presence or history. A publish right
+// on another channel would allow forged "message" events, because Ably
+// capabilities are per channel, not per event name.
+const TYPING_OPERATIONS = ["publish", "subscribe"];
+
 export const traineeCapability = (
   userId: number,
   conversationId: number,
   dmConversationIds: number[] = [],
 ): AblyCapability => ({
   [conversationChannel(conversationId)]: ["subscribe"],
+  // Own conversation only: a trainee can only type into their own chat.
+  [typingChannel(conversationId)]: TYPING_OPERATIONS,
   [userChannel(userId)]: ["subscribe"],
   // Only the trainee's own chats, one entry each, never a wildcard.
   ...Object.fromEntries(
@@ -66,9 +76,15 @@ export const adminCapability = (
 ): AblyCapability => ({
   ...(conversationIds
     ? Object.fromEntries(
-        conversationIds.map((id) => [conversationChannel(id), ["subscribe"]]),
+        conversationIds.flatMap((id) => [
+          [conversationChannel(id), ["subscribe"]],
+          [typingChannel(id), TYPING_OPERATIONS],
+        ]),
       )
-    : { [`${CHAT_CHANNEL_PREFIX}:conversation:*`]: ["subscribe"] }),
+    : {
+        [`${CHAT_CHANNEL_PREFIX}:conversation:*`]: ["subscribe"],
+        [`${CHAT_CHANNEL_PREFIX}:typing:*`]: TYPING_OPERATIONS,
+      }),
   [INBOX_CHANNEL]: ["subscribe"],
 });
 
@@ -85,11 +101,14 @@ export const dmEvent = (
   senderId: assertId(senderId, "senderId"),
 });
 
+export const TRAINEE_CLIENT_PREFIX = "user:";
+export const ADMIN_CLIENT_PREFIX = "admin:";
+
 export const traineeClientId = (userId: number) =>
-  `user:${assertId(userId, "userId")}`;
+  `${TRAINEE_CLIENT_PREFIX}${assertId(userId, "userId")}`;
 
 export const adminClientId = (adminId: number) =>
-  `admin:${assertId(adminId, "adminId")}`;
+  `${ADMIN_CLIENT_PREFIX}${assertId(adminId, "adminId")}`;
 
 export interface ChatMessageEventSource {
   id: number;
@@ -143,13 +162,6 @@ export const inboxEvent = (
   conversationId: assertId(conversationId, "conversationId"),
   messageId: assertId(messageId, "messageId"),
   senderRole,
-});
-
-// Who is typing: the role plus the sender's Ably client id, so a second tab of
-// the same person can ignore its own echo. Never carries text.
-export const typingEvent = (role: "user" | "admin", senderKey: string) => ({
-  role,
-  senderKey,
 });
 
 export const GROUP_EVENTS = {

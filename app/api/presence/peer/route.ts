@@ -2,13 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
-  getAdminTeamLastSeen,
-  getUserLastSeen,
-} from "@/features/chat/services/presence";
-import { serializeLastSeen } from "@/features/chat/utils/presence";
+  peerPresenceForAdmin,
+  peerPresenceForUser,
+} from "@/features/chat/services/presence-beat";
 import { getApiAdmin, getApiUser } from "@/services/auth-guard";
-import { canAdminAccessUser } from "@/services/hidden-users";
-import { findUserById } from "@/services/users";
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
@@ -22,7 +19,8 @@ const userIdSchema = z.coerce.number().int().positive();
 // `serverNow` lets the client measure its clock skew: last-seen is stamped
 // by the server, so "online" must be judged on the server's clock.
 // Trainee: newest last-seen across all PTs. `?as=admin&userId=N`: that
-// trainee's last-seen; 404 when the user does not exist.
+// trainee's last-seen; 404 when the user does not exist. The unread poll
+// (GET /api/chat/unread) returns the same fields when asked for a peer.
 export const GET = async (request: NextRequest) => {
   const params = request.nextUrl.searchParams;
 
@@ -37,23 +35,14 @@ export const GET = async (request: NextRequest) => {
     if (!userId.success) {
       return reply({ error: "invalid_query" }, 400);
     }
-    const trainee = await findUserById(userId.data);
+    const peer = await peerPresenceForAdmin(admin.id, userId.data);
 
-    if (!trainee || !(await canAdminAccessUser(admin.id, trainee.id))) {
-      return reply({ error: "not_found" }, 404);
-    }
-    return reply({
-      peerLastSeenAt: serializeLastSeen(await getUserLastSeen(trainee.id)),
-      serverNow: new Date().toISOString(),
-    });
+    return peer ? reply(peer) : reply({ error: "not_found" }, 404);
   }
   const user = await getApiUser();
 
   if (!user) {
     return reply({ error: "unauthorized" }, 401);
   }
-  return reply({
-    peerLastSeenAt: serializeLastSeen(await getAdminTeamLastSeen()),
-    serverNow: new Date().toISOString(),
-  });
+  return reply(await peerPresenceForUser());
 };

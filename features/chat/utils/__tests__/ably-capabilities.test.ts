@@ -23,7 +23,7 @@ import {
   readEvent,
   traineeCapability,
   traineeClientId,
-  typingEvent,
+  typingChannel,
   userChannel,
 } from "@/features/chat/utils/ably-capabilities";
 
@@ -32,6 +32,8 @@ describe("channel names", () => {
     expect(conversationChannel(5)).toBe("chat:conversation:5");
     expect(userChannel(3)).toBe("chat:user:3");
     expect(INBOX_CHANNEL).toBe("chat:inbox");
+    expect(typingChannel(5)).toBe("chat:typing:5");
+    expect(() => typingChannel(0)).toThrow();
   });
 
   it.each([0, -1, 1.5, Number.NaN])("rejects invalid id %s", (id) => {
@@ -43,33 +45,45 @@ describe("channel names", () => {
 });
 
 describe("capabilities", () => {
-  it("gives a trainee subscribe on own channels only", () => {
+  it("gives a trainee subscribe on own channels, publish only on own typing", () => {
     expect(traineeCapability(3, 5)).toEqual({
       "chat:conversation:5": ["subscribe"],
+      "chat:typing:5": ["publish", "subscribe"],
       "chat:user:3": ["subscribe"],
     });
   });
 
-  it("gives an admin subscribe on all conversations and the inbox", () => {
+  it("gives an admin subscribe on all conversations and the inbox, typing on any", () => {
     expect(adminCapability()).toEqual({
       "chat:conversation:*": ["subscribe"],
+      "chat:typing:*": ["publish", "subscribe"],
       "chat:inbox": ["subscribe"],
     });
   });
 
-  it("limits a PT to the listed conversations plus the inbox", () => {
+  it("limits a PT to the listed conversations (and their typing) plus the inbox", () => {
     expect(adminCapability([4, 9])).toEqual({
       "chat:conversation:4": ["subscribe"],
+      "chat:typing:4": ["publish", "subscribe"],
       "chat:conversation:9": ["subscribe"],
+      "chat:typing:9": ["publish", "subscribe"],
       "chat:inbox": ["subscribe"],
     });
   });
 
-  it("never grants publish, presence or history; all names start with chat:", () => {
-    for (const capability of [traineeCapability(3, 5), adminCapability()]) {
+  it("grants publish only on typing channels, never presence or history", () => {
+    for (const capability of [
+      traineeCapability(3, 5, [7]),
+      adminCapability(),
+      adminCapability([4]),
+    ]) {
       const json = JSON.stringify(capability);
 
-      expect(json).not.toContain("publish");
+      Object.entries(capability).forEach(([name, operations]) => {
+        if (operations.includes("publish")) {
+          expect(name.startsWith("chat:typing:")).toBe(true);
+        }
+      });
       expect(json).not.toContain("presence");
       expect(json).not.toContain("history");
       Object.keys(capability).forEach((name) =>
@@ -146,15 +160,6 @@ describe("event payloads", () => {
   });
 });
 
-describe("typing event", () => {
-  it("carries only the role and sender key", () => {
-    expect(typingEvent("user", "user:3")).toEqual({
-      role: "user",
-      senderKey: "user:3",
-    });
-  });
-});
-
 describe("trainee chat (dm) channels", () => {
   it("lives under chat:dm:conversation:<id>", () => {
     expect(dmConversationChannel(7)).toBe("chat:dm:conversation:7");
@@ -166,18 +171,21 @@ describe("trainee chat (dm) channels", () => {
 
     expect(capability).toEqual({
       "chat:conversation:5": ["subscribe"],
+      "chat:typing:5": ["publish", "subscribe"],
       "chat:user:3": ["subscribe"],
       "chat:dm:conversation:7": ["subscribe"],
       "chat:dm:conversation:9": ["subscribe"],
     });
     for (const [channel, operations] of Object.entries(capability)) {
       expect(channel).not.toContain("*");
-      expect(operations).toEqual(["subscribe"]);
+      expect(operations).toEqual(
+        channel === "chat:typing:5" ? ["publish", "subscribe"] : ["subscribe"],
+      );
     }
   });
 
   it("adds nothing without dm conversations", () => {
-    expect(Object.keys(traineeCapability(3, 5))).toHaveLength(2);
+    expect(Object.keys(traineeCapability(3, 5))).toHaveLength(3);
   });
 
   it("an event carries ids only", () => {

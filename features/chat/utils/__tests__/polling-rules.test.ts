@@ -7,13 +7,13 @@ import {
 } from "@/features/chat/utils/polling-rules";
 
 describe("unreadPollMs", () => {
-  it("polls every 15 s without a live connection", () => {
-    expect(unreadPollMs(false)).toBe(15_000);
+  it("polls every 30 s without a live connection", () => {
+    expect(unreadPollMs(false)).toBe(30_000);
     expect(unreadPollMs(false)).toBe(UNREAD_POLL_MS);
   });
 
-  it("falls back to a 60 s safety net while realtime is connected", () => {
-    expect(unreadPollMs(true)).toBe(60_000);
+  it("falls back to a 55 s safety net while realtime is connected", () => {
+    expect(unreadPollMs(true)).toBe(55_000);
     expect(unreadPollMs(true)).toBe(UNREAD_SAFETY_POLL_MS);
   });
 });

@@ -14,7 +14,6 @@ import {
   messageUpdateEvent,
   profileUpdateEvent,
   readEvent,
-  typingEvent,
   userChannel,
 } from "@/features/chat/utils/ably-capabilities";
 import { getAblyApiKey } from "@/services/env";
@@ -135,24 +134,6 @@ export const publishRead = async (
     );
   } catch (error) {
     logServerError("publishRead", error, { conversationId });
-  }
-};
-
-// Typing is a no-op without Ably (polling mode has no indicator). The caller
-// has already checked the session, ownership and the chat lock.
-export const publishTyping = async (
-  conversationId: number,
-  role: "user" | "admin",
-  senderKey: string,
-) => {
-  try {
-    await publishChatEvent(
-      conversationChannel(conversationId),
-      CHAT_EVENTS.TYPING,
-      typingEvent(role, senderKey),
-    );
-  } catch (error) {
-    logServerError("publishTyping", error, { conversationId });
   }
 };
 

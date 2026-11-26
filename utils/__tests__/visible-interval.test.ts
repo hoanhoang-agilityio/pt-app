@@ -2,6 +2,25 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { startVisibleInterval } from "@/utils/visible-interval";
 
+// Controllable idle state: tests flip `idle` and fire the active listeners.
+const idle = vi.hoisted(() => ({
+  value: false,
+  listeners: new Set<() => void>(),
+}));
+
+vi.mock("@/utils/user-idle", () => ({
+  isUserIdle: () => idle.value,
+  onUserActive: (fn: () => void) => {
+    idle.listeners.add(fn);
+    return () => idle.listeners.delete(fn);
+  },
+}));
+
+const becomeActive = () => {
+  idle.value = false;
+  [...idle.listeners].forEach((fn) => fn());
+};
+
 // A minimal document: visibility state plus visibilitychange listeners.
 const makeDocument = () => {
   const listeners = new Set<() => void>();
@@ -25,6 +44,8 @@ describe("startVisibleInterval", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    idle.value = false;
+    idle.listeners.clear();
     doc = makeDocument();
     vi.stubGlobal("document", doc);
   });
@@ -83,5 +104,42 @@ describe("startVisibleInterval", () => {
     vi.advanceTimersByTime(5000);
     expect(callback).not.toHaveBeenCalled();
     expect(doc.listenerCount()).toBe(0);
+  });
+
+  it("skips ticks while the user is idle", () => {
+    const callback = vi.fn();
+
+    startVisibleInterval(callback, 1000);
+    idle.value = true;
+    vi.advanceTimersByTime(5000);
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it("runs once on activity after idle, then ticks again", () => {
+    const callback = vi.fn();
+
+    startVisibleInterval(callback, 1000);
+    idle.value = true;
+    vi.advanceTimersByTime(5000);
+    becomeActive();
+    expect(callback).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(2000);
+    expect(callback).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not run on activity while the tab is hidden", () => {
+    const callback = vi.fn();
+
+    startVisibleInterval(callback, 1000);
+    doc.setVisibility("hidden");
+    becomeActive();
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it("stop removes the activity listener", () => {
+    const stop = startVisibleInterval(vi.fn(), 1000);
+
+    stop();
+    expect(idle.listeners.size).toBe(0);
   });
 });

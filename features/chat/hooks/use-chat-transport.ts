@@ -1,11 +1,13 @@
 "use client";
 
+import type { RealtimeChannel } from "ably";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   CHAT_EVENTS,
   conversationChannel,
   groupChannel,
+  typingChannel,
   userChannel,
 } from "@/features/chat/utils/ably-capabilities";
 import {
@@ -14,16 +16,14 @@ import {
   realtimeStateFor,
 } from "@/features/chat/utils/chat-thread-rules";
 import {
-  isPeerTyping,
-  parseTypingEvent,
+  isTypingFromPeer,
   shouldSendTyping,
   TYPING_EXPIRY_MS,
 } from "@/features/chat/utils/typing-rules";
+import { isUserIdle, onUserActive } from "@/utils/user-idle";
 
 const USER_TOKEN_URL = "/api/chat/ably-token";
 const ADMIN_TOKEN_URL = "/api/chat/ably-token?as=admin";
-const USER_TYPING_URL = "/api/chat/typing";
-const ADMIN_TYPING_URL = "/api/chat/typing?as=admin";
 
 interface UseChatTransportOptions {
   role: "user" | "admin";
@@ -57,6 +57,8 @@ export const useChatTransport = ({
   const lastTypingSentAt = useRef<number | null>(null);
   // Mirrors the connection for sendTyping without re-creating it.
   const connectedRef = useRef(false);
+  // The typing channel of the live client; null without a connection.
+  const typingChannelRef = useRef<RealtimeChannel | null>(null);
 
   const clearPeerTyping = useCallback(() => {
     if (typingTimer.current !== null) {
@@ -128,22 +130,25 @@ export const useChatTransport = ({
           },
         });
         const trigger = () => syncRef.current();
-        // Typing events are not a reason to fetch; they only drive the
-        // indicator, which expires on its own if the peer goes quiet.
-        const handleEvent = (message: { name?: string; data?: unknown }) => {
-          if (message.name !== CHAT_EVENTS.TYPING) {
-            trigger();
-            return;
-          }
-          const event = parseTypingEvent(message.data);
-
+        // Typing travels on its own channel, so every event here is a reason
+        // to fetch.
+        const handleTyping = (message: {
+          name?: string;
+          clientId?: string;
+        }) => {
           if (
             cancelled ||
-            !event ||
-            !isPeerTyping(event, role, client.auth.clientId ?? null)
+            message.name !== CHAT_EVENTS.TYPING ||
+            !isTypingFromPeer(
+              message.clientId,
+              role,
+              client.auth.clientId ?? null,
+              userId,
+            )
           ) {
             return;
           }
+          // The indicator expires on its own if the peer goes quiet.
           if (typingTimer.current !== null) {
             clearTimeout(typingTimer.current);
           }
@@ -176,8 +181,15 @@ export const useChatTransport = ({
               ? groupChannel(groupId)
               : conversationChannel(conversationId ?? 0),
           )
-          .subscribe(handleEvent)
+          .subscribe(trigger)
           .catch(ignore);
+        if (groupId === null && conversationId !== null) {
+          // Browsers publish and subscribe here, nowhere else.
+          const typing = client.channels.get(typingChannel(conversationId));
+
+          typingChannelRef.current = typing;
+          typing.subscribe(handleTyping).catch(ignore);
+        }
         if (role === "user" && groupId === null) {
           client.channels
             .get(userChannel(userId))
@@ -195,6 +207,7 @@ export const useChatTransport = ({
     return () => {
       cancelled = true;
       connectedRef.current = false;
+      typingChannelRef.current = null;
       close?.();
       clearPeerTyping();
     };
@@ -214,14 +227,12 @@ export const useChatTransport = ({
       return;
     }
     lastTypingSentAt.current = now;
-    const isAdmin = role === "admin";
-
-    fetch(isAdmin ? ADMIN_TYPING_URL : USER_TYPING_URL, {
-      method: "POST",
-      headers: isAdmin ? { "Content-Type": "application/json" } : undefined,
-      body: isAdmin ? JSON.stringify({ conversationId }) : undefined,
-    }).catch(() => undefined);
-  }, [conversationId, groupId, role]);
+    // Straight to Ably: no request to our server. A failed publish only means
+    // the indicator does not show.
+    typingChannelRef.current
+      ?.publish(CHAT_EVENTS.TYPING, null)
+      .catch(() => undefined);
+  }, [conversationId, groupId]);
 
   // Pause while the tab is hidden; fetch once on return.
   useEffect(() => {
@@ -248,9 +259,18 @@ export const useChatTransport = ({
     if (interval === null) {
       return;
     }
-    const timer = setInterval(() => syncRef.current(), interval);
+    const timer = setInterval(() => {
+      if (!isUserIdle()) {
+        syncRef.current();
+      }
+    }, interval);
+    // One catch-up sync when the user returns from idle.
+    const offActive = onUserActive(() => syncRef.current());
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      offActive();
+    };
   }, [interval]);
 
   return {

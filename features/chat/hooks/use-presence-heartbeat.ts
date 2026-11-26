@@ -2,30 +2,32 @@
 
 import { useEffect } from "react";
 
-import { PRESENCE_HEARTBEAT_MS } from "@/features/chat/utils/presence";
+import { useInboxRealtimeConnected } from "@/features/chat/hooks/inbox-realtime";
+import { subscribeUnread } from "@/features/chat/hooks/unread-store";
 import {
-  heartbeatUrl,
-  shouldRunPresence,
-} from "@/features/chat/utils/presence-status";
-import { startVisibleInterval } from "@/utils/visible-interval";
+  ADMIN_UNREAD_URL,
+  USER_UNREAD_URL,
+} from "@/features/chat/hooks/use-chat-unread";
+import { unreadPollMs } from "@/features/chat/utils/polling-rules";
 
-// Tells the server this person has the app open (KAN-129): once on mount, then
-// every minute, and again when the tab comes back. Nothing is sent while the
-// page is hidden. Errors are ignored: the next beat retries.
+// Tells the server this person has the app open (KAN-129). It no longer posts
+// to /api/presence: every unread poll (GET /api/chat/unread) records the
+// heartbeat, so this only keeps the shared poller alive for the whole session,
+// including where the badge subscriber is paused (the trainee's /messages).
+// The poll runs once on mount, every 30 s (60 s with a live admin inbox) while
+// the tab is visible and the user active, and again on return. Errors are
+// ignored: the next poll retries.
 export const usePresenceHeartbeat = (role: "user" | "admin") => {
-  useEffect(() => {
-    const url = heartbeatUrl(role);
-    const beat = () => {
-      if (!shouldRunPresence(document.visibilityState)) {
-        return;
-      }
-      fetch(url, { method: "POST", cache: "no-store", keepalive: true }).catch(
-        () => undefined,
-      );
-    };
+  const realtimeConnected = useInboxRealtimeConnected();
+  const pollMs = unreadPollMs(role === "admin" && realtimeConnected);
 
-    beat();
-    // The timer stops while hidden and beats once when the tab returns.
-    return startVisibleInterval(beat, PRESENCE_HEARTBEAT_MS);
-  }, [role]);
+  useEffect(
+    () =>
+      subscribeUnread(
+        role === "admin" ? ADMIN_UNREAD_URL : USER_UNREAD_URL,
+        pollMs,
+        () => undefined,
+      ),
+    [role, pollMs],
+  );
 };

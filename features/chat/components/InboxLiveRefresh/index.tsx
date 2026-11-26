@@ -10,6 +10,7 @@ import {
   type RealtimeState,
   realtimeStateFor,
 } from "@/features/chat/utils/chat-thread-rules";
+import { isUserIdle, onUserActive } from "@/utils/user-idle";
 
 const TOKEN_URL = "/api/chat/ably-token?as=admin";
 // Without a live channel the inbox is refreshed on this slow tick.
@@ -19,8 +20,8 @@ const COALESCE_MS = 300;
 
 // Renders nothing. Keeps the server-rendered inbox fresh: refreshes the route
 // on every inbox event from Ably, and on a 30 s tick while Ably is not
-// connected (no key, failed, or still connecting). A hidden tab pauses and
-// refreshes once when it returns.
+// connected (no key, failed, or still connecting). A hidden tab or an idle
+// user (5 min without input) pauses the tick and refreshes once on return.
 export const InboxLiveRefresh = () => {
   const router = useRouter();
   const [state, setState] = useState<RealtimeState>("connecting");
@@ -135,12 +136,17 @@ export const InboxLiveRefresh = () => {
     if (!shouldTick) {
       return;
     }
-    const timer = setInterval(
-      () => refreshRef.current(),
-      INBOX_FALLBACK_REFRESH_MS,
-    );
+    const timer = setInterval(() => {
+      if (!isUserIdle()) {
+        refreshRef.current();
+      }
+    }, INBOX_FALLBACK_REFRESH_MS);
+    const offActive = onUserActive(() => refreshRef.current());
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      offActive();
+    };
   }, [shouldTick]);
 
   return null;

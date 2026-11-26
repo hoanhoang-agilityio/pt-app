@@ -31,6 +31,7 @@ import {
   prependOlder,
 } from "@/features/social/utils/dm-thread-rules";
 import { useLocalizeMessage } from "@/i18n/use-localize-message";
+import { isUserIdle, onUserActive } from "@/utils/user-idle";
 
 interface PollPayload extends DmThreadPage {
   isReadOnly: boolean;
@@ -136,10 +137,14 @@ export const useDmThread = ({ conversationId, meId, initial }: Options) => {
       if (stopped || document.visibilityState === "hidden") {
         return;
       }
-      timer = setTimeout(
-        () => void sync().then(schedule),
-        dmPollDelayMs(emptyPolls.current),
-      );
+      timer = setTimeout(() => {
+        // Idle user: stop the chain; onUserActive wakes it again.
+        if (isUserIdle()) {
+          timer = null;
+          return;
+        }
+        void sync().then(schedule);
+      }, dmPollDelayMs(emptyPolls.current));
     };
     const wake = () => {
       emptyPolls.current = 0;
@@ -165,6 +170,8 @@ export const useDmThread = ({ conversationId, meId, initial }: Options) => {
     schedule();
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("focus", wake);
+    const offActive = onUserActive(wake);
+
     return () => {
       stopped = true;
       clear();
@@ -172,6 +179,7 @@ export const useDmThread = ({ conversationId, meId, initial }: Options) => {
       speedUpRef.current = () => undefined;
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("focus", wake);
+      offActive();
     };
   }, [sync]);
 

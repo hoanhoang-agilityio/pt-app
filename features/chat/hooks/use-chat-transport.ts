@@ -19,6 +19,7 @@ import {
   shouldSendTyping,
   TYPING_EXPIRY_MS,
 } from "@/features/chat/utils/typing-rules";
+import { isUserIdle, onUserActive } from "@/utils/user-idle";
 
 const USER_TOKEN_URL = "/api/chat/ably-token";
 const ADMIN_TOKEN_URL = "/api/chat/ably-token?as=admin";
@@ -248,9 +249,18 @@ export const useChatTransport = ({
     if (interval === null) {
       return;
     }
-    const timer = setInterval(() => syncRef.current(), interval);
+    const timer = setInterval(() => {
+      if (!isUserIdle()) {
+        syncRef.current();
+      }
+    }, interval);
+    // One catch-up sync when the user returns from idle.
+    const offActive = onUserActive(() => syncRef.current());
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      offActive();
+    };
   }, [interval]);
 
   return {

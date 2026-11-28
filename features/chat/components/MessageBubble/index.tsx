@@ -275,8 +275,10 @@ export const MessageBubble = ({
                     : mine
                       ? clsx(mineBubble, "px-3.5 py-2")
                       : "border border-line bg-surface px-3.5 py-2 text-fg",
-            // pan-y: sideways moves reach the swipe, up and down still scroll.
-            canReply ? "touch-pan-y touch-pinch-zoom" : "touch-manipulation",
+            // pan-y alone: iOS Safari rejects the pinch-zoom keyword, which voids the
+            // whole value (back to auto) and lets Safari steal the swipe. Sideways
+            // moves reach the swipe, up and down still scroll.
+            canReply ? "touch-pan-y" : "touch-manipulation",
             mine && !isUnsent && isSending && "opacity-70",
             mine && !isUnsent && isFailed && "bg-danger text-white",
             isHighlighted && "ring-2 ring-accent",

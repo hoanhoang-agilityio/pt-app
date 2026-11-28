@@ -4,6 +4,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -110,10 +111,32 @@ export const useBubbleGesture = (
 
   useEffect(() => () => tracker.dispose(), [tracker]);
 
+  // Safari (iOS) can start its own horizontal pan whatever touch-action says,
+  // and pointer events cannot stop it. A native non-passive touchmove can, so
+  // a locked swipe cancels the default; a vertical scroll never locks, so it
+  // stays native.
+  const bubbleRef = useCallback(
+    (element: HTMLElement | null) => {
+      if (!element) {
+        return;
+      }
+      const onTouchMove = (event: TouchEvent) => {
+        if (tracker.isSwiping() && event.cancelable) {
+          event.preventDefault();
+        }
+      };
+
+      element.addEventListener("touchmove", onTouchMove, { passive: false });
+      return () => element.removeEventListener("touchmove", onTouchMove);
+    },
+    [tracker],
+  );
+
   if (!isEnabled) {
     return {};
   }
   return {
+    ref: bubbleRef,
     onPointerDown: (event: PointerEvent) => {
       // Only the primary button / finger; a right click is the context menu.
       if (
@@ -174,7 +197,9 @@ export const useBubbleGesture = (
       tracker.cancel();
     },
     onPointerLeave: (event: PointerEvent) => {
-      if (isOtherPointer(event)) {
+      // During a swipe the row is damped past the threshold, so the finger
+      // outruns the bubble. Leaving it is not the end: pointerup / cancel are.
+      if (isOtherPointer(event) || tracker.isSwiping()) {
         return;
       }
       activePointerRef.current = null;

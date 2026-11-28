@@ -60,17 +60,25 @@ const load = async (): Promise<SourceExercise[]> => {
 
 const main = async () => {
   const source = await load();
-  const catalog = source.map((item) => ({
-    id: item.id,
-    name: item.name,
-    primary: item.primaryMuscles.map(toKey),
-    secondary: item.secondaryMuscles.map(toKey),
-    equipment: item.equipment,
-    category: item.category,
-    level: item.level,
-    instructions: item.instructions,
-    image: item.images[0] ?? null,
-  }));
+  const catalog = source.map((item) => {
+    // A few entries repeat a muscle or list it as both primary and secondary.
+    const primary = [...new Set(item.primaryMuscles.map(toKey))];
+    const secondary = [...new Set(item.secondaryMuscles.map(toKey))].filter(
+      (key) => !primary.includes(key),
+    );
+
+    return {
+      id: item.id,
+      name: item.name,
+      primary,
+      secondary,
+      equipment: item.equipment,
+      category: item.category,
+      level: item.level,
+      instructions: item.instructions,
+      image: item.images[0] ?? null,
+    };
+  });
 
   await writeFile(OUTPUT, `${JSON.stringify(catalog)}\n`);
   console.log(`Wrote ${catalog.length} exercises to ${OUTPUT}`);

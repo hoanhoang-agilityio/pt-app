@@ -39,4 +39,8 @@
 
 ## Deviations
 
-None yet.
+- Removed `features/training-notes/constants/suggestions.ts` (the static common-exercise list): the picker shows recent names and the library instead of a `<datalist>`.
+- The exercise field in the note form is a button that opens the picker (free text goes through the "Dùng tên" row); there is no inline text input any more.
+- `searchExercises` also takes `source` (`all`, `mine`, `builtin`) for the library tabs.
+- The catalog script de-duplicates muscles (9 source entries list a muscle twice or as both primary and secondary).
+- The upper-back polygons light both `lats` and `middle_back`, because the vendored body has no separate lats shape.

@@ -24,6 +24,16 @@ describe("catalog", () => {
     expect(keys.every(isMuscleKey)).toBe(true);
   });
 
+  it("lists each muscle once, primary or secondary", () => {
+    const bad = CATALOG.filter(
+      (entry) =>
+        new Set([...entry.primary, ...entry.secondary]).size !==
+        entry.primary.length + entry.secondary.length,
+    );
+
+    expect(bad.map((entry) => entry.id)).toEqual([]);
+  });
+
   it("has an id that forms a valid built-in ref", () => {
     const bad = CATALOG.filter(
       (entry) => parseExerciseRef(`b:${entry.id}`)?.kind !== "builtin",

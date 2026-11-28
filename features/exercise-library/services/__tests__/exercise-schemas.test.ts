@@ -64,15 +64,48 @@ describe("searchInputSchema", () => {
   it("fills the defaults", () => {
     expect(searchInputSchema.parse({})).toEqual({
       q: "",
+      filters: { muscles: [], equipment: [], levels: [], categories: [] },
       source: "all",
       limit: 30,
     });
   });
 
-  it.each([{ limit: 0 }, { limit: 101 }, { muscle: "wings" }, { source: "x" }])(
-    "rejects %j",
-    (input) => {
-      expect(searchInputSchema.safeParse(input).success).toBe(false);
-    },
-  );
+  it("keeps known keys and fills the groups left out", () => {
+    expect(
+      searchInputSchema.parse({
+        filters: { muscles: ["chest", "triceps"], levels: ["expert"] },
+      }).filters,
+    ).toEqual({
+      muscles: ["chest", "triceps"],
+      equipment: [],
+      levels: ["expert"],
+      categories: [],
+    });
+  });
+
+  it("drops duplicate keys", () => {
+    expect(
+      searchInputSchema.parse({
+        filters: {
+          muscles: ["chest", "lats", "chest"],
+          equipment: ["body_only", "body_only"],
+        },
+      }).filters,
+    ).toMatchObject({ muscles: ["chest", "lats"], equipment: ["body_only"] });
+  });
+
+  it.each([
+    { limit: 0 },
+    { limit: 101 },
+    { source: "x" },
+    { filters: { muscles: ["wings"] } },
+    { filters: { equipment: ["body only"] } },
+    { filters: { levels: ["god"] } },
+    { filters: { categories: ["yoga"] } },
+    { filters: { muscles: "chest" } },
+    { filters: { muscles: Array(18).fill("chest") } },
+    { filters: { levels: ["beginner", "beginner", "beginner", "beginner"] } },
+  ])("rejects %j", (input) => {
+    expect(searchInputSchema.safeParse(input).success).toBe(false);
+  });
 });

@@ -7,8 +7,9 @@ import { BottomSheet } from "@/components/common/BottomSheet";
 import { Input } from "@/components/common/Input";
 import { Skeleton } from "@/components/common/Skeleton";
 import { BUTTON_SECONDARY, SECTION_TITLE } from "@/constants/styles";
+import { ActiveFilterChips } from "@/features/exercise-library/components/ActiveFilterChips";
+import { ExerciseFilterButton } from "@/features/exercise-library/components/ExerciseFilterButton";
 import { ExerciseRowItem } from "@/features/exercise-library/components/ExerciseRowItem";
-import { MuscleFilterChips } from "@/features/exercise-library/components/MuscleFilterChips";
 import { EXERCISE_NAME_MAX } from "@/features/exercise-library/constants/limits";
 import { useExerciseSearch } from "@/features/exercise-library/hooks/use-exercise-search";
 import type {
@@ -45,7 +46,7 @@ const PickerBody = ({
   const t = useTranslations("exerciseLibrary");
   const search = useExerciseSearch({ source: "all" });
   const typed = search.query.trim();
-  const isBrowsing = typed === "" && search.muscle === undefined;
+  const isBrowsing = typed === "" && !search.hasFilters;
   const recent = isBrowsing ? recentNames.slice(0, RECENT_MAX) : [];
 
   const pickRow = (row: ExerciseRow) =>
@@ -77,26 +78,35 @@ const PickerBody = ({
         }}
         className="sticky top-0 z-10 -mx-4 space-y-2 bg-bg px-4 pb-2"
       >
-        <Input
-          type="search"
-          clearable
-          autoFocus
-          leadingIcon={<Search className="size-5" aria-hidden />}
-          value={search.query}
-          onChange={(event) => search.setQuery(event.target.value)}
-          placeholder={t("picker.searchPlaceholder")}
-          aria-label={t("picker.searchLabel")}
-          // The query can be saved as the name: keep it within the limit.
-          maxLength={EXERCISE_NAME_MAX}
-          enterKeyHint="done"
-          autoCapitalize="none"
-          autoCorrect="off"
-          autoComplete="off"
-        />
-        <MuscleFilterChips
-          value={search.muscle}
-          onChange={search.setMuscle}
-          label={t("picker.filterLabel")}
+        <div className="flex gap-2">
+          <Input
+            type="search"
+            clearable
+            autoFocus
+            leadingIcon={<Search className="size-5" aria-hidden />}
+            value={search.query}
+            onChange={(event) => search.setQuery(event.target.value)}
+            placeholder={t("picker.searchPlaceholder")}
+            aria-label={t("picker.searchLabel")}
+            // The query can be saved as the name: keep it within the limit.
+            maxLength={EXERCISE_NAME_MAX}
+            enterKeyHint="done"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="off"
+            wrapperClassName="min-w-0 flex-1"
+          />
+          <ExerciseFilterButton
+            placement="sheet"
+            filters={search.filters}
+            onToggle={search.toggleFilter}
+            onClear={search.clearFilters}
+          />
+        </div>
+        <ActiveFilterChips
+          filters={search.filters}
+          onRemove={search.toggleFilter}
+          onClear={search.clearFilters}
         />
       </form>
       {typed !== "" && (
@@ -104,8 +114,8 @@ const PickerBody = ({
           <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--accent)_14%,var(--surface))] text-accent">
             <TextCursorInput className="size-5" aria-hidden />
           </span>
-          <span className="grid min-w-0">
-            <span className="truncate font-semibold text-fg">
+          <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)]">
+            <span className="font-semibold [overflow-wrap:anywhere] text-fg">
               {t("picker.useName", { name: typed })}
             </span>
             <span className="text-xs text-muted">
@@ -119,14 +129,16 @@ const PickerBody = ({
           <h3 className={SECTION_TITLE}>{t("picker.recent")}</h3>
           <ul className="flex flex-wrap gap-2">
             {recent.map((name) => (
-              <li key={name}>
+              <li key={name} className="max-w-full">
                 <button
                   type="button"
                   onClick={() => pickText(name)}
-                  className="inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-sm font-medium text-fg transition active:bg-line/40"
+                  className="inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-left text-sm font-medium text-fg transition active:bg-line/40"
                 >
                   <History className="size-4 shrink-0 text-muted" aria-hidden />
-                  <span className="truncate">{name}</span>
+                  <span className="min-w-0 [overflow-wrap:anywhere]">
+                    {name}
+                  </span>
                 </button>
               </li>
             ))}

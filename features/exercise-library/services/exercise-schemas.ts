@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 import {
+  CATEGORY_KEYS,
+  EQUIPMENT_KEYS,
+  LEVEL_KEYS,
+} from "@/features/exercise-library/constants/labels";
+import {
   EXERCISE_EQUIPMENT_MAX,
   EXERCISE_INSTRUCTIONS_MAX,
   EXERCISE_NAME_MAX,
@@ -68,9 +73,27 @@ export type ParsedExerciseInput = z.output<typeof exerciseInputSchema>;
 
 export const exerciseIdSchema = z.number().int().positive();
 
+// A list of known keys, no longer than the key list itself, duplicates
+// dropped. Anything outside the list rejects the whole search.
+const keyFilter = <const T extends readonly [string, ...string[]]>(keys: T) =>
+  z
+    .array(z.enum(keys))
+    .max(keys.length)
+    .default([])
+    .transform((list) => [...new Set(list)]);
+
+const filtersSchema = z
+  .object({
+    muscles: keyFilter(MUSCLE_KEYS),
+    equipment: keyFilter(EQUIPMENT_KEYS),
+    levels: keyFilter(LEVEL_KEYS),
+    categories: keyFilter(CATEGORY_KEYS),
+  })
+  .prefault({});
+
 export const searchInputSchema = z.object({
   q: z.string().max(SEARCH_QUERY_MAX).default(""),
-  muscle: muscleSchema.optional(),
+  filters: filtersSchema,
   source: z.enum(["all", "mine", "builtin"]).default("all"),
   limit: z
     .number()

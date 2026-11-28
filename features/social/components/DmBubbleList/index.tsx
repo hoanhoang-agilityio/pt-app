@@ -126,8 +126,10 @@ const DmBubbleRow = ({
         tabIndex={canReply ? 0 : undefined}
         className={clsx(
           "max-w-[80%] space-y-1.5 rounded-2xl px-3 py-2 text-base break-words focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none",
-          // pan-y: sideways moves reach the swipe, up and down still scroll.
-          canReply && "touch-pan-y touch-pinch-zoom",
+          // pan-y alone: iOS Safari rejects the pinch-zoom keyword, which voids the
+          // whole value (back to auto) and lets Safari steal the swipe. Sideways
+          // moves reach the swipe, up and down still scroll.
+          canReply && "touch-pan-y",
           isMine
             ? "bg-accent text-accent-fg"
             : "border border-line bg-surface text-fg",

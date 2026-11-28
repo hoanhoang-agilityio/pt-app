@@ -256,6 +256,7 @@ describe("moveItem", () => {
     key,
     name: `Bài ${key}`,
     ref: null,
+    muscles: null,
     open: true,
     sets: [],
   });

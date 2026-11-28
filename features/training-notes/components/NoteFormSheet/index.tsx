@@ -36,8 +36,8 @@ import {
   LABEL,
   TEXTAREA,
 } from "@/constants/styles";
+import { ExercisePickerSheet } from "@/features/exercise-library/components/ExercisePickerSheet";
 import {
-  EXERCISE_LIST_ID,
   moveButtonId,
   NoteItemFields,
   NoteItemOverlay,
@@ -56,8 +56,8 @@ interface NoteFormSheetProps {
   note: TrainingNote | null;
   // "YYYY-MM-DD" in the app time zone: the default date of a new note.
   today: string;
-  // Names offered in the exercise field.
-  suggestions: string[];
+  // Names this admin used before, shown first in the exercise picker.
+  recentNames: string[];
   // Exercise of `note` to start expanded; the first by default.
   openIndex?: number;
 }
@@ -67,7 +67,7 @@ export const NoteFormSheet = ({
   onOpenChange,
   note,
   today,
-  suggestions,
+  recentNames,
   openIndex,
 }: NoteFormSheetProps) => {
   const t = useTranslations("trainingNotes.form");
@@ -88,6 +88,8 @@ export const NoteFormSheet = ({
     submit,
   } = useNoteForm(note, today, () => onOpenChange(false), openIndex);
   const dndId = useId();
+  // The exercise row whose picker is open.
+  const [pickerKey, setPickerKey] = useState<number | null>(null);
   // The exercise being dragged: every card shows collapsed meanwhile.
   const [draggingKey, setDraggingKey] = useState<number | null>(null);
   // The arrow to focus once the list has re-rendered in its new order.
@@ -227,11 +229,6 @@ export const NoteFormSheet = ({
             clearable
           />
         </div>
-        <datalist id={EXERCISE_LIST_ID}>
-          {suggestions.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
         <div className="space-y-2">
           <DndContext
             id={dndId}
@@ -263,6 +260,7 @@ export const NoteFormSheet = ({
                   onAddSet={() => addSet(item.key)}
                   onRemoveSet={(setKey) => removeSet(item.key, setKey)}
                   onRemove={() => removeItem(item.key)}
+                  onOpenPicker={() => setPickerKey(item.key)}
                   isSortable={isSortable}
                   isLast={index === draft.items.length - 1}
                   isCollapsed={draggingKey !== null}
@@ -333,6 +331,20 @@ export const NoteFormSheet = ({
           </SubmitButton>
         </div>
       </form>
+      <ExercisePickerSheet
+        isOpen={pickerKey !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setPickerKey(null);
+          }
+        }}
+        recentNames={recentNames}
+        onPick={({ name, ref, muscles }) => {
+          if (pickerKey !== null) {
+            updateItem(pickerKey, { name, ref, muscles });
+          }
+        }}
+      />
     </BottomSheet>
   );
 };

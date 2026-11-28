@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import {
+  formatExerciseRef,
+  parseExerciseRef,
+} from "@/features/exercise-library/utils/exercise-ref";
+import {
   DURATION_MAX_SEC,
   DURATION_MIN_SEC,
   EXERCISE_NAME_MAX,
@@ -15,10 +19,6 @@ import {
   WEIGHT_MIN_KG,
 } from "@/features/training-notes/constants/limits";
 import { TRAINING_NOTE_MESSAGES as MESSAGES } from "@/features/training-notes/constants/messages";
-import {
-  formatExerciseRef,
-  parseExerciseRef,
-} from "@/features/exercise-library/utils/exercise-ref";
 import { isValidDate } from "@/utils/week";
 
 // An empty optional number arrives as null (or undefined) from the form.

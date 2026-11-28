@@ -12,6 +12,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { IconButton } from "@/components/common/IconButton";
+import { MuscleDiagram } from "@/features/exercise-library/components/MuscleDiagram";
 import type { TrainingNote } from "@/features/training-notes/types/training-note";
 import {
   formatSetChip,
@@ -109,6 +110,13 @@ export const NoteCard = ({ note, onEdit, onDelete }: NoteCardProps) => {
                 })}
                 className="flex min-h-14 w-full items-center gap-2 rounded-2xl bg-bg p-3 text-left transition hover:bg-[color-mix(in_srgb,var(--fg)_8%,var(--bg))] focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none"
               >
+                {item.muscles && (
+                  <MuscleDiagram
+                    primary={item.muscles.primary}
+                    secondary={item.muscles.secondary}
+                    className="w-12"
+                  />
+                )}
                 <span className="grid min-w-0 flex-1 gap-2 @min-[420px]:grid-cols-[minmax(8.75rem,1fr)_auto] @min-[420px]:items-center @min-[420px]:gap-3">
                   <span className="min-w-0 text-sm font-semibold text-accent [overflow-wrap:anywhere]">
                     {item.exerciseName}

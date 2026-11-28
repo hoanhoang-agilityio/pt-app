@@ -20,11 +20,11 @@ import {
   adminTrainingNotes,
   adminTrainingNoteSets,
 } from "@/db/schema";
+import { findExerciseMuscles } from "@/features/exercise-library/services/exercise-queries";
 import type {
   TrainingNote,
   TrainingNoteRange,
 } from "@/features/training-notes/types/training-note";
-import { findExerciseMuscles } from "@/features/exercise-library/services/exercise-queries";
 import { getRangeBounds } from "@/features/training-notes/utils/note-filters";
 import { toItemSets } from "@/features/training-notes/utils/note-sets";
 import { getTodayDate } from "@/utils/week";

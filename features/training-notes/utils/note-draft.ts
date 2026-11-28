@@ -1,3 +1,4 @@
+import type { ExerciseMuscles } from "@/features/exercise-library/types/exercise";
 import type {
   SetUnit,
   TrainingNote,
@@ -23,6 +24,8 @@ export interface ItemDraft {
   name: string;
   // Library exercise picked for this row ("b:<id>" / "c:<id>"), else null.
   ref: string | null;
+  // Its muscles, for the diagram next to the name; not sent on save.
+  muscles: ExerciseMuscles | null;
   open: boolean;
   sets: SetDraft[];
 }
@@ -56,6 +59,7 @@ export const createEmptyItem = (key: number, setKey: number): ItemDraft => ({
   key,
   name: "",
   ref: null,
+  muscles: null,
   open: true,
   sets: [createEmptySet(setKey)],
 });
@@ -92,6 +96,7 @@ const toDraftItem = (
     key,
     name: item.exerciseName,
     ref: item.exerciseRef,
+    muscles: item.muscles,
     open,
     sets: sets.length > 0 ? sets : [createEmptySet(next.key++)],
   };

@@ -31,7 +31,7 @@ interface NoteCardProps {
 export const NoteCard = ({ note, onEdit, onDelete }: NoteCardProps) => {
   const t = useTranslations("trainingNotes");
   const [isNotesOpen, setIsNotesOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const format: ItemFormatter = (key, values) => t(key, values);
   const title = note.title ?? t("untitled");
   const summary = summarizeNote(note);

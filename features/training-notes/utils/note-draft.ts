@@ -21,6 +21,8 @@ export interface SetDraft {
 export interface ItemDraft {
   key: number;
   name: string;
+  // Library exercise picked for this row ("b:<id>" / "c:<id>"), else null.
+  ref: string | null;
   open: boolean;
   sets: SetDraft[];
 }
@@ -53,6 +55,7 @@ export const createSetFrom = (previous: SetDraft, key: number): SetDraft => ({
 export const createEmptyItem = (key: number, setKey: number): ItemDraft => ({
   key,
   name: "",
+  ref: null,
   open: true,
   sets: [createEmptySet(setKey)],
 });
@@ -88,6 +91,7 @@ const toDraftItem = (
   return {
     key,
     name: item.exerciseName,
+    ref: item.exerciseRef,
     open,
     sets: sets.length > 0 ? sets : [createEmptySet(next.key++)],
   };
@@ -142,6 +146,7 @@ export const toInput = (draft: NoteDraft, id?: number): TrainingNoteInput => ({
   note: draft.note,
   items: draft.items.map((item) => ({
     exerciseName: item.name,
+    exerciseRef: item.ref,
     sets: item.sets.map((set) => {
       const value = toNumber(set.value);
 

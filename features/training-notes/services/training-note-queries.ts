@@ -24,6 +24,7 @@ import type {
   TrainingNote,
   TrainingNoteRange,
 } from "@/features/training-notes/types/training-note";
+import { findExerciseMuscles } from "@/features/exercise-library/services/exercise-queries";
 import { getRangeBounds } from "@/features/training-notes/utils/note-filters";
 import { toItemSets } from "@/features/training-notes/utils/note-sets";
 import { getTodayDate } from "@/utils/week";
@@ -96,6 +97,7 @@ export const listTrainingNotes = async (
       noteId: adminTrainingNoteItems.noteId,
       position: adminTrainingNoteItems.position,
       exerciseName: adminTrainingNoteItems.exerciseName,
+      exerciseRef: adminTrainingNoteItems.exerciseRef,
       sets: adminTrainingNoteItems.sets,
       reps: adminTrainingNoteItems.reps,
       durationSec: adminTrainingNoteItems.durationSec,
@@ -139,6 +141,11 @@ export const listTrainingNotes = async (
             asc(adminTrainingNoteSets.position),
           );
   const setsByItem = Map.groupBy(setRows, (row) => row.itemId);
+  // Refs to a deleted exercise are not found here, so they read as no link.
+  const muscles = await findExerciseMuscles(
+    adminId,
+    items.map((item) => item.exerciseRef),
+  );
 
   return notes.map((note) => ({
     ...note,
@@ -148,6 +155,11 @@ export const listTrainingNotes = async (
         id: item.id,
         position: item.position,
         exerciseName: item.exerciseName,
+        exerciseRef:
+          item.exerciseRef && muscles.has(item.exerciseRef)
+            ? item.exerciseRef
+            : null,
+        muscles: (item.exerciseRef && muscles.get(item.exerciseRef)) || null,
         sets: toItemSets(item, setsByItem.get(item.id) ?? []),
       })),
   }));

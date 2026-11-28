@@ -87,7 +87,11 @@
     "dragStart": "Picked up “{name}”, position {n} of {total}",
     "dragOver": "“{name}” is at position {n} of {total}",
     "dragEnd": "Dropped “{name}” at position {n} of {total}",
-    "dragCancel": "Cancelled, “{name}” is back at position {n}"
+    "dragCancel": "Cancelled, “{name}” is back at position {n}",
+    "exercisePick": "Pick exercise {n}",
+    "exerciseHint": "Tap to pick from the library or type a name",
+    "exerciseLinked": "In the library",
+    "exerciseEmpty": "Pick or type an exercise name"
   },
   "notesToggle": "{count} notes",
   "setNoteLabel": "{name} · set {n}",
@@ -95,5 +99,6 @@
   "collapse": "Collapse note: {title}",
   "expand": "Expand note: {title}",
   "summary": "{exercises, plural, one {# exercise} other {# exercises}} · {sets, plural, one {# set} other {# sets}}",
-  "editExercise": "Edit {name}, {count, plural, one {# set} other {# sets}}"
+  "editExercise": "Edit {name}, {count, plural, one {# set} other {# sets}}",
+  "muscleDiagram": "Muscles of {name}"
 }

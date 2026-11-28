@@ -59,6 +59,8 @@ const item = (
   id: 1,
   position: 0,
   exerciseName,
+  exerciseRef: null,
+  muscles: null,
   sets: withPositions(sets),
 });
 

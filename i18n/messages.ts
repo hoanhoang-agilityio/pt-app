@@ -6,6 +6,7 @@ import enChatGroups from "@/messages/en/chatGroups.json";
 import enCommon from "@/messages/en/common.json";
 import enDashboard from "@/messages/en/dashboard.json";
 import enErrors from "@/messages/en/errors.json";
+import enExerciseLibrary from "@/messages/en/exerciseLibrary.json";
 import enFoods from "@/messages/en/foods.json";
 import enFormat from "@/messages/en/format.json";
 import enLayout from "@/messages/en/layout.json";
@@ -29,6 +30,7 @@ import viChatGroups from "@/messages/vi/chatGroups.json";
 import viCommon from "@/messages/vi/common.json";
 import viDashboard from "@/messages/vi/dashboard.json";
 import viErrors from "@/messages/vi/errors.json";
+import viExerciseLibrary from "@/messages/vi/exerciseLibrary.json";
 import viFoods from "@/messages/vi/foods.json";
 import viFormat from "@/messages/vi/format.json";
 import viLayout from "@/messages/vi/layout.json";
@@ -52,6 +54,7 @@ import zhChatGroups from "@/messages/zh/chatGroups.json";
 import zhCommon from "@/messages/zh/common.json";
 import zhDashboard from "@/messages/zh/dashboard.json";
 import zhErrors from "@/messages/zh/errors.json";
+import zhExerciseLibrary from "@/messages/zh/exerciseLibrary.json";
 import zhFoods from "@/messages/zh/foods.json";
 import zhFormat from "@/messages/zh/format.json";
 import zhLayout from "@/messages/zh/layout.json";
@@ -82,6 +85,7 @@ export const MESSAGES = {
     common: viCommon,
     dashboard: viDashboard,
     errors: viErrors,
+    exerciseLibrary: viExerciseLibrary,
     foods: viFoods,
     format: viFormat,
     layout: viLayout,
@@ -107,6 +111,7 @@ export const MESSAGES = {
     common: enCommon,
     dashboard: enDashboard,
     errors: enErrors,
+    exerciseLibrary: enExerciseLibrary,
     foods: enFoods,
     format: enFormat,
     layout: enLayout,
@@ -132,6 +137,7 @@ export const MESSAGES = {
     common: zhCommon,
     dashboard: zhDashboard,
     errors: zhErrors,
+    exerciseLibrary: zhExerciseLibrary,
     foods: zhFoods,
     format: zhFormat,
     layout: zhLayout,

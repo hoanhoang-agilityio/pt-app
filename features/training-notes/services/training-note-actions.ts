@@ -11,6 +11,7 @@ import {
   adminTrainingNotes,
   adminTrainingNoteSets,
 } from "@/db/schema";
+import { findExerciseMuscles } from "@/features/exercise-library/services/exercise-queries";
 import { TRAINING_NOTE_MESSAGES } from "@/features/training-notes/constants/messages";
 import {
   type TrainingNoteInput,
@@ -68,6 +69,12 @@ export const saveTrainingNoteAction = withResultErrorHandling(
       };
     }
     const { id, date, title, note, items } = parsed.data;
+    // Only refs that exist for this admin are stored: a deleted or foreign
+    // custom exercise, or an unknown built-in, saves as free text.
+    const liveRefs = await findExerciseMuscles(
+      admin.id,
+      items.map((item) => item.exerciseRef),
+    );
 
     const savedId = await db.transaction(async (tx) => {
       let noteId: number;
@@ -107,6 +114,10 @@ export const saveTrainingNoteAction = withResultErrorHandling(
               noteId,
               position,
               exerciseName: item.exerciseName,
+              exerciseRef:
+                item.exerciseRef && liveRefs.has(item.exerciseRef)
+                  ? item.exerciseRef
+                  : null,
             })),
           )
           .returning({

@@ -1,4 +1,5 @@
 import {
+  Dumbbell,
   Flag,
   MessageCircle,
   Newspaper,
@@ -134,6 +135,10 @@ const AdminDashboardPage = async () => {
             <Link href={ROUTES.ADMIN_NOTES} className={TILE}>
               <NotebookPen className="size-6 text-accent" aria-hidden />
               <span>{t("tiles.notes")}</span>
+            </Link>
+            <Link href={ROUTES.ADMIN_EXERCISES} className={TILE}>
+              <Dumbbell className="size-6 text-accent" aria-hidden />
+              <span>{t("tiles.exercises")}</span>
             </Link>
             <Link href={ROUTES.ADMIN_SOCIAL} className={TILE}>
               <Newspaper className="size-6 text-accent" aria-hidden />

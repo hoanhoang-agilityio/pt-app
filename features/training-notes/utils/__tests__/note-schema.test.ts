@@ -50,7 +50,7 @@ describe("trainingNoteSchema", () => {
 
     expect(result.title).toBeNull();
     expect(result.note).toBeNull();
-    expect(result.items).toEqual([item()]);
+    expect(result.items).toEqual([{ ...item(), exerciseRef: null }]);
   });
 
   it("rejects an invalid or impossible date", () => {
@@ -97,7 +97,9 @@ describe("trainingNoteSchema", () => {
         note({ items: [item({ sets: [] })] }),
       );
 
-      expect(result.items).toEqual([{ exerciseName: "Squat", sets: [] }]);
+      expect(result.items).toEqual([
+        { exerciseName: "Squat", exerciseRef: null, sets: [] },
+      ]);
     });
 
     it("rejects sets without an exercise name", () => {
@@ -296,5 +298,24 @@ describe("trainingNoteSchema", () => {
     expect(firstError(note({ items: items(21) }))).toBe(
       MESSAGES.TOO_MANY_ITEMS,
     );
+  });
+
+  describe("exerciseRef", () => {
+    const refOf = (exerciseRef: unknown) =>
+      trainingNoteSchema.parse(note({ items: [item({ exerciseRef })] }))
+        .items[0].exerciseRef;
+
+    it("keeps a well-formed built-in or custom ref", () => {
+      expect(refOf("b:Barbell_Squat")).toBe("b:Barbell_Squat");
+      expect(refOf("c:12")).toBe("c:12");
+    });
+
+    it("reads a missing or malformed ref as no link without failing the save", () => {
+      expect(refOf(undefined)).toBeNull();
+      expect(refOf(null)).toBeNull();
+      expect(refOf("c:0")).toBeNull();
+      expect(refOf("b:a b")).toBeNull();
+      expect(refOf(7)).toBeNull();
+    });
   });
 });

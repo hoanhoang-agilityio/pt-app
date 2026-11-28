@@ -87,7 +87,11 @@
     "dragStart": "Đã nhấc “{name}”, vị trí {n} trên {total}",
     "dragOver": "“{name}” đang ở vị trí {n} trên {total}",
     "dragEnd": "Đã thả “{name}” ở vị trí {n} trên {total}",
-    "dragCancel": "Đã hủy, “{name}” về vị trí {n}"
+    "dragCancel": "Đã hủy, “{name}” về vị trí {n}",
+    "exercisePick": "Chọn bài tập {n}",
+    "exerciseHint": "Chạm để chọn từ thư viện hoặc nhập tên",
+    "exerciseLinked": "Có trong thư viện",
+    "exerciseEmpty": "Chọn hoặc nhập tên bài tập"
   },
   "notesToggle": "{count} ghi chú",
   "setNoteLabel": "{name} · set {n}",
@@ -95,5 +99,6 @@
   "collapse": "Thu gọn ghi chú: {title}",
   "expand": "Mở rộng ghi chú: {title}",
   "summary": "{exercises} bài · {sets} set",
-  "editExercise": "Sửa bài {name}, {count} set"
+  "editExercise": "Sửa bài {name}, {count} set",
+  "muscleDiagram": "Nhóm cơ của {name}"
 }

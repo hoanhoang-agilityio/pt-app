@@ -22,6 +22,8 @@ const saved: TrainingNote = {
       id: 1,
       position: 0,
       exerciseName: "Squat",
+      exerciseRef: null,
+      muscles: null,
       sets: [
         {
           position: 0,
@@ -45,6 +47,8 @@ const saved: TrainingNote = {
       id: 2,
       position: 1,
       exerciseName: "Plank",
+      exerciseRef: null,
+      muscles: null,
       sets: [
         {
           position: 0,
@@ -136,6 +140,7 @@ describe("toInput", () => {
     expect(parsed.items).toEqual([
       {
         exerciseName: "Squat",
+        exerciseRef: null,
         sets: [
           {
             unit: "reps",
@@ -155,6 +160,7 @@ describe("toInput", () => {
       },
       {
         exerciseName: "Plank",
+        exerciseRef: null,
         sets: [
           {
             unit: "seconds",
@@ -249,6 +255,7 @@ describe("moveItem", () => {
   const make = (key: number): ItemDraft => ({
     key,
     name: `Bài ${key}`,
+    ref: null,
     open: true,
     sets: [],
   });

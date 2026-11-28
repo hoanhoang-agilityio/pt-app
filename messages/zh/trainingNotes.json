@@ -87,7 +87,11 @@
     "dragStart": "已拿起“{name}”，第 {n} 位，共 {total} 个",
     "dragOver": "“{name}”在第 {n} 位，共 {total} 个",
     "dragEnd": "已将“{name}”放在第 {n} 位，共 {total} 个",
-    "dragCancel": "已取消，“{name}”回到第 {n} 位"
+    "dragCancel": "已取消，“{name}”回到第 {n} 位",
+    "exercisePick": "选择动作 {n}",
+    "exerciseHint": "点按从资料库选择，或输入名称",
+    "exerciseLinked": "在资料库中",
+    "exerciseEmpty": "选择或输入动作名称"
   },
   "notesToggle": "{count} 条备注",
   "setNoteLabel": "{name} · 第 {n} 组",
@@ -95,5 +99,6 @@
   "collapse": "收起笔记：{title}",
   "expand": "展开笔记：{title}",
   "summary": "{exercises} 个动作 · {sets} 组",
-  "editExercise": "编辑 {name}，{count} 组"
+  "editExercise": "编辑 {name}，{count} 组",
+  "muscleDiagram": "{name} 的肌群"
 }

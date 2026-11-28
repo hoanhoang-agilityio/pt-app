@@ -49,9 +49,18 @@ describe("NoteCard initial state", () => {
           id: 1,
           position: 0,
           exerciseName: "Squat",
+          exerciseRef: null,
+          muscles: null,
           sets: [set(1, 8), set(2, 8)],
         },
-        { id: 2, position: 1, exerciseName: "Lunge", sets: [set(1, 10)] },
+        {
+          id: 2,
+          position: 1,
+          exerciseName: "Lunge",
+          exerciseRef: null,
+          muscles: null,
+          sets: [set(1, 10)],
+        },
       ],
     });
 

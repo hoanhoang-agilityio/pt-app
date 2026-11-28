@@ -5,7 +5,8 @@ import { and, count, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { exerciseLibrary } from "@/db/schema";
 import { catalogImageUrl } from "@/features/exercise-library/constants/catalog-source";
-import type { MuscleKey } from "@/features/exercise-library/constants/muscles";
+import type { ExerciseFilters } from "@/features/exercise-library/constants/filters";
+import { toLabelKey } from "@/features/exercise-library/constants/labels";
 import {
   CATALOG,
   type CatalogExercise,
@@ -17,6 +18,7 @@ import type {
   ExerciseRow,
   ExerciseSource,
 } from "@/features/exercise-library/types/exercise";
+import { matchEquipmentKey } from "@/features/exercise-library/utils/equipment-key";
 import { exercisePhotoUrl } from "@/features/exercise-library/utils/exercise-photo";
 import {
   formatExerciseRef,
@@ -87,7 +89,7 @@ const listCustom = (adminId: number) =>
 
 interface SearchParams {
   q: string;
-  muscle?: MuscleKey;
+  filters?: ExerciseFilters;
   source: ExerciseSource;
   limit: number;
 }
@@ -95,7 +97,7 @@ interface SearchParams {
 // Built-ins plus the admin's own exercises, ranked by `rankExercises`.
 export const searchExerciseRows = async (
   adminId: number,
-  { q, muscle, source, limit }: SearchParams,
+  { q, filters, source, limit }: SearchParams,
 ): Promise<ExerciseRow[]> => {
   const custom =
     source === "builtin"
@@ -103,6 +105,9 @@ export const searchExerciseRows = async (
       : (await listCustom(adminId)).map((record) => ({
           row: toCustomRow(record),
           nameKey: toNameKey(record.name),
+          equipmentKey: matchEquipmentKey(record.equipment),
+          levelKey: null,
+          categoryKey: null,
         }));
   const builtin =
     source === "mine"
@@ -110,15 +115,18 @@ export const searchExerciseRows = async (
       : CATALOG.map((entry) => ({
           row: toCatalogRow(entry),
           nameKey: entry.nameKey,
+          equipmentKey: entry.equipment ? toLabelKey(entry.equipment) : null,
+          levelKey: toLabelKey(entry.level),
+          categoryKey: toLabelKey(entry.category),
         }));
 
   return rankExercises(
-    [...custom, ...builtin].map(({ row, nameKey }) => ({
+    [...custom, ...builtin].map(({ row, ...keys }) => ({
       row,
-      nameKey,
+      ...keys,
       ...row,
     })),
-    { q, muscle, limit },
+    { q, filters, limit },
   ).map((entry) => entry.row);
 };
 

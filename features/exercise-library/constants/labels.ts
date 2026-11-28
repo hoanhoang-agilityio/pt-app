@@ -36,3 +36,7 @@ export const isLabelKey = <T extends readonly string[]>(
   keys: T,
   value: string,
 ): value is T[number] => (keys as readonly string[]).includes(value);
+
+export type EquipmentKey = (typeof EQUIPMENT_KEYS)[number];
+export type LevelKey = (typeof LEVEL_KEYS)[number];
+export type CategoryKey = (typeof CATEGORY_KEYS)[number];

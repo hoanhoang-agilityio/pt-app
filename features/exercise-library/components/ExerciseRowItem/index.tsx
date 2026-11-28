@@ -38,13 +38,13 @@ export const ExerciseRowItem = ({
           secondary={exercise.secondary}
           className="w-14"
         />
-        <span className="grid min-w-0 flex-1 gap-1">
-          <span className="flex items-center gap-2">
-            <span className="min-w-0 truncate text-base font-semibold text-fg">
+        <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-1">
+          <span className="flex items-start gap-2">
+            <span className="min-w-0 text-base font-semibold [overflow-wrap:anywhere] text-fg">
               {exercise.name}
             </span>
             {exercise.isCustom && (
-              <span className="shrink-0 rounded-full border border-accent/40 px-2 text-xs leading-5 font-medium text-accent">
+              <span className="shrink-0 self-start rounded-full border border-accent/40 px-2 text-xs leading-5 font-medium text-accent">
                 {t("custom")}
               </span>
             )}
@@ -54,7 +54,9 @@ export const ExerciseRowItem = ({
             secondary={exercise.secondary}
           />
           {equipment && (
-            <span className="truncate text-xs text-muted">{equipment}</span>
+            <span className="text-xs [overflow-wrap:anywhere] text-muted">
+              {equipment}
+            </span>
           )}
         </span>
         <ChevronRight className="size-5 shrink-0 text-muted" aria-hidden />

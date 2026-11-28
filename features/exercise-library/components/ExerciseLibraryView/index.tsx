@@ -8,10 +8,12 @@ import { useState } from "react";
 import { Input } from "@/components/common/Input";
 import { Skeleton } from "@/components/common/Skeleton";
 import { BUTTON_PRIMARY, BUTTON_SECONDARY, CARD } from "@/constants/styles";
+import { ActiveFilterChips } from "@/features/exercise-library/components/ActiveFilterChips";
 import { ExerciseDetailSheet } from "@/features/exercise-library/components/ExerciseDetailSheet";
+import { ExerciseFilterButton } from "@/features/exercise-library/components/ExerciseFilterButton";
 import { ExerciseFormSheet } from "@/features/exercise-library/components/ExerciseFormSheet";
 import { ExerciseRowItem } from "@/features/exercise-library/components/ExerciseRowItem";
-import { MuscleFilterChips } from "@/features/exercise-library/components/MuscleFilterChips";
+import { CATALOG_ONLY_GROUPS } from "@/features/exercise-library/constants/filters";
 import { useExerciseSearch } from "@/features/exercise-library/hooks/use-exercise-search";
 import type {
   ExerciseDetail,
@@ -28,7 +30,7 @@ const TAB_BASE =
   "min-h-11 flex-1 rounded-lg px-3 text-sm font-semibold transition";
 
 // The library page: own exercises and the built-in catalog, one search box and
-// one muscle filter for both.
+// one filter box for both.
 export const ExerciseLibraryView = ({
   initialTab,
 }: ExerciseLibraryViewProps) => {
@@ -45,7 +47,7 @@ export const ExerciseLibraryView = ({
   const search = useExerciseSearch({
     source: tab === "mine" ? "mine" : "builtin",
   });
-  const isFiltered = search.query.trim() !== "" || search.muscle !== undefined;
+  const isFiltered = search.query.trim() !== "" || search.hasFilters;
 
   const openForm = (exercise: ExerciseDetail | null) =>
     setForm({ isOpen: true, exercise });
@@ -86,21 +88,30 @@ export const ExerciseLibraryView = ({
           </button>
         ))}
       </div>
-      <Input
-        type="search"
-        clearable
-        leadingIcon={<Search className="size-5" aria-hidden />}
-        value={search.query}
-        onChange={(event) => search.setQuery(event.target.value)}
-        placeholder={t("searchPlaceholder")}
-        aria-label={t("searchLabel")}
-        autoCapitalize="none"
-        autoCorrect="off"
-      />
-      <MuscleFilterChips
-        value={search.muscle}
-        onChange={search.setMuscle}
-        label={t("filterLabel")}
+      <div className="flex gap-2">
+        <Input
+          type="search"
+          clearable
+          leadingIcon={<Search className="size-5" aria-hidden />}
+          value={search.query}
+          onChange={(event) => search.setQuery(event.target.value)}
+          placeholder={t("searchPlaceholder")}
+          aria-label={t("searchLabel")}
+          autoCapitalize="none"
+          autoCorrect="off"
+          wrapperClassName="min-w-0 flex-1"
+        />
+        <ExerciseFilterButton
+          hiddenGroups={tab === "mine" ? CATALOG_ONLY_GROUPS : undefined}
+          filters={search.filters}
+          onToggle={search.toggleFilter}
+          onClear={search.clearFilters}
+        />
+      </div>
+      <ActiveFilterChips
+        filters={search.filters}
+        onRemove={search.toggleFilter}
+        onClear={search.clearFilters}
       />
       <div aria-live="polite" className="sr-only">
         {!search.isLoading && t("resultCount", { count: search.rows.length })}

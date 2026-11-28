@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import {
+  CATALOG_ONLY_GROUPS,
+  EMPTY_FILTERS,
+  type ExerciseFilters,
+  type FilterGroup,
+} from "@/features/exercise-library/constants/filters";
 import { SEARCH_LIMIT_MAX } from "@/features/exercise-library/constants/limits";
-import type { MuscleKey } from "@/features/exercise-library/constants/muscles";
 import {
   SEARCH_DEBOUNCE_MS,
   SEARCH_PAGE_SIZE,
@@ -14,6 +19,11 @@ import type {
   ExerciseRow,
   ExerciseSource,
 } from "@/features/exercise-library/types/exercise";
+import {
+  clearedFilters,
+  hasFilters,
+  toggleFilterKey,
+} from "@/features/exercise-library/utils/exercise-filters";
 
 interface Options {
   source: ExerciseSource;
@@ -27,20 +37,32 @@ interface Settled {
   hasError: boolean;
 }
 
+const clearedGroups = (groups: readonly FilterGroup[]) =>
+  Object.fromEntries(groups.map((group) => [group, []]));
+
 // Debounced search over the library. `isLoading` is derived: the last settled
 // result belongs to another request key than the current one. Rows of the
 // previous request stay visible meanwhile, so the list does not flash empty.
 export const useExerciseSearch = ({ source, isEnabled = true }: Options) => {
   const [query, setQueryState] = useState("");
-  const [muscle, setMuscleState] = useState<MuscleKey>();
+  const [selected, setFiltersState] = useState<ExerciseFilters>(EMPTY_FILTERS);
   const [limit, setLimit] = useState(SEARCH_PAGE_SIZE);
   const [retryCount, setRetryCount] = useState(0);
   const [settled, setSettled] = useState<Settled | null>(null);
+  // The own-exercises list has no level or category: those selections stay in
+  // state (they come back on the other list) but are neither shown nor sent.
+  const filters = useMemo(
+    () =>
+      source === "mine"
+        ? { ...selected, ...clearedGroups(CATALOG_ONLY_GROUPS) }
+        : selected,
+    [source, selected],
+  );
   const debouncedQuery = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
   const key = JSON.stringify([
     source,
     debouncedQuery,
-    muscle,
+    filters,
     limit,
     retryCount,
   ]);
@@ -51,7 +73,7 @@ export const useExerciseSearch = ({ source, isEnabled = true }: Options) => {
     }
     let isCurrent = true;
 
-    searchExercises({ q: debouncedQuery, muscle, source, limit })
+    searchExercises({ q: debouncedQuery, filters, source, limit })
       .then((result) => {
         if (isCurrent) {
           setSettled({
@@ -69,7 +91,7 @@ export const useExerciseSearch = ({ source, isEnabled = true }: Options) => {
     return () => {
       isCurrent = false;
     };
-  }, [isEnabled, key, debouncedQuery, muscle, source, limit]);
+  }, [isEnabled, key, debouncedQuery, filters, source, limit]);
 
   return {
     query,
@@ -77,9 +99,14 @@ export const useExerciseSearch = ({ source, isEnabled = true }: Options) => {
       setQueryState(value);
       setLimit(SEARCH_PAGE_SIZE);
     },
-    muscle,
-    setMuscle: (value: MuscleKey | undefined) => {
-      setMuscleState(value);
+    filters,
+    hasFilters: hasFilters(filters),
+    toggleFilter: (group: FilterGroup, key: string) => {
+      setFiltersState((current) => toggleFilterKey(current, group, key));
+      setLimit(SEARCH_PAGE_SIZE);
+    },
+    clearFilters: () => {
+      setFiltersState(clearedFilters());
       setLimit(SEARCH_PAGE_SIZE);
     },
     rows: settled?.rows ?? [],

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
 import { admins, exerciseLibrary } from "@/db/schema";
 import { EXERCISE_MESSAGES as MESSAGES } from "@/features/exercise-library/constants/messages";
+import { CATALOG } from "@/features/exercise-library/services/exercise-catalog";
 
 const state = vi.hoisted(() => ({
   db: null as unknown,
@@ -308,7 +309,7 @@ describe("searchExercises", () => {
     const mine = await searchExercises({ q: "", source: "mine" });
     const neck = await searchExercises({
       q: "",
-      muscle: "neck",
+      filters: { muscles: ["neck"] },
       source: "builtin",
       limit: 100,
     });
@@ -325,6 +326,95 @@ describe("searchExercises", () => {
             row.primary.includes("neck") || row.secondary.includes("neck"),
         ),
     ).toBe(true);
+  });
+
+  it("filters custom exercises by equipment text and drops them for a level", async () => {
+    await create("Kéo cáp riêng", { equipment: "Body only" });
+    await create("Kéo lạ riêng", { equipment: "Dây thừng" });
+    await create("Kéo tạ riêng", { equipment: "Tạ đơn" });
+    const byEquipment = await searchExercises({
+      q: "riêng",
+      filters: { equipment: ["body_only"] },
+    });
+    const byLevel = await searchExercises({
+      q: "riêng",
+      filters: { levels: ["beginner"] },
+    });
+
+    const byVietnamese = await searchExercises({
+      q: "riêng",
+      filters: { equipment: ["dumbbell"] },
+    });
+
+    expect(byEquipment).toMatchObject({
+      status: "success",
+      rows: [{ name: "Kéo cáp riêng", isCustom: true }],
+    });
+    expect(byVietnamese).toMatchObject({
+      status: "success",
+      rows: [{ name: "Kéo tạ riêng", isCustom: true }],
+    });
+    expect(byLevel).toEqual({ status: "success", rows: [] });
+  });
+
+  it("ANDs groups over the built-in catalog", async () => {
+    const result = await searchExercises({
+      q: "",
+      source: "builtin",
+      limit: 100,
+      filters: {
+        muscles: ["neck", "traps"],
+        equipment: ["barbell"],
+        levels: ["beginner"],
+        categories: ["strength"],
+      },
+    });
+    const everything = await searchExercises({
+      q: "",
+      source: "builtin",
+      limit: 100,
+      filters: { muscles: ["neck", "traps"] },
+    });
+
+    expect(result.status).toBe("success");
+    expect(everything.status).toBe("success");
+    if (result.status === "success" && everything.status === "success") {
+      // 7 built-in barbell strength exercises for beginners work the neck
+      // or the traps; the muscle filter alone finds far more.
+      expect(result.rows).toHaveLength(7);
+      expect(everything.rows.length).toBeGreaterThan(50);
+      const entries = result.rows.map((row) =>
+        CATALOG.find((entry) => `b:${entry.id}` === row.ref),
+      );
+
+      expect(
+        entries.every(
+          (entry) =>
+            entry?.level === "beginner" && entry.category === "strength",
+        ),
+      ).toBe(true);
+      expect(
+        result.rows.every(
+          (row) =>
+            row.equipment === "barbell" &&
+            [...row.primary, ...row.secondary].some(
+              (key) => key === "neck" || key === "traps",
+            ),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects an unknown filter key", async () => {
+    const result = await searchExercises({
+      q: "",
+      filters: { equipment: ["rope"] as unknown as ["cable"] },
+    });
+
+    expect(result).toEqual({
+      status: "error",
+      message: "Dữ liệu không hợp lệ",
+    });
   });
 
   it("gives built-ins an image URL and a custom photo a versioned URL", async () => {

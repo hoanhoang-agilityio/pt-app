@@ -16,6 +16,7 @@ import {
   type MuteState,
   UNMUTED,
 } from "@/features/chat/utils/mute-rules";
+import { describeErrorReference } from "@/utils/errors";
 
 // Mute / unmute one trainee's chat for the signed-in admin. Reports the new
 // state to the caller, toasts the outcome, and nudges the unread poll and the
@@ -36,6 +37,13 @@ export const useMuteActions = (
     router.refresh();
   };
 
+  // The server's message plus, for an unexpected error, its reference id.
+  const failed = (result: { message?: string; reference?: string }) => {
+    toast.error(result.message ?? t("failed"), {
+      description: describeErrorReference(result.reference),
+    });
+  };
+
   const mute = (duration: MuteDuration) =>
     startTransition(async () => {
       try {
@@ -47,7 +55,7 @@ export const useMuteActions = (
         });
 
         if (result.status !== "success") {
-          toast.error(result.message ?? t("failed"));
+          failed(result);
           return;
         }
         const until = result.until ? new Date(result.until) : null;
@@ -71,7 +79,7 @@ export const useMuteActions = (
         const result = await unmuteContactAction({ userId });
 
         if (result.status !== "success") {
-          toast.error(result.message ?? t("failed"));
+          failed(result);
           return;
         }
         finish(UNMUTED, t("unmuted"));

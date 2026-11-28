@@ -19,7 +19,7 @@ export const muteDurationSchema = z.enum(MUTE_DURATIONS);
 // Browser `Date#getTimezoneOffset()` style: minutes UTC is ahead of local
 // time (Vietnam is -420). The widest real offsets are -840 .. +720.
 export const TZ_OFFSET_MIN = -840;
-export const TZ_OFFSET_MAX = 840;
+export const TZ_OFFSET_MAX = 720;
 
 export const tzOffsetSchema = z
   .number()

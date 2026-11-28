@@ -60,7 +60,10 @@ const AdminUsersPage = async ({ searchParams }: PageProps<"/admin/users">) => {
     getHref: getMemberHref,
     locale,
     unreadByUserId: new Map(
-      unreadByTrainee.map((row) => [row.userId, row.unread]),
+      // A chat this admin muted shows no unread badge outside the inbox row.
+      unreadByTrainee
+        .filter((row) => !row.muted)
+        .map((row) => [row.userId, row.unread]),
     ),
     restrictionByUserId: new Map(
       [...restrictions].map(([userId, restriction]) => [

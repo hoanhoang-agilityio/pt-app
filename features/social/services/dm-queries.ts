@@ -27,6 +27,7 @@ import { listBlockedBetweenIds } from "@/features/social/services/relationships"
 import type {
   DmMessageView,
   DmReplyPostView,
+  DmReplyToView,
   DmThreadPage,
 } from "@/features/social/types/dm";
 import type { SocialActor } from "@/features/social/types/social";
@@ -40,10 +41,66 @@ import { DEFAULT_LOCALE, type Locale } from "@/utils/locale";
 
 export type { DmMessageView, DmThreadPage };
 
+const REPLY_PREVIEW_MAX = 120;
+
+type DmRow = typeof dmMessages.$inferSelect;
+type PhotoMap = Map<number, { id: number; width: number; height: number }[]>;
+
+// The quoted messages of a page in one query. A target must sit in the same
+// conversation as the message that quotes it; unsent ones stay as a tombstone.
+const loadReplyTargets = async (rows: DmRow[]) => {
+  const ids = [
+    ...new Set(
+      rows.flatMap((row) =>
+        row.replyToMessageId === null ? [] : [row.replyToMessageId],
+      ),
+    ),
+  ];
+
+  if (ids.length === 0) {
+    return new Map<number, DmRow>();
+  }
+  const targets = await db
+    .select()
+    .from(dmMessages)
+    .where(inArray(dmMessages.id, ids));
+
+  return new Map(targets.map((target) => [target.id, target]));
+};
+
+const toReplyTo = (
+  row: DmRow,
+  targets: Map<number, DmRow>,
+  photos: PhotoMap,
+): DmReplyToView | null => {
+  const target =
+    row.replyToMessageId === null
+      ? undefined
+      : targets.get(row.replyToMessageId);
+
+  if (!target || target.conversationId !== row.conversationId) {
+    return null;
+  }
+  const deleted = target.deletedAt !== null;
+  const text = deleted ? "" : (target.body ?? "").trim();
+
+  return {
+    id: target.id,
+    senderId: target.senderId,
+    body: text === "" ? null : text.slice(0, REPLY_PREVIEW_MAX),
+    photoCount:
+      deleted || target.photoId === null
+        ? 0
+        : (photos.get(target.id)?.length ?? 1),
+    deleted,
+  };
+};
+
 const toView = (
-  row: typeof dmMessages.$inferSelect,
-  photos: Map<number, { id: number; width: number; height: number }[]>,
+  row: DmRow,
+  photos: PhotoMap,
   posts: Map<number, DmReplyPostView>,
+  targets: Map<number, DmRow>,
 ): DmMessageView => {
   const list = (photos.get(row.id) ?? []).map((photo) => ({
     url: dmPhotoUrl(photo.id),
@@ -59,6 +116,7 @@ const toView = (
     photos: list,
     post:
       row.replyPostId === null ? null : (posts.get(row.replyPostId) ?? null),
+    replyTo: toReplyTo(row, targets, photos),
     clientId: row.clientId,
     createdAt: row.createdAt.toISOString(),
     ...(row.deletedAt === null ? {} : { deleted: true }),
@@ -74,13 +132,22 @@ export const toMessageViews = async (
   const rows = storedRows.map((row) =>
     row.deletedAt === null
       ? row
-      : { ...row, body: null, photoId: null, replyPostId: null },
+      : {
+          ...row,
+          body: null,
+          photoId: null,
+          replyPostId: null,
+          replyToMessageId: null,
+        },
   );
+  const targets = await loadReplyTargets(rows);
   const [photos, posts] = await Promise.all([
-    // Sizes only, one query for every message of the page.
+    // Sizes only, one query for every message of the page and its quotes.
     loadPhotosOfDmMessages(
-      rows.flatMap((row) =>
-        row.photoId === null ? [] : [{ id: row.id, photoId: row.photoId }],
+      [...rows, ...targets.values()].flatMap((row) =>
+        row.photoId === null || row.deletedAt !== null
+          ? []
+          : [{ id: row.id, photoId: row.photoId }],
       ),
     ),
     loadReplyPostViews(
@@ -91,7 +158,7 @@ export const toMessageViews = async (
     ),
   ]);
 
-  return rows.map((row) => toView(row, photos, posts));
+  return rows.map((row) => toView(row, photos, posts, targets));
 };
 
 export const getDmMessageView = async (

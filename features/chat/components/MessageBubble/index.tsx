@@ -12,6 +12,8 @@ import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { ChatPhotoGrid } from "@/features/chat/components/ChatPhotoGrid";
 import { ChatPhotoImage } from "@/features/chat/components/ChatPhotoImage";
 import { ChatPhotoViewer } from "@/features/chat/components/ChatPhotoViewer";
+import { ReplyHoverButton } from "@/features/chat/components/ReplyHoverButton";
+import { SwipeReplyRow } from "@/features/chat/components/SwipeReplyRow";
 import { useBubbleGesture } from "@/features/chat/hooks/use-bubble-gesture";
 import type { UnsentKind } from "@/features/chat/services/unsent-reveal";
 import {
@@ -74,6 +76,9 @@ interface MessageBubbleProps {
   // True briefly after a tap on a quote scrolled here.
   isHighlighted?: boolean;
   onOpenActions: (message: ThreadMessage) => void;
+  // Quick reply: swipe right, the hover button or the R key. Left out when
+  // the chat is read-only.
+  onReply?: (message: ThreadMessage) => void;
   onToggleHeart: (message: ThreadMessage) => void;
   onOpenReactors: (message: ThreadMessage, emoji: string) => void;
   onOpenHistory: (message: ThreadMessage) => void;
@@ -109,6 +114,7 @@ export const MessageBubble = ({
   onRetry,
   isHighlighted = false,
   onOpenActions,
+  onReply,
   onToggleHeart,
   onOpenReactors,
   onOpenHistory,
@@ -162,7 +168,11 @@ export const MessageBubble = ({
   // tap landed on (the gesture opens the viewer after the double-tap window).
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const tapIndexRef = useRef(0);
+  // Unsent, sending and failed messages cannot be replied to.
+  const canReply = isInteractive && onReply !== undefined;
+  const replyToThis = canReply ? () => onReply(message) : undefined;
   const gesture = useBubbleGesture(isInteractive, {
+    onReply: replyToThis,
     onDoubleTap: () => onToggleHeart(message),
     onLongPress: () => onOpenActions(message),
     onSingleTap:
@@ -209,12 +219,16 @@ export const MessageBubble = ({
           {senderVerified && <VerifiedBadge className="ml-1" />}
         </p>
       )}
-      <div
+      <SwipeReplyRow
+        isSwipeable={canReply}
         className={clsx(
           "flex w-full items-end gap-1.5",
           mine ? "justify-end" : "justify-start",
         )}
       >
+        {mine && replyToThis && (
+          <ReplyHoverButton label={t("replyToMessage")} onClick={replyToThis} />
+        )}
         {!mine && (
           <span className={clsx(!showAvatar && "invisible")}>
             <Avatar
@@ -240,7 +254,7 @@ export const MessageBubble = ({
               : undefined
           }
           className={clsx(
-            "flex max-w-[75%] touch-manipulation flex-col rounded-[1.25rem] text-[15px] leading-snug select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none",
+            "flex max-w-[75%] flex-col rounded-[1.25rem] text-[15px] leading-snug select-none [-webkit-touch-callout:none] focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none",
             isUnsent || isHidden
               ? "border border-line px-3.5 py-2 text-muted italic"
               : isSticker
@@ -261,6 +275,8 @@ export const MessageBubble = ({
                     : mine
                       ? clsx(mineBubble, "px-3.5 py-2")
                       : "border border-line bg-surface px-3.5 py-2 text-fg",
+            // pan-y: sideways moves reach the swipe, up and down still scroll.
+            canReply ? "touch-pan-y" : "touch-manipulation",
             mine && !isUnsent && isSending && "opacity-70",
             mine && !isUnsent && isFailed && "bg-danger text-white",
             isHighlighted && "ring-2 ring-accent",
@@ -359,7 +375,10 @@ export const MessageBubble = ({
             </>
           )}
         </div>
-      </div>
+        {!mine && replyToThis && (
+          <ReplyHoverButton label={t("replyToMessage")} onClick={replyToThis} />
+        )}
+      </SwipeReplyRow>
       {isGrid && hasPhoto && (
         <ChatPhotoViewer
           photos={photos}

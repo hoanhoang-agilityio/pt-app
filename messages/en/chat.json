@@ -150,6 +150,7 @@
   },
   "messageBubble": {
     "revealFailed": "Could not load the content",
+    "replyToMessage": "Reply to message",
     "viewReply": "View the message being replied to",
     "messageName": "message",
     "edited": "Edited",

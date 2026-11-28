@@ -228,3 +228,218 @@ describe("createGestureTracker", () => {
     });
   });
 });
+
+describe("createGestureTracker swipe to reply", () => {
+  const onDoubleTap = vi.fn();
+  const onLongPress = vi.fn();
+  const onSingleTap = vi.fn();
+  const onSwipeReply = vi.fn();
+  const onSwipeMove = vi.fn();
+  const onSwipeThreshold = vi.fn();
+  const onSwipeEnd = vi.fn();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    for (const fn of [
+      onDoubleTap,
+      onLongPress,
+      onSingleTap,
+      onSwipeReply,
+      onSwipeMove,
+      onSwipeThreshold,
+      onSwipeEnd,
+    ]) {
+      fn.mockReset();
+    }
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const tracker = (withSwipe = true) =>
+    createGestureTracker({
+      onDoubleTap,
+      onLongPress,
+      onSingleTap,
+      ...(withSwipe
+        ? { onSwipeReply, onSwipeMove, onSwipeThreshold, onSwipeEnd }
+        : {}),
+    });
+
+  it("replies when released past the threshold", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 100, y: 200 });
+    gesture.move({ x: 130, y: 204 });
+    gesture.move({ x: 170, y: 205 });
+    gesture.up({ x: 170, y: 205 });
+
+    expect(onSwipeReply).toHaveBeenCalledTimes(1);
+    expect(onSwipeMove).toHaveBeenCalledWith(30);
+    expect(onSwipeMove).toHaveBeenCalledWith(64 + 6 * 0.35);
+    // The last report is the spring back to 0.
+    expect(onSwipeMove).toHaveBeenLastCalledWith(0);
+    expect(onSwipeEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("springs back without replying when released short of the threshold", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 100, y: 200 });
+    gesture.move({ x: 150, y: 200 });
+    gesture.up({ x: 150, y: 200 });
+
+    expect(onSwipeReply).not.toHaveBeenCalled();
+    expect(onSwipeEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("ticks once on crossing the threshold, not on every move", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 100, y: 200 });
+    gesture.move({ x: 140, y: 200 });
+    expect(onSwipeThreshold).not.toHaveBeenCalled();
+    gesture.move({ x: 165, y: 200 });
+    gesture.move({ x: 180, y: 200 });
+    gesture.move({ x: 190, y: 200 });
+
+    expect(onSwipeThreshold).toHaveBeenCalledTimes(1);
+  });
+
+  it("replies on release only if the finger is still past the threshold", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 100, y: 200 });
+    gesture.move({ x: 180, y: 200 });
+    gesture.move({ x: 120, y: 200 });
+    gesture.up({ x: 120, y: 200 });
+
+    expect(onSwipeReply).not.toHaveBeenCalled();
+  });
+
+  it("cancels the long press and never counts as a tap", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 100, y: 200 });
+    gesture.move({ x: 125, y: 200 });
+    vi.advanceTimersByTime(LONG_PRESS_MS + 100);
+    gesture.up({ x: 125, y: 200 });
+    vi.advanceTimersByTime(DOUBLE_TAP_MS * 2);
+
+    expect(onLongPress).not.toHaveBeenCalled();
+    expect(onSingleTap).not.toHaveBeenCalled();
+    expect(onDoubleTap).not.toHaveBeenCalled();
+    expect(gesture.isSwiping()).toBe(false);
+  });
+
+  it("drops a pending tap when a swipe starts inside its double-tap window", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 100, y: 200 });
+    gesture.up({ x: 100, y: 200 });
+    vi.advanceTimersByTime(100);
+    gesture.down({ x: 100, y: 200 });
+    gesture.move({ x: 160, y: 200 });
+    gesture.up({ x: 160, y: 200 });
+    vi.advanceTimersByTime(DOUBLE_TAP_MS * 2);
+
+    expect(onDoubleTap).not.toHaveBeenCalled();
+    expect(onSingleTap).not.toHaveBeenCalled();
+  });
+
+  it("keeps scrolling behaviour for a vertical move", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 100, y: 200 });
+    gesture.move({ x: 104, y: 240 });
+    gesture.move({ x: 170, y: 245 });
+    gesture.up({ x: 170, y: 245 });
+    vi.advanceTimersByTime(LONG_PRESS_MS + DOUBLE_TAP_MS);
+
+    expect(onSwipeReply).not.toHaveBeenCalled();
+    expect(onSwipeMove).not.toHaveBeenCalled();
+    expect(onLongPress).not.toHaveBeenCalled();
+    expect(onSingleTap).not.toHaveBeenCalled();
+  });
+
+  it("ignores a leftward drag", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 200, y: 200 });
+    gesture.move({ x: 150, y: 200 });
+    gesture.up({ x: 150, y: 200 });
+
+    expect(onSwipeReply).not.toHaveBeenCalled();
+    expect(gesture.isSwiping()).toBe(false);
+  });
+
+  it("ignores a press within 20 px of the left edge", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 19, y: 200 });
+    gesture.move({ x: 120, y: 200 });
+    gesture.up({ x: 120, y: 200 });
+    expect(onSwipeReply).not.toHaveBeenCalled();
+
+    gesture.down({ x: 20, y: 200 });
+    gesture.move({ x: 120, y: 200 });
+    gesture.up({ x: 120, y: 200 });
+    expect(onSwipeReply).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not swipe when the press says it cannot (a mouse)", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 100, y: 200 }, { canSwipe: false });
+    gesture.move({ x: 200, y: 200 });
+    gesture.up({ x: 200, y: 200 });
+
+    expect(onSwipeReply).not.toHaveBeenCalled();
+  });
+
+  it("does not swipe without an onSwipeReply handler", () => {
+    const gesture = tracker(false);
+
+    gesture.down({ x: 100, y: 200 });
+    gesture.move({ x: 200, y: 200 });
+    gesture.up({ x: 200, y: 200 });
+
+    expect(onSwipeReply).not.toHaveBeenCalled();
+    expect(gesture.isSwiping()).toBe(false);
+  });
+
+  it("does not start a swipe after the long press fired", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 100, y: 200 });
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    gesture.move({ x: 200, y: 200 });
+    gesture.up({ x: 200, y: 200 });
+
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+    expect(onSwipeReply).not.toHaveBeenCalled();
+  });
+
+  it("ends the swipe without replying when the browser cancels it", () => {
+    const gesture = tracker();
+
+    gesture.down({ x: 100, y: 200 });
+    gesture.move({ x: 190, y: 200 });
+    gesture.cancel();
+
+    expect(onSwipeReply).not.toHaveBeenCalled();
+    expect(onSwipeEnd).toHaveBeenCalledTimes(1);
+    expect(gesture.isSwiping()).toBe(false);
+  });
+
+  it("skips the long press timer when there is no long-press handler", () => {
+    const gesture = createGestureTracker({ onSwipeReply });
+
+    gesture.down({ x: 100, y: 200 });
+    expect(() => vi.advanceTimersByTime(LONG_PRESS_MS * 2)).not.toThrow();
+    gesture.up({ x: 100, y: 200 });
+    expect(onSwipeReply).not.toHaveBeenCalled();
+  });
+});

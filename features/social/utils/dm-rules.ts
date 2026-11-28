@@ -44,6 +44,9 @@ export const dmSendSchema = z.object({
   photoIds: messagePhotoIdsSchema.optional().default([]),
   // The post being replied to (a text is required then).
   postId: dmIdSchema.nullable().optional().default(null),
+  // An earlier message of the same chat being replied to; the server keeps it
+  // only when it still exists there.
+  replyToMessageId: z.number().int().positive().optional(),
 });
 
 export type DmSendInput = z.infer<typeof dmSendSchema>;

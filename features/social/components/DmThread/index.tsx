@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { ArrowUp, ImagePlus, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,9 +15,11 @@ import { ScrollJumpButton } from "@/components/common/ScrollJumpButton";
 import { ROUTES } from "@/constants/routes";
 import { ICON_BUTTON, PAGE_CONTAINER } from "@/constants/styles";
 import { PhotoTray } from "@/features/chat/components/PhotoTray";
+import { ReplyBar } from "@/features/chat/components/ReplyBar";
 import { uploadPhotoToUrl } from "@/features/chat/hooks/use-chat-adapter";
 import { useClearNotifications } from "@/features/chat/hooks/use-clear-notifications";
 import { useMessagePhotos } from "@/features/chat/hooks/use-message-photos";
+import { quoteText } from "@/features/chat/utils/chat-thread-rules";
 import { dmNotificationTags } from "@/features/chat/utils/clear-notifications";
 import { MAX_MESSAGE_PHOTOS } from "@/features/chat/utils/photo-rules";
 import { DmBubbleList } from "@/features/social/components/DmBubbleList";
@@ -26,10 +28,14 @@ import { DM_BODY_MAX_LENGTH } from "@/features/social/constants/dm";
 import { useDmThread } from "@/features/social/hooks/use-dm-thread";
 import type { DmReplyPostView, DmThreadPage } from "@/features/social/types/dm";
 import { dmPhotoUrl } from "@/features/social/utils/dm-rules";
-import { lastSeenOwnId } from "@/features/social/utils/dm-thread-rules";
+import {
+  type DmThreadItem,
+  lastSeenOwnId,
+} from "@/features/social/utils/dm-thread-rules";
 import { profilePath } from "@/features/social/utils/post-rules";
 import { useLoadOlderOnScroll } from "@/hooks/use-load-older-on-scroll";
 import { useScrollAway } from "@/hooks/use-scroll-away";
+import { getFormatTranslator } from "@/i18n/format-translator";
 import { useLocalizeMessage } from "@/i18n/use-localize-message";
 
 interface DmThreadProps {
@@ -64,6 +70,10 @@ export const DmThread = ({
   );
   const tTray = useTranslations("chat.photoTray");
   const [quote, setQuote] = useState(replyPost);
+  // The message of this chat being replied to (swipe, hover button, R key).
+  const [replyId, setReplyId] = useState<number | null>(null);
+  const locale = useLocale();
+  const tChat = useTranslations("chat.chatThread");
   const endRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const tJump = useTranslations("common.scrollJump");
@@ -100,6 +110,20 @@ export const DmThread = ({
   };
 
   const t = useTranslations("social.dmThread");
+  // Gone from the list (unsent) = nothing to reply to any more.
+  const replyItem =
+    replyId === null
+      ? null
+      : (thread.items.find(
+          (item) => item.id === replyId && !item.pending && !item.deleted,
+        ) ?? null);
+
+  const handleReply = (item: DmThreadItem) => {
+    if (quote) {
+      clearQuote();
+    }
+    setReplyId(item.id);
+  };
 
   const handleSend = () => {
     if (!canSend) {
@@ -118,7 +142,17 @@ export const DmThread = ({
         height: photo.height,
       })),
       quote,
+      replyItem
+        ? {
+            id: replyItem.id,
+            senderId: replyItem.senderId,
+            body: replyItem.body?.trim().slice(0, 120) || null,
+            photoCount: replyItem.photos?.length ?? (replyItem.photo ? 1 : 0),
+            deleted: false,
+          }
+        : null,
     );
+    setReplyId(null);
     setText("");
     photos.reset();
     if (quote) {
@@ -185,6 +219,8 @@ export const DmThread = ({
                 seenId={lastSeenOwnId(thread.items, meId, thread.otherReadUpTo)}
                 onUnsend={(id) => void thread.unsend(id)}
                 onRetry={thread.retry}
+                otherName={other.name}
+                onReply={isReadOnly ? undefined : handleReply}
               />
             )}
             <div ref={endRef} />
@@ -211,6 +247,27 @@ export const DmThread = ({
           </p>
         ) : (
           <div className={clsx(PAGE_CONTAINER, "space-y-2 py-2")}>
+            {!quote && replyItem && (
+              <ReplyBar
+                title={tChat("replying", {
+                  name:
+                    replyItem.senderId === meId
+                      ? getFormatTranslator(locale)("thread.you")
+                      : other.name,
+                })}
+                snippet={quoteText(
+                  {
+                    deleted: false,
+                    isPhoto: Boolean(replyItem.photo),
+                    photoCount: replyItem.photos?.length,
+                    body: replyItem.body ?? "",
+                  },
+                  locale,
+                )}
+                closeLabel={tChat("cancelReply")}
+                onClose={() => setReplyId(null)}
+              />
+            )}
             {quote && (
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">

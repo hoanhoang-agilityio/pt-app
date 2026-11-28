@@ -849,6 +849,7 @@ export const ChatThread = ({
                         item.message.id === highlightId
                       }
                       onOpenActions={openActions}
+                      onReply={chatEnabled ? handleReply : undefined}
                       onToggleHeart={toggleHeart}
                       onOpenReactors={(message) =>
                         openSheet("reactors", message)

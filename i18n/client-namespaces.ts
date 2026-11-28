@@ -10,6 +10,7 @@ export const CLIENT_NAMESPACES = [
   "chatGroups",
   "common",
   "dashboard",
+  "exerciseLibrary",
   "foods",
   "layout",
   "mealPlans",

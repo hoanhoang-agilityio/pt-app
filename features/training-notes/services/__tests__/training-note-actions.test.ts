@@ -7,6 +7,7 @@ import {
   adminTrainingNoteItems,
   adminTrainingNotes,
   adminTrainingNoteSets,
+  exerciseLibrary,
 } from "@/db/schema";
 import { TRAINING_NOTE_MESSAGES as MESSAGES } from "@/features/training-notes/constants/messages";
 import type { TrainingNoteInput } from "@/features/training-notes/utils/note-schema";
@@ -487,5 +488,99 @@ describe("listTrainingNotes", () => {
 
     expect((await listExerciseNames(alice)).sort()).toEqual(["Plank", "Squat"]);
     expect(await listExerciseNames(bob)).toEqual(["Curl"]);
+  });
+});
+
+describe("exercise_ref", () => {
+  const addCustom = async (adminId: number, name: string) => {
+    const [row] = await db
+      .insert(exerciseLibrary)
+      .values({
+        adminId,
+        name,
+        primaryMuscles: '["lats"]',
+        secondaryMuscles: '["biceps"]',
+      })
+      .returning({ id: exerciseLibrary.id });
+
+    return row.id;
+  };
+
+  const withRefs = (...refs: (string | null)[]) =>
+    input({
+      items: refs.map((exerciseRef, index) => ({
+        exerciseName: `Bài ${index}`,
+        exerciseRef,
+        sets: [],
+      })),
+    });
+
+  const savedRefs = async () =>
+    (await listTrainingNotes(alice, { today: "2026-11-25" }))[0].items.map(
+      (item) => item.exerciseRef,
+    );
+
+  it("saves a built-in ref and returns its muscles", async () => {
+    await saveTrainingNoteAction(withRefs("b:3_4_Sit-Up"));
+
+    const [note] = await listTrainingNotes(alice, { today: "2026-11-25" });
+
+    expect(note.items[0]).toMatchObject({
+      exerciseRef: "b:3_4_Sit-Up",
+      muscles: { primary: ["abdominals"], secondary: [] },
+    });
+  });
+
+  it("saves the ref of the caller's own custom exercise", async () => {
+    const id = await addCustom(alice, "Kéo xà");
+
+    await saveTrainingNoteAction(withRefs(`c:${id}`));
+
+    const [note] = await listTrainingNotes(alice, { today: "2026-11-25" });
+
+    expect(note.items[0]).toMatchObject({
+      exerciseName: "Bài 0",
+      exerciseRef: `c:${id}`,
+      muscles: { primary: ["lats"], secondary: ["biceps"] },
+    });
+  });
+
+  it("stores no link for free text, a foreign custom ref, a missing one and junk", async () => {
+    const bobs = await addCustom(bob, "Của Bob");
+
+    await saveTrainingNoteAction(
+      withRefs(null, `c:${bobs}`, "c:9999", "b:does-not-exist", "garbage"),
+    );
+
+    expect(await savedRefs()).toEqual([null, null, null, null, null]);
+    const rows = await db.select().from(adminTrainingNoteItems);
+
+    expect(rows.map((row) => row.exerciseRef)).toEqual([
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+    expect(rows).toHaveLength(5);
+  });
+
+  it("keeps the exercise name and reads the ref as no link after the exercise is deleted", async () => {
+    const id = await addCustom(alice, "Kéo xà");
+
+    await saveTrainingNoteAction(withRefs(`c:${id}`));
+    await db.delete(exerciseLibrary).where(eq(exerciseLibrary.id, id));
+
+    const [note] = await listTrainingNotes(alice, { today: "2026-11-25" });
+
+    expect(note.items[0]).toMatchObject({
+      exerciseName: "Bài 0",
+      exerciseRef: null,
+      muscles: null,
+    });
+    // The stored value is untouched; only the reader ignores it.
+    const [row] = await db.select().from(adminTrainingNoteItems);
+
+    expect(row.exerciseRef).toBe(`c:${id}`);
   });
 });

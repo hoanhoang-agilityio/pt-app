@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import {
+  formatExerciseRef,
+  parseExerciseRef,
+} from "@/features/exercise-library/utils/exercise-ref";
+import {
   DURATION_MAX_SEC,
   DURATION_MIN_SEC,
   EXERCISE_NAME_MAX,
@@ -66,6 +70,15 @@ const itemSchema = z.object({
     .string()
     .trim()
     .max(EXERCISE_NAME_MAX, MESSAGES.EXERCISE_NAME_TOO_LONG),
+  // A malformed ref is no link, not an error: the name still saves.
+  exerciseRef: z
+    .unknown()
+    .optional()
+    .transform((value) => {
+      const parsed = parseExerciseRef(value);
+
+      return parsed ? formatExerciseRef(parsed.kind, parsed.id) : null;
+    }),
   sets: z.array(setSchema).max(SETS_PER_ITEM_MAX, MESSAGES.TOO_MANY_SETS),
 });
 
@@ -109,7 +122,11 @@ export const trainingNoteSchema = z
           path: ["items", itemIndex, "exerciseName"],
         });
       }
-      items.push({ exerciseName: item.exerciseName, sets: filled });
+      items.push({
+        exerciseName: item.exerciseName,
+        exerciseRef: item.exerciseRef,
+        sets: filled,
+      });
     });
 
     if (items.length === 0 && input.note === null) {

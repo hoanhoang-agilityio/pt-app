@@ -1240,6 +1240,9 @@ export const adminTrainingNoteItems = sqliteTable(
     // 0-based order of the exercise within the note.
     position: integer("position").notNull(),
     exerciseName: text("exercise_name").notNull(),
+    // Link to the exercise library: "b:<builtinId>" or "c:<customId>". Null
+    // for free text and for rows from before the library.
+    exerciseRef: text("exercise_ref"),
     sets: integer("sets"),
     reps: integer("reps"),
     // Timed exercises (plank): seconds instead of reps.
@@ -1270,4 +1273,36 @@ export const adminTrainingNoteSets = sqliteTable(
     note: text("note"),
   },
   (table) => [index("admin_training_note_sets_item_idx").on(table.itemId)],
+);
+
+// Personal exercise library (custom exercises of one admin). The built-in
+// catalog is static data in features/exercise-library, not rows here. Muscles
+// are JSON arrays of the 17 muscle keys. The optional photo is resized in the
+// browser (WebP, long side <= 800 px) and stored like chat_photos. Foreign
+// keys are not enforced in production (D10): deleting a row leaves note items
+// that reference it as "c:<id>", and readers treat a missing row as no link.
+export const exerciseLibrary = sqliteTable(
+  "exercise_library",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    adminId: integer("admin_id")
+      .notNull()
+      .references(() => admins.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    primaryMuscles: text("primary_muscles").notNull().default("[]"),
+    secondaryMuscles: text("secondary_muscles").notNull().default("[]"),
+    equipment: text("equipment"),
+    // Up to 2000 characters (Zod).
+    instructions: text("instructions"),
+    photoMime: text("photo_mime", { enum: ["image/webp", "image/jpeg"] }),
+    photoWidth: integer("photo_width"),
+    photoHeight: integer("photo_height"),
+    photoData: blob("photo_data", { mode: "buffer" }),
+    photoSize: integer("photo_size"),
+    createdAt: createdAt(),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [index("exercise_library_admin_idx").on(table.adminId)],
 );

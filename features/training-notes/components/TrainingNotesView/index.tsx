@@ -42,7 +42,7 @@ interface TrainingNotesViewProps {
   // True when the admin has no notes at all (not just none matching).
   hasNoNotes: boolean;
   today: string;
-  suggestions: string[];
+  recentNames: string[];
 }
 
 export const TrainingNotesView = ({
@@ -51,7 +51,7 @@ export const TrainingNotesView = ({
   query: initialQuery,
   hasNoNotes,
   today,
-  suggestions,
+  recentNames,
 }: TrainingNotesViewProps) => {
   const t = useTranslations("trainingNotes");
   const confirm = useConfirm();
@@ -200,7 +200,7 @@ export const TrainingNotesView = ({
         note={sheet.note}
         openIndex={sheet.openIndex}
         today={today}
-        suggestions={suggestions}
+        recentNames={recentNames}
       />
     </>
   );

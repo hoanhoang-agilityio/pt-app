@@ -14,6 +14,9 @@ interface BottomSheetProps {
   role?: "dialog" | "alertdialog";
   // A card with a 16px gutter instead of a full-width sheet.
   isFloating?: boolean;
+  // Full height (94dvh) whatever the content: for a sheet opened over another
+  // sheet, or one whose content grows as results load.
+  isTall?: boolean;
   onOpenAutoFocus?: (event: Event) => void;
 }
 
@@ -25,6 +28,7 @@ export const BottomSheet = ({
   children,
   role,
   isFloating = false,
+  isTall = false,
   onOpenAutoFocus,
 }: BottomSheetProps) => (
   <Drawer.Root
@@ -46,6 +50,7 @@ export const BottomSheet = ({
           isFloating
             ? "bottom-[max(1rem,env(safe-area-inset-bottom))] w-full max-w-[min(32rem,calc(100%-2rem))] rounded-3xl border border-line"
             : "bottom-0 w-full max-w-lg rounded-t-3xl",
+          isTall && "h-[94dvh]",
         )}
       >
         <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-line" />

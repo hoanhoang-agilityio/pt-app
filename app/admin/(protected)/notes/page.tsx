@@ -4,7 +4,6 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { ScrollToTopButton } from "@/components/common/ScrollToTopButton";
 import { TIME_ZONE } from "@/constants/time";
 import { TrainingNotesView } from "@/features/training-notes/components/TrainingNotesView";
-import { COMMON_EXERCISES } from "@/features/training-notes/constants/suggestions";
 import {
   listExerciseNames,
   listTrainingNotes,
@@ -37,7 +36,6 @@ const AdminNotesPage = async ({ searchParams }: PageProps<"/admin/notes">) => {
     listTrainingNotes(admin.id, { q: query, range, today }),
     listExerciseNames(admin.id),
   ]);
-  const suggestions = [...new Set([...usedNames, ...COMMON_EXERCISES])];
 
   return (
     <>
@@ -49,7 +47,7 @@ const AdminNotesPage = async ({ searchParams }: PageProps<"/admin/notes">) => {
         query={query}
         hasNoNotes={notes.length === 0 && range === "all" && query === ""}
         today={today}
-        suggestions={suggestions}
+        recentNames={usedNames}
       />
       <ScrollToTopButton />
     </>

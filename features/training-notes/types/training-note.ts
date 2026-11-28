@@ -1,3 +1,5 @@
+import type { ExerciseMuscles } from "@/features/exercise-library/types/exercise";
+
 export type SetUnit = "reps" | "seconds";
 
 // One set of an exercise: reps or seconds (per `unit`), an optional weight
@@ -15,6 +17,10 @@ export interface TrainingNoteItem {
   id: number;
   position: number;
   exerciseName: string;
+  // "b:<id>" / "c:<id>" of a library exercise that still exists, else null.
+  exerciseRef: string | null;
+  // Muscles of that exercise, for the card's diagram; null without a link.
+  muscles: ExerciseMuscles | null;
   sets: TrainingNoteSet[];
 }
 

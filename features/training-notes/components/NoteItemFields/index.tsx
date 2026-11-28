@@ -7,14 +7,14 @@ import {
   ArrowUp,
   ChevronDown,
   GripVertical,
+  Search,
   Trash2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { IconButton } from "@/components/common/IconButton";
-import { Input } from "@/components/common/Input";
+import { MuscleDiagram } from "@/features/exercise-library/components/MuscleDiagram";
 import { SetRows } from "@/features/training-notes/components/SetRows";
-import { EXERCISE_NAME_MAX } from "@/features/training-notes/constants/limits";
 import {
   type ItemDraft,
   type ItemSummary,
@@ -22,8 +22,6 @@ import {
   summarizeItem,
 } from "@/features/training-notes/utils/note-draft";
 import { cn } from "@/utils/cn";
-
-export const EXERCISE_LIST_ID = "training-note-exercises";
 
 interface NoteItemFieldsProps {
   item: ItemDraft;
@@ -33,6 +31,8 @@ interface NoteItemFieldsProps {
   onAddSet: () => void;
   onRemoveSet: (setKey: number) => void;
   onRemove: () => void;
+  // Opens the exercise picker for this row.
+  onOpenPicker: () => void;
   // Reordering controls show only with more than one exercise.
   isSortable: boolean;
   isLast: boolean;
@@ -83,6 +83,7 @@ export const NoteItemFields = ({
   onAddSet,
   onRemoveSet,
   onRemove,
+  onOpenPicker,
   isSortable,
   isLast,
   isCollapsed,
@@ -184,18 +185,42 @@ export const NoteItemFields = ({
         </IconButton>
       </div>
       <div id={bodyId} hidden={!isOpen} className="mt-2 space-y-3">
-        <Input
+        <button
+          type="button"
           id={`${id}-name`}
-          list={EXERCISE_LIST_ID}
-          value={item.name}
-          onChange={(event) => onChange({ name: event.target.value })}
-          placeholder={t("exercisePlaceholder")}
-          aria-label={t("exercise")}
-          maxLength={EXERCISE_NAME_MAX}
-          autoComplete="off"
-          autoCorrect="off"
-          enterKeyHint="next"
-        />
+          onClick={onOpenPicker}
+          // The label replaces the button text, so it carries the name too.
+          aria-label={`${t("exercisePick", { n: index + 1 })}: ${
+            item.name.trim() || t("exerciseEmpty")
+          }`}
+          aria-describedby={`${id}-name-hint`}
+          className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-line bg-surface px-3 text-left transition focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:outline-none active:bg-line/40"
+        >
+          {item.muscles && (
+            <MuscleDiagram
+              primary={item.muscles.primary}
+              secondary={item.muscles.secondary}
+              className="w-12"
+            />
+          )}
+          <span className="grid min-w-0 flex-1">
+            <span
+              className={cn(
+                "truncate text-base",
+                item.name.trim() ? "font-semibold text-fg" : "text-muted",
+              )}
+            >
+              {item.name.trim() || t("exerciseEmpty")}
+            </span>
+            <span
+              id={`${id}-name-hint`}
+              className="truncate text-xs text-muted"
+            >
+              {item.ref ? t("exerciseLinked") : t("exerciseHint")}
+            </span>
+          </span>
+          <Search className="size-5 shrink-0 text-muted" aria-hidden />
+        </button>
         <SetRows
           idPrefix={id}
           sets={item.sets}

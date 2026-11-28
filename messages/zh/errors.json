@@ -322,5 +322,17 @@
     "NOT_FOUND": "未找到此记录",
     "SAVED": "已保存记录",
     "DELETED": "已删除记录"
+  },
+  "exerciseLibrary": {
+    "NAME_REQUIRED": "请输入动作名称",
+    "NAME_TOO_LONG": "动作名称最多 60 个字符",
+    "EQUIPMENT_TOO_LONG": "器材最多 40 个字符",
+    "INSTRUCTIONS_TOO_LONG": "说明最多 2000 个字符",
+    "MUSCLE_INVALID": "肌群无效",
+    "INVALID_INPUT": "数据无效",
+    "NOT_FOUND": "找不到该动作",
+    "PHOTO_INVALID": "照片无效，请选择 JPEG、PNG 或 WebP 照片。",
+    "PHOTO_TOO_LARGE": "照片太大，请选择其他照片。",
+    "TOO_MANY": "自定义动作数量已达上限"
   }
 }

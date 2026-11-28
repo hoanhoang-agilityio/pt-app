@@ -193,7 +193,10 @@ export const DmThread = ({
         </div>
       </header>
       <div className="relative min-h-0 flex-1">
-        <main ref={mainRef} className="h-full overflow-y-auto">
+        <main
+          ref={mainRef}
+          className="h-full overflow-y-auto overflow-x-hidden"
+        >
           <div className={clsx(PAGE_CONTAINER, "space-y-3 py-4")}>
             <LoadOlderControl
               sentinelRef={older.sentinelRef}

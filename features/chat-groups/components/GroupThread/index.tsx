@@ -553,7 +553,7 @@ export const GroupThread = ({
         <div
           ref={scroller}
           onScroll={handleScroll}
-          className="h-full overflow-y-auto overscroll-contain px-4 pb-3"
+          className="h-full overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-3"
         >
           <div className="mx-auto w-full max-w-lg">
             <LoadOlderControl

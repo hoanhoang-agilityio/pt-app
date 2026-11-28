@@ -12,6 +12,7 @@ import {
   pushSubscriptions,
   users,
 } from "@/db/schema";
+import { loadMutedOwnerKeys } from "@/features/chat/services/chat-mutes";
 import { parseAdminTarget } from "@/features/chat/utils/chat-rules";
 import { adminLabel } from "@/features/chat/utils/chat-settings";
 import { displayNameFor } from "@/features/chat/utils/display-name";
@@ -172,6 +173,12 @@ const loadTargets = async (
     db.select({ id: adminsTable.id, role: adminsTable.role }).from(adminsTable),
   ]);
   const hiddenKeys = new Set(hidden.map((row) => adminOwnerKey(row.adminId)));
+  // An admin who muted this trainee gets no push for their chat.
+  const mutedKeys = await loadMutedOwnerKeys(
+    userActorKey(traineeUserId),
+    targets.map((target) => target.ownerKey),
+    new Date(),
+  );
   const [trainee] = await db
     .select({ ptAdminId: users.ptAdminId })
     .from(users)
@@ -190,7 +197,9 @@ const loadTargets = async (
   // KAN-163: an admin who hid this trainee gets no push for them.
   return targets.filter(
     (target) =>
-      !hiddenKeys.has(target.ownerKey) && !outOfScopeKeys.has(target.ownerKey),
+      !hiddenKeys.has(target.ownerKey) &&
+      !outOfScopeKeys.has(target.ownerKey) &&
+      !mutedKeys.has(target.ownerKey),
   );
 };
 
@@ -484,7 +493,15 @@ export const sendReactionPush = async (
     if (
       recipient.role === "admin" &&
       ((await isUserHidden(recipient.adminId, traineeUserId)) ||
-        !(await isUserInAdminScope(recipient.adminId, traineeUserId)))
+        !(await isUserInAdminScope(recipient.adminId, traineeUserId)) ||
+        // Muting the trainee silences their whole conversation, reactions too.
+        (
+          await loadMutedOwnerKeys(
+            userActorKey(traineeUserId),
+            [adminOwnerKey(recipient.adminId)],
+            new Date(),
+          )
+        ).size > 0)
     ) {
       return;
     }

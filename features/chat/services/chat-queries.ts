@@ -29,6 +29,10 @@ import {
 } from "@/db/schema";
 import { avatarUrl } from "@/features/avatar/utils/avatar-rules";
 import {
+  listActiveMutes,
+  listMutedUserIds,
+} from "@/features/chat/services/chat-mutes";
+import {
   attachPhotosToMessage,
   countPhotosOfMessages,
   loadPhotosOfMessages,
@@ -54,6 +58,10 @@ import {
   toChatSticker,
 } from "@/features/chat/utils/sticker-rules";
 import { loadTraineeAliases } from "@/features/contact-aliases/services/contact-aliases";
+import {
+  adminActorKey,
+  userActorKey,
+} from "@/features/contact-aliases/utils/alias-rules";
 import { loadReplyPostViews } from "@/features/social/services/dm-reply-post";
 import type { DmReplyPostView } from "@/features/social/types/dm";
 import type { SocialActor } from "@/features/social/types/social";
@@ -831,19 +839,27 @@ export const countUnreadForUser = async (userId: number) => {
   return row?.unread ?? 0;
 };
 
-export const countUnreadForAdmin = async (adminId: number) => {
-  const rows = await unreadByConversation(
-    "user",
-    adminReaderKey(adminId),
-    undefined,
-    adminId,
-  );
+// Trainee chats the admin has not muted: a muted chat keeps its row count but
+// adds nothing to the header total or the icon badge.
+export const countUnreadForAdmin = async (
+  adminId: number,
+  now: Date = new Date(),
+) => {
+  const rows = await listUnreadByTraineeForAdmin(adminId, now);
 
-  return rows.reduce((total, row) => total + row.unread, 0);
+  return rows.reduce(
+    (total, row) => (row.muted ? total : total + row.unread),
+    0,
+  );
 };
 
 // Unread per trainee for the admin, only trainees with something unread.
-export const listUnreadByTraineeForAdmin = async (adminId: number) => {
+// `muted` marks the ones this admin silenced; `unread` stays as is so the row
+// can still show its count.
+export const listUnreadByTraineeForAdmin = async (
+  adminId: number,
+  now: Date = new Date(),
+) => {
   const unreadRows = await unreadByConversation(
     "user",
     adminReaderKey(adminId),
@@ -854,15 +870,18 @@ export const listUnreadByTraineeForAdmin = async (adminId: number) => {
   if (unreadRows.length === 0) {
     return [];
   }
-  const owners = await db
-    .select({ id: chatConversations.id, userId: chatConversations.userId })
-    .from(chatConversations)
-    .where(
-      inArray(
-        chatConversations.id,
-        unreadRows.map((row) => row.conversationId),
+  const [owners, mutedUserIds] = await Promise.all([
+    db
+      .select({ id: chatConversations.id, userId: chatConversations.userId })
+      .from(chatConversations)
+      .where(
+        inArray(
+          chatConversations.id,
+          unreadRows.map((row) => row.conversationId),
+        ),
       ),
-    );
+    listMutedUserIds(adminId, now),
+  ]);
   const userByConversation = new Map(owners.map((row) => [row.id, row.userId]));
 
   const loud = await latestLoudIncomingIds(
@@ -881,6 +900,7 @@ export const listUnreadByTraineeForAdmin = async (adminId: number) => {
             userId,
             conversationId: row.conversationId,
             unread: row.unread,
+            muted: mutedUserIds.has(userId),
             latestLoudIncomingId: loud.get(row.conversationId) ?? null,
           },
         ];
@@ -967,6 +987,10 @@ export interface InboxItem {
   lastSenderAdminName: string | null;
   lastMessageAt: Date | null;
   unread: number;
+  // This admin muted the trainee's notifications (KAN mute): the row keeps
+  // its count but shows it grey. `mutedUntil` null = until turned back on.
+  muted: boolean;
+  mutedUntil: Date | null;
   // Trainee's last heartbeat (KAN-128); null = never seen.
   lastSeenAt: Date | null;
   // Versioned /api/avatar URL of the trainee's photo (KAN-157); null = none.
@@ -1052,6 +1076,7 @@ const loadInbox = async (
   const nicknameByUserId = await listTraineeNicknames(
     rows.map((row) => row.userId),
   );
+  const mutes = await listActiveMutes(adminActorKey(adminId), new Date());
   const unreadById = new Map(
     unreadRows.map((row) => [row.conversationId, row.unread]),
   );
@@ -1091,6 +1116,8 @@ const loadInbox = async (
     lastSenderAdminName: row.lastSenderAdminName,
     lastMessageAt: row.lastMessageAt,
     unread: unreadById.get(row.conversationId) ?? 0,
+    muted: mutes.has(userActorKey(row.userId)),
+    mutedUntil: mutes.get(userActorKey(row.userId)) ?? null,
     lastSeenAt: row.lastSeenAt,
     avatarUrl: avatarUrl("user", row.userId, row.avatarUpdatedAt),
   }));

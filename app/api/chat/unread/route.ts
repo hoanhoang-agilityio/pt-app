@@ -90,7 +90,12 @@ export const GET = async (request: NextRequest) => {
       ),
       optional("unreadBeatAdmin", wantsBeat ? beatAdmin(admin) : null),
     ]);
-    const count = perTrainee.reduce((total, row) => total + row.unread, 0);
+    // Muted chats keep their row (and `unread`) but never feed the total or
+    // the icon badge, so nothing outside the inbox row reports them.
+    const count = perTrainee.reduce(
+      (total, row) => (row.muted ? total : total + row.unread),
+      0,
+    );
 
     return NextResponse.json(
       {

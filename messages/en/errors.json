@@ -48,6 +48,9 @@
     "INVALID_INPUT": "Invalid trainee",
     "NO_MATCH": "No match"
   },
+  "muteChat": {
+    "INVALID_INPUT": "Invalid mute option"
+  },
   "presence": {
     "INVALID": "Invalid value"
   },

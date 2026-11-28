@@ -39,3 +39,16 @@ export const bubbleEntriesFrom = (
         key: `user:${row.userId}`,
         latestLoudIncomingId: row.latestLoudIncomingId,
       }));
+
+// Chats the admin muted (per person): their new messages must not pop a
+// bubble. The entries still go through detection so the seen ids advance and
+// a message that arrived while muted never pops late after unmuting.
+export const bubbleMutedKeysFrom = (
+  role: BubbleRole,
+  payload: unknown,
+): string[] =>
+  role === "user"
+    ? []
+    : parseAdminUnread(payload)
+        .perTrainee.filter((row) => row.muted)
+        .map((row) => `user:${row.userId}`);

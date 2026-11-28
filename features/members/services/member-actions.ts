@@ -15,6 +15,7 @@ import {
   chatCustomStickers,
   chatMessageEdits,
   chatMessages,
+  chatMutes,
   chatNicknames,
   chatPhotos,
   chatReactions,
@@ -129,6 +130,15 @@ export const deleteMemberAction = withResultErrorHandling(
           or(
             eq(contactAliases.ownerKey, userActorKey(id)),
             eq(contactAliases.targetKey, userActorKey(id)),
+          ),
+        );
+      // Notification mutes the member owned and the ones set on them.
+      await tx
+        .delete(chatMutes)
+        .where(
+          or(
+            eq(chatMutes.ownerKey, userActorKey(id)),
+            eq(chatMutes.targetKey, userActorKey(id)),
           ),
         );
       // Children first: foreign keys are not enforced (D10).

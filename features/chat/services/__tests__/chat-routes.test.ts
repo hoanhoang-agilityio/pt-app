@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTestDb, type TestDb } from "@/db/__tests__/create-test-db";
-import { admins, users } from "@/db/schema";
+import { admins, chatMutes, users } from "@/db/schema";
 
 const state = vi.hoisted(() => ({
   db: null as unknown,
@@ -310,15 +310,51 @@ describe("GET /api/chat/unread?as=admin", () => {
     expect(body.perTrainee).toHaveLength(2);
     expect(body.perTrainee).toEqual(
       expect.arrayContaining([
-        { userId, conversationId, unread: 1, latestLoudIncomingId: firstId },
+        {
+          userId,
+          conversationId,
+          unread: 1,
+          muted: false,
+          latestLoudIncomingId: firstId,
+        },
         {
           userId: other.id,
           conversationId: otherConversation.id,
           unread: 2,
+          muted: false,
           latestLoudIncomingId: expect.any(Number),
         },
       ]),
     );
+  });
+
+  it("keeps a muted chat's count on its row but out of count and appBadge", async () => {
+    const [other] = await db
+      .insert(users)
+      .values({ name: "Binh", nameKey: "binh", chatEnabled: true })
+      .returning({ id: users.id });
+    const otherConversation = await q.getOrCreateConversation(other.id);
+
+    for (const n of [1, 2]) {
+      await q.insertMessage({
+        conversationId: otherConversation.id,
+        senderRole: "user",
+        senderAdminId: null,
+        body: `b${n}`,
+        clientId: `00000000-0000-4000-8000-00000000011${n}`,
+      });
+    }
+    await db
+      .insert(chatMutes)
+      .values({ ownerKey: "admin:1", targetKey: `user:${other.id}` });
+    const body = await (await adminUnread()).json();
+    const mutedRow = body.perTrainee.find(
+      (row: { userId: number }) => row.userId === other.id,
+    );
+
+    expect(mutedRow).toMatchObject({ unread: 2, muted: true });
+    expect(body.count).toBe(1);
+    expect(body.appBadge).toBe(1);
   });
 
   it("drops a conversation once the admin has read it", async () => {

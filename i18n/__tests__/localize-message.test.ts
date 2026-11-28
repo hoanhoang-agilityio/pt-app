@@ -6,6 +6,7 @@ import { AVATAR_MESSAGES } from "@/features/avatar/constants/messages";
 import {
   CHAT_MESSAGES,
   HIDDEN_CHAT_MESSAGES,
+  MUTE_MESSAGES,
   PRESENCE_MESSAGES,
 } from "@/features/chat/constants/messages";
 import { CUSTOM_STICKER_ERRORS } from "@/features/chat/utils/custom-sticker-rules";
@@ -39,6 +40,7 @@ const CONSTANTS: Record<string, Record<string, string>> = {
   CHAT_MESSAGES,
   GROUP_MESSAGES,
   HIDDEN_CHAT_MESSAGES,
+  MUTE_MESSAGES,
   PRESENCE_MESSAGES,
   CUSTOM_STICKER_ERRORS,
   PHOTO_ERRORS,

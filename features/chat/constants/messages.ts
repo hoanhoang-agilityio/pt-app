@@ -22,6 +22,10 @@ export const HIDDEN_CHAT_MESSAGES = {
   NO_MATCH: "Không khớp",
 } as const;
 
+export const MUTE_MESSAGES = {
+  INVALID_INPUT: "Tuỳ chọn tắt thông báo không hợp lệ",
+} as const;
+
 export const PRESENCE_MESSAGES = {
   INVALID: "Giá trị không hợp lệ",
 } as const;

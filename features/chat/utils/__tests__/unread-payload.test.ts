@@ -69,6 +69,7 @@ describe("existing fields are unchanged", () => {
       userId: 1,
       conversationId: 2,
       unread: 3,
+      muted: false,
       latestLoudIncomingId: null,
     };
 
@@ -80,6 +81,17 @@ describe("existing fields are unchanged", () => {
     expect(
       parseAdminUnread({ count: 3, perTrainee: [row], groups }).groups,
     ).toEqual(groups);
+  });
+
+  it("reads muted only when it is exactly true", () => {
+    const rows = [true, false, "true", 1, undefined].map((muted, index) => ({
+      userId: index + 1,
+      muted,
+    }));
+
+    expect(
+      parseAdminUnread({ perTrainee: rows }).perTrainee.map((r) => r.muted),
+    ).toEqual([true, false, false, false, false]);
   });
 });
 

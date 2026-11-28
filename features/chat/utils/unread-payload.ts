@@ -19,6 +19,8 @@ export interface AdminUnreadRow {
   userId: number;
   conversationId: number;
   unread: number;
+  // The admin muted this chat: no toast, bubble pop or sound for it.
+  muted: boolean;
   latestLoudIncomingId: number | null;
 }
 
@@ -82,6 +84,7 @@ export const parseAdminUnread = (data: unknown): AdminUnread => {
               userId,
               conversationId: asNumber(item.conversationId) ?? 0,
               unread: asNumber(item.unread) ?? 0,
+              muted: item.muted === true,
               latestLoudIncomingId: asNumber(item.latestLoudIncomingId),
             },
           ];

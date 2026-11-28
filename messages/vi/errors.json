@@ -48,6 +48,9 @@
     "INVALID_INPUT": "Học viên không hợp lệ",
     "NO_MATCH": "Không khớp"
   },
+  "muteChat": {
+    "INVALID_INPUT": "Tuỳ chọn tắt thông báo không hợp lệ"
+  },
   "presence": {
     "INVALID": "Giá trị không hợp lệ"
   },

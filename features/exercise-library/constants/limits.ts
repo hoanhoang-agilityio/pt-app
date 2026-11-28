@@ -1,4 +1,8 @@
-export const EXERCISE_NAME_MAX = 80;
+import { EXERCISE_NAME_MAX as NOTE_EXERCISE_NAME_MAX } from "@/features/training-notes/constants/limits";
+
+// A picked exercise's name is saved into a training note, so it shares the
+// note's limit: a longer name would make the note fail to save.
+export const EXERCISE_NAME_MAX = NOTE_EXERCISE_NAME_MAX;
 export const EXERCISE_EQUIPMENT_MAX = 40;
 export const EXERCISE_INSTRUCTIONS_MAX = 2000;
 // Custom exercises one admin can keep.

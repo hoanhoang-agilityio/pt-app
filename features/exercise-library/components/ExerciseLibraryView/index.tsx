@@ -35,6 +35,9 @@ export const ExerciseLibraryView = ({
   const t = useTranslations("exerciseLibrary");
   const [tab, setTab] = useState<Tab>(initialTab);
   const [selected, setSelected] = useState<ExerciseRow | null>(null);
+  // Bumped after a save: remounts the detail sheet so it drops the detail it
+  // loaded before the edit instead of showing it until the refetch lands.
+  const [detailVersion, setDetailVersion] = useState(0);
   const [form, setForm] = useState<{
     isOpen: boolean;
     exercise: ExerciseDetail | null;
@@ -171,6 +174,7 @@ export const ExerciseLibraryView = ({
         </>
       )}
       <ExerciseDetailSheet
+        key={detailVersion}
         exercise={selected}
         onClose={() => setSelected(null)}
         onEdit={(exercise) => {
@@ -187,6 +191,7 @@ export const ExerciseLibraryView = ({
         onSaved={() => {
           search.refresh();
           setSelected(null);
+          setDetailVersion((version) => version + 1);
         }}
       />
     </div>

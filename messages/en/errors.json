@@ -325,7 +325,7 @@
   },
   "exerciseLibrary": {
     "NAME_REQUIRED": "Enter the exercise name",
-    "NAME_TOO_LONG": "The exercise name can have at most 80 characters",
+    "NAME_TOO_LONG": "The exercise name can have at most 60 characters",
     "EQUIPMENT_TOO_LONG": "Equipment can have at most 40 characters",
     "INSTRUCTIONS_TOO_LONG": "Instructions can have at most 2000 characters",
     "MUSCLE_INVALID": "Invalid muscle group",

@@ -325,7 +325,7 @@
   },
   "exerciseLibrary": {
     "NAME_REQUIRED": "请输入动作名称",
-    "NAME_TOO_LONG": "动作名称最多 80 个字符",
+    "NAME_TOO_LONG": "动作名称最多 60 个字符",
     "EQUIPMENT_TOO_LONG": "器材最多 40 个字符",
     "INSTRUCTIONS_TOO_LONG": "说明最多 2000 个字符",
     "MUSCLE_INVALID": "肌群无效",

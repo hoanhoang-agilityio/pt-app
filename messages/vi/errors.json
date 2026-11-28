@@ -325,7 +325,7 @@
   },
   "exerciseLibrary": {
     "NAME_REQUIRED": "Nhập tên bài tập",
-    "NAME_TOO_LONG": "Tên bài tập tối đa 80 ký tự",
+    "NAME_TOO_LONG": "Tên bài tập tối đa 60 ký tự",
     "EQUIPMENT_TOO_LONG": "Dụng cụ tối đa 40 ký tự",
     "INSTRUCTIONS_TOO_LONG": "Hướng dẫn tối đa 2000 ký tự",
     "MUSCLE_INVALID": "Nhóm cơ không hợp lệ",

@@ -99,6 +99,5 @@
   "collapse": "Thu gọn ghi chú: {title}",
   "expand": "Mở rộng ghi chú: {title}",
   "summary": "{exercises} bài · {sets} set",
-  "editExercise": "Sửa bài {name}, {count} set",
-  "muscleDiagram": "Nhóm cơ của {name}"
+  "editExercise": "Sửa bài {name}, {count} set"
 }

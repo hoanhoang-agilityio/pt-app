@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/common/Skeleton";
 import { BUTTON_SECONDARY, SECTION_TITLE } from "@/constants/styles";
 import { ExerciseRowItem } from "@/features/exercise-library/components/ExerciseRowItem";
 import { MuscleFilterChips } from "@/features/exercise-library/components/MuscleFilterChips";
+import { EXERCISE_NAME_MAX } from "@/features/exercise-library/constants/limits";
 import { useExerciseSearch } from "@/features/exercise-library/hooks/use-exercise-search";
 import type {
   ExerciseMuscles,
@@ -85,6 +86,8 @@ const PickerBody = ({
           onChange={(event) => search.setQuery(event.target.value)}
           placeholder={t("picker.searchPlaceholder")}
           aria-label={t("picker.searchLabel")}
+          // The query can be saved as the name: keep it within the limit.
+          maxLength={EXERCISE_NAME_MAX}
           enterKeyHint="done"
           autoCapitalize="none"
           autoCorrect="off"
@@ -195,6 +198,9 @@ export const ExercisePickerSheet = ({
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       title={t("title")}
+      // Covers the note form it opens over, and keeps its size while results
+      // load instead of growing and shrinking with them.
+      isTall
       // The search field takes focus itself; the sheet's default would focus
       // the first control it finds.
       onOpenAutoFocus={(event) => event.preventDefault()}

@@ -189,7 +189,10 @@ export const NoteItemFields = ({
           type="button"
           id={`${id}-name`}
           onClick={onOpenPicker}
-          aria-label={t("exercisePick", { n: index + 1 })}
+          // The label replaces the button text, so it carries the name too.
+          aria-label={`${t("exercisePick", { n: index + 1 })}: ${
+            item.name.trim() || t("exerciseEmpty")
+          }`}
           aria-describedby={`${id}-name-hint`}
           className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-line bg-surface px-3 text-left transition focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:outline-none active:bg-line/40"
         >

@@ -117,6 +117,8 @@ export const DmThread = ({
       : (thread.items.find(
           (item) => item.id === replyId && !item.pending && !item.deleted,
         ) ?? null);
+  const replyPhotoCount =
+    replyItem?.photos?.length || (replyItem?.photo ? 1 : 0);
 
   const handleReply = (item: DmThreadItem) => {
     if (quote) {
@@ -147,7 +149,7 @@ export const DmThread = ({
             id: replyItem.id,
             senderId: replyItem.senderId,
             body: replyItem.body?.trim().slice(0, 120) || null,
-            photoCount: replyItem.photos?.length ?? (replyItem.photo ? 1 : 0),
+            photoCount: replyPhotoCount,
             deleted: false,
           }
         : null,
@@ -262,7 +264,7 @@ export const DmThread = ({
                   {
                     deleted: false,
                     isPhoto: Boolean(replyItem.photo),
-                    photoCount: replyItem.photos?.length,
+                    photoCount: replyPhotoCount,
                     body: replyItem.body ?? "",
                   },
                   locale,

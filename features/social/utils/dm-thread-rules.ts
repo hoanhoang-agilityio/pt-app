@@ -31,11 +31,26 @@ export const mergeThread = (
     ...fetched.filter((m) => !known.has(m.id)),
   ];
 
+  // A quote of an unsent message turns into a tombstone.
+  const tombstone = <T extends DmMessageView>(item: T): T =>
+    item.replyTo && removed.has(item.replyTo.id)
+      ? {
+          ...item,
+          replyTo: {
+            ...item.replyTo,
+            deleted: true,
+            body: null,
+            photoCount: 0,
+          },
+        }
+      : item;
+
   return [
     ...merged
       .filter((item) => !removed.has(item.id))
+      .map(tombstone)
       .sort((a, b) => a.id - b.id),
-    ...pending,
+    ...pending.map(tombstone),
   ];
 };
 

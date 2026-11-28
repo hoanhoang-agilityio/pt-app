@@ -80,6 +80,11 @@ export const useBubbleGesture = (
   const rootRef = useRef<HTMLElement | null>(null);
   const capturedRef = useRef<number | null>(null);
   const swipedAtRef = useRef(0);
+  // The one pointer being tracked; a second finger is ignored until it lifts.
+  const activePointerRef = useRef<number | null>(null);
+  const isOtherPointer = (event: PointerEvent) =>
+    activePointerRef.current !== null &&
+    activePointerRef.current !== event.pointerId;
 
   // Latest callbacks, without rebuilding the tracker (and losing a pending tap).
   useEffect(() => {
@@ -111,9 +116,16 @@ export const useBubbleGesture = (
   return {
     onPointerDown: (event: PointerEvent) => {
       // Only the primary button / finger; a right click is the context menu.
-      if (event.button !== 0 || isInteractiveTarget(event.target)) {
+      if (
+        event.button !== 0 ||
+        isOtherPointer(event) ||
+        isInteractiveTarget(event.target)
+      ) {
         return;
       }
+      activePointerRef.current = event.pointerId;
+      // A new press: a click guard left by an earlier swipe must not eat it.
+      swipedAtRef.current = 0;
       rootRef.current = event.currentTarget.closest<HTMLElement>(
         `[${SWIPE_ROOT_ATTRIBUTE}]`,
       );
@@ -124,6 +136,9 @@ export const useBubbleGesture = (
       );
     },
     onPointerMove: (event: PointerEvent) => {
+      if (isOtherPointer(event)) {
+        return;
+      }
       tracker.move({ x: event.clientX, y: event.clientY });
       if (tracker.isSwiping()) {
         swipedAtRef.current = Date.now();
@@ -139,6 +154,10 @@ export const useBubbleGesture = (
       }
     },
     onPointerUp: (event: PointerEvent) => {
+      if (isOtherPointer(event)) {
+        return;
+      }
+      activePointerRef.current = null;
       if (tracker.isSwiping()) {
         swipedAtRef.current = Date.now();
       }
@@ -146,11 +165,21 @@ export const useBubbleGesture = (
       tracker.up({ x: event.clientX, y: event.clientY });
     },
     // The browser took the touch over to scroll.
-    onPointerCancel: () => {
+    onPointerCancel: (event: PointerEvent) => {
+      if (isOtherPointer(event)) {
+        return;
+      }
+      activePointerRef.current = null;
       capturedRef.current = null;
       tracker.cancel();
     },
-    onPointerLeave: () => tracker.cancel(),
+    onPointerLeave: (event: PointerEvent) => {
+      if (isOtherPointer(event)) {
+        return;
+      }
+      activePointerRef.current = null;
+      tracker.cancel();
+    },
     // A swipe that ends over a photo tile or link must not also click it.
     onClickCapture: (event: MouseEvent) => {
       if (Date.now() - swipedAtRef.current < SWIPE_CLICK_GUARD_MS) {

@@ -168,8 +168,8 @@ export const MessageBubble = ({
   // tap landed on (the gesture opens the viewer after the double-tap window).
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const tapIndexRef = useRef(0);
-  // Unsent, sending and failed messages cannot be replied to.
-  const canReply = isInteractive && onReply !== undefined;
+  // Unsent, sending, failed and manager-hidden messages cannot be replied to.
+  const canReply = isInteractive && !isHidden && onReply !== undefined;
   const replyToThis = canReply ? () => onReply(message) : undefined;
   const gesture = useBubbleGesture(isInteractive, {
     onReply: replyToThis,
@@ -276,7 +276,7 @@ export const MessageBubble = ({
                       ? clsx(mineBubble, "px-3.5 py-2")
                       : "border border-line bg-surface px-3.5 py-2 text-fg",
             // pan-y: sideways moves reach the swipe, up and down still scroll.
-            canReply ? "touch-pan-y" : "touch-manipulation",
+            canReply ? "touch-pan-y touch-pinch-zoom" : "touch-manipulation",
             mine && !isUnsent && isSending && "opacity-70",
             mine && !isUnsent && isFailed && "bg-danger text-white",
             isHighlighted && "ring-2 ring-accent",

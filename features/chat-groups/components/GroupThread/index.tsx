@@ -485,6 +485,9 @@ export const GroupThread = ({
 
   // From the actions sheet, a swipe, the hover button or the R key.
   const handleReply = (message: ThreadMessage) => {
+    if (message.hidden || message.deleted) {
+      return;
+    }
     setIsSheetOpen(false);
     setEditing(null);
     setReplyId(message.id);

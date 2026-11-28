@@ -32,6 +32,41 @@ describe("mergeThread", () => {
     ).toEqual([1, 3]);
   });
 
+  it("turns quotes of an unsent message into tombstones", () => {
+    const quoting: DmMessageView = {
+      ...msg(3),
+      replyTo: {
+        id: 2,
+        senderId: 1,
+        body: "m2",
+        photoCount: 2,
+        deleted: false,
+      },
+    };
+    const other: DmMessageView = {
+      ...msg(4),
+      replyTo: {
+        id: 1,
+        senderId: 1,
+        body: "m1",
+        photoCount: 0,
+        deleted: false,
+      },
+    };
+    const merged = mergeThread([msg(1), msg(2), quoting], [other], [2]);
+
+    expect(merged.map((m) => m.id)).toEqual([1, 3, 4]);
+    expect(merged[1].replyTo).toEqual({
+      id: 2,
+      senderId: 1,
+      body: null,
+      photoCount: 0,
+      deleted: true,
+    });
+    expect(merged[2].replyTo?.deleted).toBe(false);
+    expect(merged[2].replyTo?.body).toBe("m1");
+  });
+
   it("replaces an optimistic message by its stored copy and keeps others last", () => {
     const pending: DmThreadItem = { ...msg(-5, 1, "mine"), pending: "sending" };
     const other: DmThreadItem = { ...msg(-6, 1, "later"), pending: "sending" };

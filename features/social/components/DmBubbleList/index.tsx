@@ -127,7 +127,7 @@ const DmBubbleRow = ({
         className={clsx(
           "max-w-[80%] space-y-1.5 rounded-2xl px-3 py-2 text-base break-words focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none",
           // pan-y: sideways moves reach the swipe, up and down still scroll.
-          canReply && "touch-pan-y",
+          canReply && "touch-pan-y touch-pinch-zoom",
           isMine
             ? "bg-accent text-accent-fg"
             : "border border-line bg-surface text-fg",

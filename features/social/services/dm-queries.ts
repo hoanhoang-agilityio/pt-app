@@ -140,16 +140,9 @@ export const toMessageViews = async (
           replyToMessageId: null,
         },
   );
-  const targets = await loadReplyTargets(rows);
-  const [photos, posts] = await Promise.all([
-    // Sizes only, one query for every message of the page and its quotes.
-    loadPhotosOfDmMessages(
-      [...rows, ...targets.values()].flatMap((row) =>
-        row.photoId === null || row.deletedAt !== null
-          ? []
-          : [{ id: row.id, photoId: row.photoId }],
-      ),
-    ),
+  // The reply targets and the quoted posts do not depend on each other.
+  const [targets, posts] = await Promise.all([
+    loadReplyTargets(rows),
     loadReplyPostViews(
       viewer,
       rows.flatMap((row) =>
@@ -157,6 +150,14 @@ export const toMessageViews = async (
       ),
     ),
   ]);
+  // Sizes only, one query for every message of the page and its quotes.
+  const photos = await loadPhotosOfDmMessages(
+    [...rows, ...targets.values()].flatMap((row) =>
+      row.photoId === null || row.deletedAt !== null
+        ? []
+        : [{ id: row.id, photoId: row.photoId }],
+    ),
+  );
 
   return rows.map((row) => toView(row, photos, posts, targets));
 };

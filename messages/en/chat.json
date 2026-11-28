@@ -334,5 +334,24 @@
     "slotsFull": "At most {max} photos per message.",
     "trimmed": "Only {count} more photos fit (max {max}). The rest were skipped.",
     "pending": "Wait for the photos to finish uploading or remove the failed ones."
+  },
+  "mute": {
+    "title": "Mute notifications",
+    "subtitle": "New messages still show a count, with no notifications.",
+    "hour1": "1 hour",
+    "hour4": "4 hours",
+    "hour8": "8 hours",
+    "untilMorning": "Until 8:00 tomorrow",
+    "forever": "Until I turn it back on",
+    "unmute": "Turn notifications back on",
+    "label": "Notifications muted",
+    "mutedUntil": "Notifications muted until {time}",
+    "mutedForever": "Notifications muted until you turn them on",
+    "unmuted": "Notifications turned back on",
+    "failed": "Could not change notification setting",
+    "rowMenu": "Notification options for {name}",
+    "unreadMuted": "{count} unread, notifications muted",
+    "currentUntil": "Muted until {time}",
+    "currentForever": "Muted until you turn it back on"
   }
 }

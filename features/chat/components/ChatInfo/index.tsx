@@ -1,7 +1,13 @@
 "use client";
 
 import clsx from "clsx";
-import { ChevronRight, Search, SlidersHorizontal } from "lucide-react";
+import {
+  Bell,
+  BellOff,
+  ChevronRight,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -13,6 +19,7 @@ import { Spinner } from "@/components/common/Spinner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { PAGE_CONTAINER, SECTION_TITLE } from "@/constants/styles";
 import { HideConversationButton } from "@/features/chat/components/HideConversationButton";
+import { MuteSheet } from "@/features/chat/components/MuteSheet";
 import { PresenceStatus } from "@/features/chat/components/PresenceStatus";
 import { usePeerPresence } from "@/features/chat/hooks/use-peer-presence";
 import type { ChatPaths } from "@/features/chat/utils/chat-links";
@@ -26,6 +33,7 @@ import {
   type GalleryPhoto,
   photoLabel,
 } from "@/features/chat/utils/gallery-rules";
+import { type MuteState, UNMUTED } from "@/features/chat/utils/mute-rules";
 import { BubblePopSwitch } from "@/features/chat-bubbles/components/BubblePopSwitch";
 
 // Mounted only after the "Tuỳ chỉnh" tap, so its code loads on demand.
@@ -60,6 +68,8 @@ export interface ChatInfoProps {
   paths: ChatPaths;
   // The newest photos, for the preview; empty when there are none.
   preview: GalleryPhoto[];
+  // Admin only: this admin's mute of the trainee ("Tắt thông báo" button).
+  initialMute?: MuteState;
 }
 
 const ROUND_BUTTON =
@@ -80,13 +90,17 @@ export const ChatInfo = ({
   peerAvatarUrl,
   paths,
   preview,
+  initialMute = UNMUTED,
 }: ChatInfoProps) => {
   const locale = useLocale();
   const t = useTranslations("chat.chatInfo");
+  const tMute = useTranslations("chat.mute");
   const isAdmin = viewer.role === "admin";
   const [profile, setProfile] = useState(initialProfile);
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [isPhotoOpen, setIsPhotoOpen] = useState(false);
+  const [mute, setMute] = useState(initialMute);
+  const [isMuteOpen, setIsMuteOpen] = useState(false);
   const presence = usePeerPresence({
     role: viewer.role,
     userId,
@@ -158,6 +172,28 @@ export const ChatInfo = ({
                 {t("customize")}
               </span>
             </li>
+            {isAdmin && (
+              <li className="flex w-20 flex-col items-center gap-1.5">
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  onClick={() => setIsMuteOpen(true)}
+                  className={ROUND_BUTTON}
+                >
+                  {mute.muted ? (
+                    <BellOff className="size-5" aria-hidden />
+                  ) : (
+                    <Bell className="size-5" aria-hidden />
+                  )}
+                  <span className="sr-only">
+                    {mute.muted ? tMute("label") : tMute("title")}
+                  </span>
+                </button>
+                <span aria-hidden className="text-xs font-medium text-fg">
+                  {mute.muted ? tMute("label") : tMute("title")}
+                </span>
+              </li>
+            )}
           </ul>
         </section>
 
@@ -243,6 +279,16 @@ export const ChatInfo = ({
           </section>
         )}
       </main>
+      {isAdmin && (
+        <MuteSheet
+          isOpen={isMuteOpen}
+          onOpenChange={setIsMuteOpen}
+          userId={userId}
+          name={shownName}
+          state={mute}
+          onChanged={setMute}
+        />
+      )}
       {peerAvatarUrl && (
         <AvatarLightbox
           isOpen={isPhotoOpen}

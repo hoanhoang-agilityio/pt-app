@@ -13,6 +13,7 @@ import {
 } from "@/features/avatar/services/avatar";
 import { AdminChatThread } from "@/features/chat/components/AdminChatThread";
 import { ChatLockSwitch } from "@/features/chat/components/ChatLockSwitch";
+import { getMuteState } from "@/features/chat/services/chat-mutes";
 import { isChatEnabled } from "@/features/chat/services/chat-permission";
 import { loadChatProfile } from "@/features/chat/services/chat-profile";
 import {
@@ -118,6 +119,7 @@ const AdminMessagesPage = async ({
     profile,
     adminAvatars,
     traineeAvatarUrl,
+    muteState,
   ] = await Promise.all([
     around ??
       listMessages(conversation.id, {}, viewer).then((page) => ({
@@ -128,6 +130,7 @@ const AdminMessagesPage = async ({
     loadChatProfile(conversation.id),
     listAdminAvatarUrls(),
     getAvatarUrl("user", user.id),
+    getMuteState(admin.id, user.id),
   ]);
   const avatars: Record<string, string> = Object.fromEntries(
     [...adminAvatars].map(([id, url]) => [`admin:${id}`, url]),
@@ -146,6 +149,7 @@ const AdminMessagesPage = async ({
       // on mount; remount per jump target so the new window is used.
       key={`${chatEnabled ? "enabled" : "locked"}:${around ? jumpId : ""}`}
       below={below}
+      muteState={muteState}
       isEmbed={isEmbed}
       userName={user.name}
       userId={user.id}

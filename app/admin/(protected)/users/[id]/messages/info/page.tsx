@@ -8,6 +8,7 @@ import {
 } from "@/features/avatar/services/avatar";
 import { ChatInfo } from "@/features/chat/components/ChatInfo";
 import { listGalleryPhotos } from "@/features/chat/services/chat-gallery";
+import { getMuteState } from "@/features/chat/services/chat-mutes";
 import { isChatEnabled } from "@/features/chat/services/chat-permission";
 import { loadChatProfile } from "@/features/chat/services/chat-profile";
 import {
@@ -44,7 +45,7 @@ const AdminMessagesInfoPage = async ({
   const conversation = chatEnabled
     ? await getOrCreateConversation(user.id)
     : await findConversationByUserId(user.id);
-  const [profile, traineeAvatar, gallery] = await Promise.all([
+  const [profile, traineeAvatar, gallery, , muteState] = await Promise.all([
     conversation ? loadChatProfile(conversation.id) : undefined,
     getAvatarUrl("user", user.id),
     conversation
@@ -54,6 +55,7 @@ const AdminMessagesInfoPage = async ({
         })
       : { items: [], nextCursor: null },
     listAdminAvatarUrls(),
+    getMuteState(admin.id, user.id),
   ]);
 
   return (
@@ -73,6 +75,7 @@ const AdminMessagesInfoPage = async ({
       peerAvatarUrl={traineeAvatar}
       paths={chatPaths("admin", user.id)}
       preview={gallery.items}
+      initialMute={muteState}
     />
   );
 };

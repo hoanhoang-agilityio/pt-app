@@ -334,5 +334,24 @@
     "slotsFull": "Mỗi tin nhắn tối đa {max} ảnh.",
     "trimmed": "Chỉ thêm được {count} ảnh nữa (tối đa {max}). Các ảnh còn lại đã bị bỏ qua.",
     "pending": "Hãy chờ các ảnh tải lên xong hoặc bỏ các ảnh bị lỗi."
+  },
+  "mute": {
+    "title": "Tắt thông báo",
+    "subtitle": "Tin mới vẫn hiện số chưa đọc, không có thông báo.",
+    "hour1": "1 giờ",
+    "hour4": "4 giờ",
+    "hour8": "8 giờ",
+    "untilMorning": "Đến 8:00 sáng mai",
+    "forever": "Cho đến khi bật lại",
+    "unmute": "Bật lại thông báo",
+    "label": "Đã tắt thông báo",
+    "mutedUntil": "Đã tắt thông báo đến {time}",
+    "mutedForever": "Đã tắt thông báo cho đến khi bật lại",
+    "unmuted": "Đã bật lại thông báo",
+    "failed": "Không đổi được cài đặt thông báo",
+    "rowMenu": "Tuỳ chọn thông báo của {name}",
+    "unreadMuted": "{count} tin chưa đọc, thông báo đã tắt",
+    "currentUntil": "Đang tắt đến {time}",
+    "currentForever": "Đang tắt cho đến khi bật lại"
   }
 }

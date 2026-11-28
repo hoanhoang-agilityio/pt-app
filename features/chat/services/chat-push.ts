@@ -39,7 +39,9 @@ import { isUserHidden } from "@/services/hidden-users";
 import { logServerError } from "@/services/logger";
 import { type Locale, parseLocale } from "@/utils/locale";
 
-const PUSH_TTL_SECONDS = 3600;
+// Push services keep an undelivered push this long for an offline device;
+// `topic` collapses it to the latest one per conversation.
+const PUSH_TTL_SECONDS = 24 * 60 * 60;
 
 type StoredSubscription = typeof pushSubscriptions.$inferSelect;
 type VapidConfig = NonNullable<ReturnType<typeof getVapidConfig>>;

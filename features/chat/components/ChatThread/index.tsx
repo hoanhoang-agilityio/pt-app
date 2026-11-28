@@ -786,7 +786,7 @@ export const ChatThread = ({
         <div
           ref={scroller}
           onScroll={handleScroll}
-          className="h-full overflow-y-auto overscroll-contain px-4 pb-3"
+          className="h-full overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-3"
         >
           <div className="mx-auto w-full max-w-lg">
             {chatEnabled && !isAdmin && (
@@ -849,6 +849,7 @@ export const ChatThread = ({
                         item.message.id === highlightId
                       }
                       onOpenActions={openActions}
+                      onReply={chatEnabled ? handleReply : undefined}
                       onToggleHeart={toggleHeart}
                       onOpenReactors={(message) =>
                         openSheet("reactors", message)

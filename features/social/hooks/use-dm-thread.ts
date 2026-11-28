@@ -17,6 +17,7 @@ import {
 import type {
   DmMessageView,
   DmReplyPostView,
+  DmReplyToView,
   DmThreadPage,
 } from "@/features/social/types/dm";
 import {
@@ -266,6 +267,7 @@ export const useDmThread = ({ conversationId, meId, initial }: Options) => {
         body: item.body ?? "",
         photoIds,
         postId,
+        replyToMessageId: item.replyTo?.id,
       });
 
       if (result.status === "error") {
@@ -291,6 +293,7 @@ export const useDmThread = ({ conversationId, meId, initial }: Options) => {
       body: string,
       photos: { id: number; url: string; width: number; height: number }[],
       post: DmReplyPostView | null = null,
+      replyTo: DmReplyToView | null = null,
     ) => {
       const item: DmThreadItem = {
         id: -Date.now(),
@@ -299,6 +302,8 @@ export const useDmThread = ({ conversationId, meId, initial }: Options) => {
         photo: photos[0] ?? null,
         photos,
         post,
+        // A post reply wins: a message quotes one thing (the server agrees).
+        replyTo: post ? null : replyTo,
         clientId: crypto.randomUUID(),
         createdAt: new Date().toISOString(),
         pending: "sending",

@@ -1,7 +1,15 @@
 // Touch gestures on a chat bubble, as pure timing rules (no React, no DOM):
 // double-tap toggles my heart, a long press opens the actions sheet, a single
 // tap (optional) fires once the double-tap window has passed without a second
-// tap, and a finger that moves is a scroll, never a tap.
+// tap, a finger that moves is a scroll, never a tap, and a finger that moves
+// right (when `onSwipeReply` is set) is a swipe to reply, never a tap.
+
+import {
+  decideSwipeAxis,
+  isPastThreshold,
+  SWIPE_EDGE_PX,
+  swipeOffset,
+} from "@/features/chat/utils/swipe-reply";
 
 export const DOUBLE_TAP_MS = 300;
 export const LONG_PRESS_MS = 450;
@@ -28,11 +36,27 @@ export const isDoubleTap = (previous: TimedPoint | null, next: TimedPoint) =>
   isWithinTolerance(previous, next);
 
 export interface GestureHandlers {
-  onDoubleTap: () => void;
-  onLongPress: () => void;
+  // Without them the gesture is not offered (a bubble with no hearts or
+  // actions sheet, like a friend chat).
+  onDoubleTap?: () => void;
+  onLongPress?: () => void;
   // Only after DOUBLE_TAP_MS with no second tap, so it never fires on the
   // first tap of a double-tap.
   onSingleTap?: () => void;
+  // Set = left-to-right swipes are recognised. Fires on release past the
+  // threshold.
+  onSwipeReply?: () => void;
+  // The row's drawn offset in px while a swipe is locked (0 when it ends).
+  onSwipeMove?: (offset: number) => void;
+  // The finger crossed the reply threshold (the haptic tick).
+  onSwipeThreshold?: () => void;
+  // The swipe is over, replied or not (the row springs back).
+  onSwipeEnd?: () => void;
+}
+
+export interface DownOptions {
+  // False for a mouse: dragging with a mouse never replies.
+  canSwipe?: boolean;
 }
 
 export interface GestureClock {
@@ -58,6 +82,10 @@ export const createGestureTracker = (
   let didLongPress = false;
   let lastTap: TimedPoint | null = null;
   let singleTapTimer: unknown = null;
+  // This press may become a swipe (not at the screen edge, not a mouse).
+  let maySwipe = false;
+  let isSwiping = false;
+  let isPast = false;
 
   const clearSingleTap = () => {
     if (singleTapTimer !== null) {
@@ -73,33 +101,91 @@ export const createGestureTracker = (
     }
   };
 
+  const endSwipe = () => {
+    isSwiping = false;
+    isPast = false;
+    handlers.onSwipeMove?.(0);
+    handlers.onSwipeEnd?.();
+  };
+
+  // A finger that drifts is scrolling (drop the long press and the tap),
+  // unless it went right: then it is a swipe to reply.
+  const move = (point: Point) => {
+    if (start === null) {
+      return;
+    }
+    if (isSwiping) {
+      const offset = swipeOffset(point.x - start.x);
+      const past = isPastThreshold(offset);
+
+      handlers.onSwipeMove?.(offset);
+      if (past && !isPast) {
+        handlers.onSwipeThreshold?.();
+      }
+      isPast = past;
+      return;
+    }
+    if (isWithinTolerance(start, point)) {
+      return;
+    }
+    clearPress();
+    if (
+      maySwipe &&
+      !didLongPress &&
+      handlers.onSwipeReply &&
+      decideSwipeAxis(point.x - start.x, point.y - start.y) === "swipe"
+    ) {
+      // A swipe is neither a tap nor half of a double-tap.
+      lastTap = null;
+      clearSingleTap();
+      isSwiping = true;
+      isPast = false;
+      move(point);
+      return;
+    }
+    start = null;
+    lastTap = null;
+  };
+
   return {
+    // True from the moment the finger locked onto a swipe until it lifts.
+    isSwiping: () => isSwiping,
     // Swap the callbacks without losing a pending tap.
     setHandlers(next: GestureHandlers) {
       handlers = next;
     },
-    down(point: Point) {
+    down(point: Point, { canSwipe = true }: DownOptions = {}) {
       clearPress();
+      if (isSwiping) {
+        endSwipe();
+      }
       start = point;
       didLongPress = false;
+      maySwipe = canSwipe && point.x >= SWIPE_EDGE_PX;
+      if (!handlers.onLongPress) {
+        return;
+      }
       timer = clock.setTimer(() => {
         timer = null;
         didLongPress = true;
         lastTap = null;
         clearSingleTap();
-        handlers.onLongPress();
+        handlers.onLongPress?.();
       }, LONG_PRESS_MS);
     },
-    // A finger that drifts is scrolling: drop the long press and the tap.
-    move(point: Point) {
-      if (start !== null && !isWithinTolerance(start, point)) {
-        clearPress();
-        start = null;
-        lastTap = null;
-      }
-    },
+    move,
     up(point: Point) {
       clearPress();
+      if (isSwiping && start !== null) {
+        const committed = isPastThreshold(swipeOffset(point.x - start.x));
+
+        start = null;
+        endSwipe();
+        if (committed) {
+          handlers.onSwipeReply?.();
+        }
+        return;
+      }
       const wasTap = start !== null && !didLongPress;
 
       start = null;
@@ -111,7 +197,7 @@ export const createGestureTracker = (
       clearSingleTap();
       if (isDoubleTap(lastTap, tap)) {
         lastTap = null;
-        handlers.onDoubleTap();
+        handlers.onDoubleTap?.();
       } else {
         lastTap = tap;
         singleTapTimer = clock.setTimer(() => {
@@ -126,12 +212,16 @@ export const createGestureTracker = (
     cancel() {
       clearPress();
       start = null;
+      if (isSwiping) {
+        endSwipe();
+      }
     },
     // Unmount: nothing may fire any more.
     dispose() {
       clearPress();
       clearSingleTap();
       start = null;
+      isSwiping = false;
     },
   };
 };

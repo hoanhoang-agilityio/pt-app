@@ -88,7 +88,35 @@ export interface SendDmInput {
   photoIds: number[];
   // The post this message replies to; needs a text.
   postId?: number | null;
+  // The earlier message of the same conversation this one replies to.
+  replyToMessageId?: number | null;
 }
+
+// The message a new message may quote: it must exist in the same conversation
+// and not be unsent. A post reply wins (a message quotes one thing). Anything
+// else is stored as no reply instead of failing the send.
+export const resolveReplyTarget = async (
+  conversationId: number,
+  replyToMessageId: number | null | undefined,
+  postId: number | null,
+): Promise<number | null> => {
+  if (replyToMessageId == null || postId !== null) {
+    return null;
+  }
+  const [target] = await db
+    .select({ id: dmMessages.id })
+    .from(dmMessages)
+    .where(
+      and(
+        eq(dmMessages.id, replyToMessageId),
+        eq(dmMessages.conversationId, conversationId),
+        sql`${dmMessages.deletedAt} is null`,
+      ),
+    )
+    .limit(1);
+
+  return target?.id ?? null;
+};
 
 export type SendDmResult = Result<{
   message: DmMessageView;
@@ -149,6 +177,12 @@ export const sendDmMessage = async (
       };
     }
   }
+  const replyToMessageId = await resolveReplyTarget(
+    input.conversationId,
+    input.replyToMessageId,
+    postId,
+  );
+
   if (input.photoIds.length > MAX_MESSAGE_PHOTOS) {
     return { ok: false, error: "photo_not_found" };
   }
@@ -175,6 +209,7 @@ export const sendDmMessage = async (
           body: content.body,
           photoId: input.photoIds[0] ?? null,
           replyPostId: postId,
+          replyToMessageId,
           clientId: input.clientId,
           createdAt: now,
         })

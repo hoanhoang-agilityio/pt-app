@@ -1261,3 +1261,194 @@ describe("several photos in one message", () => {
     expect((await queries.listDmInbox(alice))[0].preview).toBe("Bạn: 📷 3 ảnh");
   });
 });
+
+describe("replying to a message", () => {
+  let id: number;
+
+  const sendReply = (
+    conversationId: number,
+    senderId: number,
+    replyToMessageId: number | null | undefined,
+    options: { body?: string; postId?: number | null } = {},
+  ) =>
+    mutations.sendDmMessage({
+      conversationId,
+      senderId,
+      body: options.body ?? "Agreed",
+      photoIds: [],
+      postId: options.postId,
+      replyToMessageId,
+      clientId: uuid(),
+    });
+
+  const storedReplyTo = async (messageId: number) => {
+    const [row] = await db
+      .select({ replyToMessageId: dmMessages.replyToMessageId })
+      .from(dmMessages)
+      .where(eq(dmMessages.id, messageId));
+
+    return row.replyToMessageId;
+  };
+
+  const sentId = (result: Awaited<ReturnType<typeof sendReply>>) => {
+    if (!result.ok) {
+      throw new Error(`send failed: ${result.error}`);
+    }
+    return result.message.id;
+  };
+
+  beforeEach(async () => {
+    await befriend(alice, bob);
+    id = await openChat(alice, bob);
+  });
+
+  it("stores a target of the same conversation and quotes it for both members", async () => {
+    const original = sentId(await send(id, bob, "  Leg day at 6?  "));
+    const reply = await sendReply(id, alice, original);
+
+    expect(await storedReplyTo(sentId(reply))).toBe(original);
+    expect(reply.ok && reply.message.replyTo).toEqual({
+      id: original,
+      senderId: bob,
+      body: "Leg day at 6?",
+      photoCount: 0,
+      deleted: false,
+    });
+    const thread = await queries.listDmThread(id, {
+      otherId: alice,
+      viewer: member(bob),
+    });
+
+    expect(thread.messages[0].replyTo).toBeNull();
+    expect(thread.messages[1].replyTo).toMatchObject({
+      id: original,
+      senderId: bob,
+      body: "Leg day at 6?",
+    });
+  });
+
+  it("trims a long quote to 120 characters and labels a photo-only one", async () => {
+    const long = sentId(await send(id, bob, "x".repeat(300)));
+    const photoId = await uploadPhoto(id, bob);
+    const photo = sentId(await send(id, bob, "", { photoId }));
+
+    const first = await sendReply(id, alice, long);
+    const second = await sendReply(id, alice, photo);
+
+    expect(first.ok && first.message.replyTo?.body).toBe("x".repeat(120));
+    expect(second.ok && second.message.replyTo).toMatchObject({
+      id: photo,
+      body: null,
+      photoCount: 1,
+    });
+  });
+
+  it("stores no reply for a target in another conversation", async () => {
+    await befriend(alice, carol);
+    const other = await openChat(alice, carol);
+    const foreign = sentId(await send(other, carol, "Hi Alice"));
+    const reply = await sendReply(id, alice, foreign);
+
+    expect(await storedReplyTo(sentId(reply))).toBeNull();
+    expect(reply.ok && reply.message.replyTo).toBeNull();
+  });
+
+  it("stores no reply for an unsent target", async () => {
+    const original = sentId(await send(id, bob, "Oops"));
+
+    await mutations.unsendDmMessage(id, original, bob);
+    const reply = await sendReply(id, alice, original);
+
+    expect(await storedReplyTo(sentId(reply))).toBeNull();
+  });
+
+  it("stores no reply for a target that does not exist", async () => {
+    const reply = await sendReply(id, alice, 99_999);
+
+    expect(await storedReplyTo(sentId(reply))).toBeNull();
+  });
+
+  it("stores no reply when none is given", async () => {
+    const missing = await sendReply(id, alice, undefined);
+    const empty = await sendReply(id, alice, null);
+
+    expect(await storedReplyTo(sentId(missing))).toBeNull();
+    expect(await storedReplyTo(sentId(empty))).toBeNull();
+  });
+
+  it("lets a post reply win over a message reply", async () => {
+    const original = sentId(await send(id, bob, "Look at my post"));
+    const now = new Date();
+    const [post] = await db
+      .insert(socialPosts)
+      .values({
+        authorKind: "user",
+        authorId: bob,
+        privacy: "friends",
+        caption: "Leg day done",
+        photoId: null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: socialPosts.id });
+    const reply = await sendReply(id, alice, original, { postId: post.id });
+    const messageId = sentId(reply);
+    const [row] = await db
+      .select()
+      .from(dmMessages)
+      .where(eq(dmMessages.id, messageId));
+
+    expect(row.replyPostId).toBe(post.id);
+    expect(row.replyToMessageId).toBeNull();
+    expect(reply.ok && reply.message.replyTo).toBeNull();
+  });
+
+  it("keeps the quote as a tombstone after the original is unsent", async () => {
+    const original = sentId(await send(id, bob, "Secret plan"));
+
+    await sendReply(id, alice, original);
+    await mutations.unsendDmMessage(id, original, bob);
+    const thread = await queries.listDmThread(id, {
+      otherId: bob,
+      viewer: member(alice),
+    });
+    const [message] = thread.messages;
+
+    expect(message.replyTo).toEqual({
+      id: original,
+      senderId: bob,
+      body: null,
+      photoCount: 0,
+      deleted: true,
+    });
+  });
+
+  it("is checked by the action: a bad id is refused, a stale one is dropped", async () => {
+    signInAs(alice);
+    const original = sentId(await send(id, bob, "Hello"));
+    const bad = await actions.sendDmAction({
+      conversationId: id,
+      clientId: uuid(),
+      body: "x",
+      replyToMessageId: -3,
+    });
+    const stale = await actions.sendDmAction({
+      conversationId: id,
+      clientId: uuid(),
+      body: "y",
+      replyToMessageId: 99_999,
+    });
+    const good = await actions.sendDmAction({
+      conversationId: id,
+      clientId: uuid(),
+      body: "z",
+      replyToMessageId: original,
+    });
+
+    expect(bad.status).toBe("error");
+    expect(stale.status === "success" && stale.message.replyTo).toBeNull();
+    expect(good.status === "success" && good.message.replyTo?.id).toBe(
+      original,
+    );
+  });
+});

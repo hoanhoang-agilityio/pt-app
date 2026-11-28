@@ -97,6 +97,7 @@ export const sendDmAction = withResultErrorHandling(
       body: parsed.data.body,
       photoIds: parsed.data.photoIds,
       postId: parsed.data.postId,
+      replyToMessageId: parsed.data.replyToMessageId,
     });
 
     if (!result.ok) {

@@ -974,6 +974,10 @@ export const dmMessages = sqliteTable(
     photoId: integer("photo_id"),
     // The post this message replies to (story-reply style); null otherwise.
     replyPostId: integer("reply_post_id"),
+    // The earlier message of the same conversation this one replies to (a
+    // swipe-to-reply quote); null otherwise, and always null when
+    // reply_post_id is set. No foreign key, like the rest of the DM tables.
+    replyToMessageId: integer("reply_to_message_id"),
     // Client-generated uuid so a retried send is a no-op.
     clientId: text("client_id").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),

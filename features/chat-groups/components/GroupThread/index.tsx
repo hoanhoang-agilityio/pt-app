@@ -483,6 +483,16 @@ export const GroupThread = ({
     }, HIGHLIGHT_MS);
   };
 
+  // From the actions sheet, a swipe, the hover button or the R key.
+  const handleReply = (message: ThreadMessage) => {
+    if (message.hidden || message.deleted) {
+      return;
+    }
+    setIsSheetOpen(false);
+    setEditing(null);
+    setReplyId(message.id);
+  };
+
   const handleSend = (body: string, photos?: SentPhoto[]) => {
     const reply = replyMessage;
 
@@ -546,7 +556,7 @@ export const GroupThread = ({
         <div
           ref={scroller}
           onScroll={handleScroll}
-          className="h-full overflow-y-auto overscroll-contain px-4 pb-3"
+          className="h-full overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-3"
         >
           <div className="mx-auto w-full max-w-lg">
             <LoadOlderControl
@@ -590,6 +600,7 @@ export const GroupThread = ({
                         item.message.id === highlightId
                       }
                       onOpenActions={openActions}
+                      onReply={chatEnabled ? handleReply : undefined}
                       onToggleHeart={toggleHeart}
                       onOpenReactors={openActions}
                       onOpenHistory={(message) => openSheet("history", message)}
@@ -730,11 +741,7 @@ export const GroupThread = ({
               void chat.react(sheetMessage.id, emoji);
             }
           }}
-          onReply={() => {
-            setIsSheetOpen(false);
-            setEditing(null);
-            setReplyId(sheetMessage.id);
-          }}
+          onReply={() => handleReply(sheetMessage)}
           onCopy={() => void handleCopy(sheetMessage)}
           onEdit={() => {
             setIsSheetOpen(false);

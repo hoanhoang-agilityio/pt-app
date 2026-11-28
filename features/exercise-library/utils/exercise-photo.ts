@@ -1,12 +1,12 @@
 import {
+  readImageSize,
+  sniffPhotoMime,
+} from "@/features/chat/utils/photo-rules";
+import {
   PHOTO_MAX_BYTES,
   PHOTO_MAX_DATA_URL_LENGTH,
   PHOTO_MAX_SIDE,
 } from "@/features/exercise-library/constants/limits";
-import {
-  readImageSize,
-  sniffPhotoMime,
-} from "@/features/chat/utils/photo-rules";
 
 export type ExercisePhotoMime = "image/webp" | "image/jpeg";
 

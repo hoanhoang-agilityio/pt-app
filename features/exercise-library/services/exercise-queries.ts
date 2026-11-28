@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db";
 import { exerciseLibrary } from "@/db/schema";
@@ -17,11 +17,11 @@ import type {
   ExerciseRow,
   ExerciseSource,
 } from "@/features/exercise-library/types/exercise";
+import { exercisePhotoUrl } from "@/features/exercise-library/utils/exercise-photo";
 import {
   formatExerciseRef,
   parseExerciseRef,
 } from "@/features/exercise-library/utils/exercise-ref";
-import { exercisePhotoUrl } from "@/features/exercise-library/utils/exercise-photo";
 import { rankExercises } from "@/features/exercise-library/utils/exercise-search";
 import {
   parseMuscleColumn,
@@ -114,11 +114,12 @@ export const searchExerciseRows = async (
 
   return rankExercises(
     [...custom, ...builtin].map(({ row, nameKey }) => ({
-      ...row,
+      row,
       nameKey,
+      ...row,
     })),
     { q, muscle, limit },
-  ).map(({ nameKey: _nameKey, ...row }) => row);
+  ).map((entry) => entry.row);
 };
 
 // One exercise by ref. A custom exercise of another admin, a deleted one and
@@ -238,4 +239,13 @@ export const findExercisePhoto = async (adminId: number, id: number) => {
   return record?.mime && record.data
     ? { mime: record.mime, data: record.data }
     : null;
+};
+
+export const countCustomExercises = async (adminId: number) => {
+  const [row] = await db
+    .select({ total: count() })
+    .from(exerciseLibrary)
+    .where(eq(exerciseLibrary.adminId, adminId));
+
+  return row.total;
 };

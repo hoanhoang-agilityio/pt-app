@@ -9,23 +9,23 @@ import { exerciseLibrary } from "@/db/schema";
 import { EXERCISE_CUSTOM_MAX } from "@/features/exercise-library/constants/limits";
 import { EXERCISE_MESSAGES } from "@/features/exercise-library/constants/messages";
 import {
-  type ExerciseInput,
+  getExerciseDetail,
+  searchExerciseRows,
+} from "@/features/exercise-library/services/exercise-queries";
+import {
   exerciseIdSchema,
+  type ExerciseInput,
   exerciseInputSchema,
   type ParsedExerciseInput,
   type SearchInput,
   searchInputSchema,
 } from "@/features/exercise-library/services/exercise-schemas";
-import {
-  getExerciseDetail,
-  searchExerciseRows,
-} from "@/features/exercise-library/services/exercise-queries";
 import type {
   ExerciseDetail,
   ExerciseRow,
 } from "@/features/exercise-library/types/exercise";
-import { formatExerciseRef } from "@/features/exercise-library/utils/exercise-ref";
 import { decodeExercisePhoto } from "@/features/exercise-library/utils/exercise-photo";
+import { formatExerciseRef } from "@/features/exercise-library/utils/exercise-ref";
 import { withResultErrorHandling } from "@/services/action-errors";
 import { requireAdmin } from "@/services/auth-guard";
 import type { ActionErrorResult } from "@/types/error";

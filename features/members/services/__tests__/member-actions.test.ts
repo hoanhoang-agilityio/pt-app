@@ -11,6 +11,7 @@ import {
   chatGroupReactions,
   chatGroups,
   chatMessages,
+  chatMutes,
   chatNicknames,
   chatReads,
   contactAliases,
@@ -170,6 +171,23 @@ describe("deleteMemberAction chat cleanup", () => {
     expect(
       (await db.select().from(chatColorOverrides)).map((r) => r.conversationId),
     ).toEqual([kept.conversationId]);
+  });
+
+  it("removes the notification mutes set on or by the removed trainee only", async () => {
+    const gone = await seedTrainee("An");
+    const kept = await seedTrainee("Binh");
+
+    await db.insert(chatMutes).values([
+      { ownerKey: "admin:1", targetKey: "user:" + gone.userId },
+      { ownerKey: "admin:1", targetKey: "user:" + kept.userId },
+      { ownerKey: "user:" + gone.userId, targetKey: "user:" + kept.userId },
+    ]);
+
+    await deleteMemberAction(gone.userId);
+
+    expect((await db.select().from(chatMutes)).map((r) => r.targetKey)).toEqual(
+      ["user:" + kept.userId],
+    );
   });
 
   it("removes the trainee's hidden-chat rows for every admin, only theirs", async () => {

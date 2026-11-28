@@ -334,5 +334,24 @@
     "slotsFull": "每条消息最多 {max} 张照片。",
     "trimmed": "只能再添加 {count} 张照片（最多 {max} 张），其余已跳过。",
     "pending": "请等待照片上传完成，或移除上传失败的照片。"
+  },
+  "mute": {
+    "title": "关闭通知",
+    "subtitle": "新消息仍显示未读数，但不会通知。",
+    "hour1": "1 小时",
+    "hour4": "4 小时",
+    "hour8": "8 小时",
+    "untilMorning": "到明早 8:00",
+    "forever": "直到重新开启",
+    "unmute": "重新开启通知",
+    "label": "通知已关闭",
+    "mutedUntil": "通知已关闭，直到 {time}",
+    "mutedForever": "通知已关闭，直到你重新开启",
+    "unmuted": "通知已重新开启",
+    "failed": "无法更改通知设置",
+    "rowMenu": "{name} 的通知选项",
+    "unreadMuted": "{count} 条未读，通知已关闭",
+    "currentUntil": "已关闭，直到 {time}",
+    "currentForever": "已关闭，直到重新开启"
   }
 }

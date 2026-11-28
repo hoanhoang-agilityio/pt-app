@@ -711,6 +711,27 @@ export const adminHiddenUsers = sqliteTable(
   (table) => [primaryKey({ columns: [table.adminId, table.userId] })],
 );
 
+// Per-person notification mute (Zalo style): owner_key silenced target_key.
+// Both are actor keys "user:<id>" / "admin:<id>". muted_until null = until
+// turned back on; a past muted_until counts as unmuted at read time (no cron).
+// No foreign keys: delete flows remove these rows explicitly.
+export const chatMutes = sqliteTable(
+  "chat_mutes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    ownerKey: text("owner_key").notNull(),
+    targetKey: text("target_key").notNull(),
+    mutedUntil: integer("muted_until", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    uniqueIndex("chat_mutes_owner_target").on(table.ownerKey, table.targetKey),
+    index("chat_mutes_owner_key").on(table.ownerKey),
+  ],
+);
+
 // Read cursor per reader. readerKey is "user" or "admin:<id>".
 export const chatReads = sqliteTable(
   "chat_reads",

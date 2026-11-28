@@ -44,6 +44,7 @@ import {
 } from "@/features/chat-bubbles/utils/bubble-links";
 import {
   bubbleEntriesFrom,
+  bubbleMutedKeysFrom,
   bubbleUnreadFrom,
 } from "@/features/chat-bubbles/utils/bubble-payload";
 import {
@@ -155,7 +156,7 @@ export const BubbleHostInner = ({ role }: { role: BubbleRole }) => {
       seen: seen.current,
       entries,
       onScreenKeys: onScreen,
-      mutedKeys: live.current.muted,
+      mutedKeys: [...live.current.muted, ...bubbleMutedKeysFrom(role, payload)],
       enabled: live.current.popEnabled,
     });
 

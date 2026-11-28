@@ -6,6 +6,7 @@ import {
 } from "@/features/chat-bubbles/utils/bubble-links";
 import {
   bubbleEntriesFrom,
+  bubbleMutedKeysFrom,
   bubbleUnreadFrom,
 } from "@/features/chat-bubbles/utils/bubble-payload";
 
@@ -58,5 +59,23 @@ describe("bubble payload ignores group chats", () => {
       expect(isKeyForRole("user", key)).toBe(false);
       expect(chatPathForKey("admin", key)).toBeNull();
     }
+  });
+});
+
+describe("bubbleMutedKeysFrom", () => {
+  const payload = {
+    perTrainee: [
+      { userId: 1, conversationId: 1, unread: 2, muted: true },
+      { userId: 2, conversationId: 2, unread: 1, muted: false },
+      { userId: 3, conversationId: 3, unread: 1 },
+    ],
+  };
+
+  it("lists only the muted trainee chats for an admin", () => {
+    expect(bubbleMutedKeysFrom("admin", payload)).toEqual(["user:1"]);
+  });
+
+  it("is empty for a trainee, whatever the payload says", () => {
+    expect(bubbleMutedKeysFrom("user", payload)).toEqual([]);
   });
 });

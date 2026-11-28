@@ -8,9 +8,11 @@ import {
   ChatThread,
   type ChatThreadProps,
 } from "@/features/chat/components/ChatThread";
+import { MuteChip } from "@/features/chat/components/MuteChip";
 import { NeutralColorsSwitch } from "@/features/chat/components/NeutralColorsSwitch";
 import { chatPaths } from "@/features/chat/utils/chat-links";
 import { displayNameFor } from "@/features/chat/utils/display-name";
+import type { MuteState } from "@/features/chat/utils/mute-rules";
 import { bubbleKeyFor } from "@/features/chat-bubbles/utils/bubble-links";
 
 interface AdminChatThreadProps extends Pick<
@@ -33,6 +35,8 @@ interface AdminChatThreadProps extends Pick<
   // Server-rendered rows under the header (section tabs, lock switch).
   // Not rendered inside the bubble panel.
   below?: ReactNode;
+  // This admin's mute of the trainee, for the "Đã tắt thông báo" chip.
+  muteState: MuteState;
 }
 
 // The admin conversation screen. A client component because the title follows
@@ -41,6 +45,7 @@ interface AdminChatThreadProps extends Pick<
 export const AdminChatThread = ({
   userName,
   below,
+  muteState,
   ...thread
 }: AdminChatThreadProps) => {
   return (
@@ -68,6 +73,7 @@ export const AdminChatThread = ({
                 key: bubbleKeyFor("admin", thread.userId),
               }}
             />
+            <MuteChip userId={thread.userId} name={name} initial={muteState} />
             {below}
           </>
         );

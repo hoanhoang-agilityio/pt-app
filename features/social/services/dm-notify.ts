@@ -5,6 +5,7 @@ import { after } from "next/server";
 
 import { db } from "@/db";
 import { pushSubscriptions, users } from "@/db/schema";
+import { loadMutedOwnerKeys } from "@/features/chat/services/chat-mutes";
 import {
   deliverLocalized,
   getVapid,
@@ -72,6 +73,17 @@ export const sendDmPush = async (
     const vapid = getVapid();
 
     if (!vapid) {
+      return;
+    }
+    // Mutes are keyed by actor key, so a recipient who muted the sender gets
+    // no push (today only admins own mutes; a friend DM never matches).
+    const muted = await loadMutedOwnerKeys(
+      userActorKey(senderId),
+      [userActorKey(recipientId)],
+      new Date(),
+    );
+
+    if (muted.size > 0) {
       return;
     }
     const targets = await db

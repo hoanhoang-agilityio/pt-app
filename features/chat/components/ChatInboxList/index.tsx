@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { Lock } from "lucide-react";
+import { BellOff, Lock, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
@@ -29,6 +29,8 @@ interface ChatInboxListProps {
   // Revealed hidden trainees: a "Bỏ ẩn" button on each row.
   onUnhide?: (userId: number) => void;
   isBusy?: boolean;
+  // A "⋯" button on each row opens the mute sheet for that trainee.
+  onMuteMenu?: (item: InboxItem) => void;
 }
 
 const MAX_SHOWN = 99;
@@ -44,9 +46,11 @@ export const ChatInboxList = ({
   onToggle,
   onUnhide,
   isBusy = false,
+  onMuteMenu,
 }: ChatInboxListProps) => {
   const locale = useLocale();
   const t = useTranslations("chat.chatInbox");
+  const tMute = useTranslations("chat.mute");
   // The row whose unhide is running (shows the spinner).
   const [tappedId, setTappedId] = useState<number | null>(null);
 
@@ -118,7 +122,9 @@ export const ChatInboxList = ({
                 <span
                   className={clsx(
                     "shrink-0 text-xs",
-                    isUnread ? "font-semibold text-accent" : "text-muted",
+                    isUnread && !item.muted
+                      ? "font-semibold text-accent"
+                      : "text-muted",
                   )}
                 >
                   {time}
@@ -136,11 +142,27 @@ export const ChatInboxList = ({
                 {isUnread && (
                   <span
                     role="status"
-                    aria-label={t("unread", { count: item.unread })}
-                    className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center gap-1 rounded-full bg-accent px-1.5 text-[11px] leading-none font-bold text-accent-fg"
+                    aria-label={
+                      item.muted
+                        ? tMute("unreadMuted", { count: item.unread })
+                        : t("unread", { count: item.unread })
+                    }
+                    className={clsx(
+                      "inline-flex h-5 min-w-5 shrink-0 items-center justify-center gap-1 rounded-full px-1.5 text-[11px] leading-none font-bold",
+                      item.muted
+                        ? "bg-line text-muted"
+                        : "bg-accent text-accent-fg",
+                    )}
                   >
+                    {item.muted && <BellOff className="size-3" aria-hidden />}
                     {item.unread > MAX_SHOWN ? `${MAX_SHOWN}+` : item.unread}
                   </span>
+                )}
+                {!isUnread && item.muted && (
+                  <BellOff
+                    className="size-4 shrink-0 text-muted"
+                    aria-label={tMute("label")}
+                  />
                 )}
               </span>
             </span>
@@ -167,6 +189,17 @@ export const ChatInboxList = ({
                   {row}
                 </Link>
               </BubbleRowTrigger>
+            )}
+            {onMuteMenu && !isSelecting && (
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                aria-label={tMute("rowMenu", { name: item.displayName })}
+                onClick={() => onMuteMenu(item)}
+                className="mr-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted transition active:bg-line"
+              >
+                <MoreHorizontal className="size-5" aria-hidden />
+              </button>
             )}
             {onUnhide && !isSelecting && (
               <button

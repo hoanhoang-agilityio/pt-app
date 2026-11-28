@@ -20,6 +20,7 @@ import {
 } from "@/constants/styles";
 import { ChatInboxList } from "@/features/chat/components/ChatInboxList";
 import { HiddenUserList } from "@/features/chat/components/HiddenUserList";
+import { MuteSheet } from "@/features/chat/components/MuteSheet";
 import { useHiddenReveal } from "@/features/chat/hooks/use-hidden-reveal";
 import {
   hideUsersAction,
@@ -77,6 +78,8 @@ export const AdminInbox = ({
   const [isSelecting, setIsSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<number>>(new Set());
   const [isPending, startTransition] = useTransition();
+  // The row whose mute sheet is open.
+  const [muteItem, setMuteItem] = useState<InboxItem | null>(null);
   const { revealed, remove } = useHiddenReveal(query, hasPasscode);
   const now = useMemo(() => new Date(nowMs), [nowMs]);
 
@@ -262,6 +265,7 @@ export const AdminInbox = ({
               isSelecting={isSelecting}
               selectedIds={selected}
               onToggle={toggle}
+              onMuteMenu={setMuteItem}
             />
           )}
           {!isUnreadOnly && shownFresh.length > 0 && (
@@ -331,6 +335,22 @@ export const AdminInbox = ({
             </section>
           )}
         </>
+      )}
+      {muteItem && (
+        <MuteSheet
+          isOpen
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setMuteItem(null);
+            }
+          }}
+          userId={muteItem.userId}
+          name={muteItem.displayName}
+          state={{
+            muted: muteItem.muted,
+            until: muteItem.mutedUntil?.toISOString() ?? null,
+          }}
+        />
       )}
       {isSelecting && (
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-bg pb-[env(safe-area-inset-bottom)]">

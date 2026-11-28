@@ -48,6 +48,9 @@
     "INVALID_INPUT": "学员无效",
     "NO_MATCH": "不匹配"
   },
+  "muteChat": {
+    "INVALID_INPUT": "关闭通知的选项无效"
+  },
   "presence": {
     "INVALID": "值无效"
   },

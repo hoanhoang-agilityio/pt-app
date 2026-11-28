@@ -433,7 +433,9 @@ export const HeaderMenus = ({
                 </div>
               </div>
               <hr className="my-1 border-line" />
-              <PushToggle role={role} itemClassName={ITEM} />
+              {role === "admin" && (
+                <PushToggle role={role} itemClassName={ITEM} />
+              )}
               {canPickAppColor && (
                 <Link
                   href={

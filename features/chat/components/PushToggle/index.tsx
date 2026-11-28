@@ -17,7 +17,8 @@ interface PushToggleProps {
 
 // "Thông báo đẩy" row of the header gear menu: shows whether push is on and
 // turns it on or off. Where push cannot work it stays visible but disabled,
-// with the reason. Mounted only while the menu is open.
+// with the reason. Mounted only while the menu is open. Admin-only in the
+// menu: HeaderMenus does not render it for trainees.
 export const PushToggle = ({ role, itemClassName }: PushToggleProps) => {
   const t = useTranslations("chat.pushToggle");
   const push = usePushSubscription(role);
